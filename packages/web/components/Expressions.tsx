@@ -15,24 +15,20 @@ export default function Expressions({
     R.entries(),
     R.sortBy(R.pathOr([1], 0)),
     R.reverse(),
-    R.take(3)
+    R.take(3),
   );
 
   return (
-    <div
-      className={
-        "text-xs p-3 w-full grid grid-cols-1 md:grid-cols-3 gap-3"
-      }
-    >
+    <div className={"text-xs p-3 w-full grid grid-cols-1 md:grid-cols-3 gap-3"}>
       {top3.map(([key, value]) => (
         <div key={key} className={"w-full overflow-hidden"}>
-          <div
-            className={"flex items-center justify-between gap-1 pb-1"}
-          >
+          <div className={"flex items-center justify-between gap-1 pb-1"}>
             <div className={"font-medium truncate tracking-tight"}>
               {expressionLabels[key]}
             </div>
-            <div className={"tabular-nums opacity-50 tracking-tight"}>{value.toFixed(2)}</div>
+            <div className={"tabular-nums opacity-50 tracking-tight"}>
+              {value.toFixed(2)}
+            </div>
           </div>
           <div
             className={"relative h-1"}
@@ -58,7 +54,7 @@ export default function Expressions({
                 width: `${R.pipe(
                   value,
                   R.clamp({ min: 0, max: 1 }),
-                  (value) => `${value * 100}%`
+                  (value) => `${value * 100}%`,
                 )}`,
               }}
             />

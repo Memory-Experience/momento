@@ -1,4 +1,4 @@
-import 'server-only';
+import "server-only";
 
 import { fetchAccessToken } from "hume";
 
@@ -7,7 +7,9 @@ export const getHumeAccessToken = async () => {
   const secretKey = process.env.HUME_SECRET_KEY;
 
   if (!apiKey || !secretKey) {
-    throw new Error('Missing required environment variables (HUME_API_KEY or HUME_SECRET_KEY)');
+    throw new Error(
+      "Missing required environment variables (HUME_API_KEY or HUME_SECRET_KEY)",
+    );
   }
 
   const accessToken = await fetchAccessToken({
@@ -16,7 +18,7 @@ export const getHumeAccessToken = async () => {
   });
 
   if (accessToken === "undefined") {
-    throw new Error('Unable to get access token');
+    throw new Error("Unable to get access token");
   }
 
   return accessToken ?? null;

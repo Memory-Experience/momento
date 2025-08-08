@@ -20,7 +20,11 @@ export default function Error({
           <p className={"text-muted-foreground text-sm"}>{error.message}</p>
         </div>
         <div className={"pt-4 flex gap-2"}>
-          <Button className={"rounded-full flex-1"} variant={"secondary"} asChild>
+          <Button
+            className={"rounded-full flex-1"}
+            variant={"secondary"}
+            asChild
+          >
             <Link href={"https://dev.hume.ai/"} target={"_blank"}>
               View Documentation
             </Link>

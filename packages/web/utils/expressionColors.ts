@@ -57,7 +57,7 @@ export const expressionColors = {
 } as const;
 
 export const isExpressionColor = (
-  color: string
+  color: string,
 ): color is keyof typeof expressionColors => {
   return color in expressionColors;
 };

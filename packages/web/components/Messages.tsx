@@ -33,7 +33,7 @@ const Messages = forwardRef<
                     "w-[80%]",
                     "bg-card",
                     "border border-border rounded-xl",
-                    msg.type === "user_message" ? "ml-auto" : ""
+                    msg.type === "user_message" ? "ml-auto" : "",
                   )}
                   initial={{
                     opacity: 0,
@@ -48,17 +48,19 @@ const Messages = forwardRef<
                     y: 0,
                   }}
                 >
-                  <div className={"flex items-center justify-between pt-4 px-3"}>
+                  <div
+                    className={"flex items-center justify-between pt-4 px-3"}
+                  >
                     <div
                       className={cn(
-                        "text-xs capitalize font-medium leading-none opacity-50 tracking-tight"
+                        "text-xs capitalize font-medium leading-none opacity-50 tracking-tight",
                       )}
                     >
                       {msg.message.role}
                     </div>
                     <div
                       className={cn(
-                        "text-xs capitalize font-medium leading-none opacity-50 tracking-tight"
+                        "text-xs capitalize font-medium leading-none opacity-50 tracking-tight",
                       )}
                     >
                       {msg.receivedAt.toLocaleTimeString(undefined, {
