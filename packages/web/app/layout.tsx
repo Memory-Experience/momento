@@ -17,8 +17,11 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // NOTE: ThemeProvider requires suppressHydrationWarning to suppress hydration warning
+  // as the theme differs between server and client rendering due to systems preference.
+  // See the note at the bottom of https://github.com/pacocoursey/next-themes?tab=readme-ov-file#with-app
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={cn(
           GeistSans.variable,
