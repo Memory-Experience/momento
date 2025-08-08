@@ -4,14 +4,22 @@ import { Button } from "./ui/button";
 import { Phone } from "lucide-react";
 import { toast } from "sonner";
 
-export default function StartCall({ configId, accessToken }: { configId?: string, accessToken: string }) {
+export default function StartCall({
+  configId,
+  accessToken,
+}: {
+  configId?: string;
+  accessToken: string;
+}) {
   const { status, connect } = useVoice();
 
   return (
     <AnimatePresence>
       {status.value !== "connected" ? (
         <motion.div
-          className={"fixed inset-0 p-4 flex items-center justify-center bg-background"}
+          className={
+            "fixed inset-0 p-4 flex items-center justify-center bg-background"
+          }
           initial="initial"
           animate="enter"
           exit="exit"
@@ -32,9 +40,9 @@ export default function StartCall({ configId, accessToken }: { configId?: string
               <Button
                 className={"z-50 flex items-center gap-1.5 rounded-full"}
                 onClick={() => {
-                  connect({ 
+                  connect({
                     auth: { type: "accessToken", value: accessToken },
-                    configId, 
+                    configId,
                     // additional options can be added here
                     // like resumedChatGroupId and sessionSettings
                   })
