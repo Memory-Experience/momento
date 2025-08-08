@@ -1,4 +1,4 @@
-import type { FC, SVGAttributes } from "react";
+import type { SVGAttributes } from "react";
 import { useId } from "react";
 
 export type HumeLogoProps = SVGAttributes<SVGSVGElement>;
