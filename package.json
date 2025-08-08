@@ -1,0 +1,21 @@
+{
+  "name": "uzh-masterproject",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "format": "prettier --ignore-unknown --write .",
+    "format:check": "prettier --ignore-unknown --check .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.14.0",
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.4",
+    "prettier": "^3.6.2"
+  }
+}
