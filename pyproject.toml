@@ -9,3 +9,8 @@ dependencies = []
 [tool.uv.workspace]
 members = ["packages/*"]
 exclude = ["packages/web"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.8",
+]

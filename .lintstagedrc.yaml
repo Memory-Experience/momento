@@ -1,4 +1,7 @@
-"*": "prettier --ignore-unknown --write"
+"!packages/**/*": "prettier --ignore-unknown --write"
 "packages/web/**/*.{ts,tsx}":
   - "prettier --ignore-unknown --write"
   - "pnpm run -r lint --max-warnings 0 --fix --file"
+"packages/api/**/*":
+  - "uvx ruff format"
+  - "uvx ruff check --fix --show-fixes"
