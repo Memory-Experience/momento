@@ -1,0 +1,19 @@
+version = 1
+revision = 3
+requires-python = ">=3.12"
+
+[manifest]
+members = [
+    "api",
+    "uzh-masterproject",
+]
+
+[[package]]
+name = "api"
+version = "0.1.0"
+source = { virtual = "packages/api" }
+
+[[package]]
+name = "uzh-masterproject"
+version = "0.1.0"
+source = { virtual = "." }
