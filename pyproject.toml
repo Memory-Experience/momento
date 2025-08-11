@@ -14,3 +14,20 @@ exclude = ["packages/web"]
 dev = [
     "ruff>=0.12.8",
 ]
+
+# `ruff check` rules:
+[tool.ruff.lint]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
