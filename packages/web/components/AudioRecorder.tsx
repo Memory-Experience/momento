@@ -4,29 +4,87 @@ import { cn } from "@/utils";
 import { Mic, Square } from "lucide-react";
 import { Button } from "./ui/button";
 import { useCallback, useRef, useState } from "react";
+import { toast } from "sonner";
 
 export default function AudioRecorder({}) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
+  const chunks = useRef<Blob[]>([]);
 
   const startRecording = useCallback(async () => {
     // Mock connection logic
     console.log("Connecting to server...");
-    setIsRecording(true);
-    setRecordingTime(0);
 
-    // Start timer
-    timerRef.current = setInterval(() => {
-      setRecordingTime((prev) => prev + 1);
-    }, 1000);
+    try {
+      chunks.current = [];
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 44100,
+        },
+      });
+
+      mediaRecorder.current = new MediaRecorder(stream, {
+        mimeType: "audio/webm;codecs=opus",
+      });
+
+      mediaRecorder.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.current.onstop = async () => {
+        const audioBlob = new Blob(chunks.current, { type: "audio/webm" });
+
+        // Stop all tracks
+        stream.getTracks().forEach((track) => track.stop());
+
+        // Create the blob URL.
+        const blobURL = URL.createObjectURL(audioBlob);
+        // Create the `<a download>` element and append it invisibly.
+        const a = document.createElement("a");
+        a.href = blobURL;
+        a.download = "recording.webm";
+        a.style.display = "none";
+        document.body.append(a);
+        a.click();
+        // Revoke the blob URL and remove the element.
+        setTimeout(() => {
+          URL.revokeObjectURL(blobURL);
+          a.remove();
+          chunks.current = [];
+        }, 1000);
+      };
+
+      // Record in smaller chunks for more frequent updates (500ms)
+      mediaRecorder.current.start(500);
+      setIsRecording(true);
+      setRecordingTime(0);
+
+      // Start timer
+      timerRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } catch (error) {
+      toast.error("Failed to access microphone. Please check permissions.");
+      console.error("Error starting recording:", error);
+      setIsRecording(false);
+      setRecordingTime(0);
+    }
   }, []);
   const stopRecording = useCallback(async () => {
-    setIsRecording(false);
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
+    if (mediaRecorder.current) {
+      mediaRecorder.current.stop();
+    }
+    setIsRecording(false);
     setRecordingTime(0);
   }, []);
 
