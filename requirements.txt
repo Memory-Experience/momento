@@ -1,0 +1,8 @@
+click==8.2.1
+grpcio==1.71.2
+grpcio-tools==1.71.2
+protobuf==5.29.5
+protoletariat==3.3.10
+-e file:///Users/pierre/projects/uzh-masterproject/packages/protos
+ruff==0.12.8
+setuptools==80.9.0

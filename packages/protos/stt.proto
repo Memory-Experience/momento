@@ -1,0 +1,17 @@
+syntax = "proto3";
+package sst;
+
+service TranscriptionService {
+  // Bidirectional streaming: client sends audio, server responds with transcripts
+  rpc Transcribe(stream AudioChunk) returns (stream Transcript);
+}
+
+// Audio chunk from client (e.g., microphone input)
+message AudioChunk {
+  bytes  data       = 1;        // Audio data (not used in dummy mode)
+}
+
+// Transcription result from SST service
+message Transcript {
+  string text       = 1;        // Recognized speech text (partial or complete)
+}
