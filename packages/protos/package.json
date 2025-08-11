@@ -1,0 +1,15 @@
+{
+  "name": "protos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "",
+  "scripts": {
+    "build": "pnpm run generate:py && pnpm run generate:py:fix",
+    "generate:py": "uvx --from grpcio-tools==1.71.2 python -m grpc_tools.protoc -I./ --python_out=generated/py --pyi_out=generated/py --grpc_python_out=generated/py stt.proto",
+    "generate:py:fix": "uvx --from protoletariat protol --create-package --in-place -o generated/py protoc --python_out=generated/py --proto-path=. stt.proto --protoc-path \"uvx --from grpcio-tools==1.71.2 python -m grpc_tools.protoc\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.14.0"
+}
