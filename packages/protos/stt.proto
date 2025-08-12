@@ -2,16 +2,26 @@ syntax = "proto3";
 package sst;
 
 service TranscriptionService {
-  // Bidirectional streaming: client sends audio, server responds with transcripts
-  rpc Transcribe(stream AudioChunk) returns (stream Transcript);
+  // Bidirectional streaming: client sends audio, server responds with various messages
+  // NOTE: This works for Node.js clients but NOT for gRPC-Web (browsers)
+  rpc Transcribe(stream AudioChunk) returns (stream StreamResponse);
 }
 
 // Audio chunk from client (e.g., microphone input)
 message AudioChunk {
-  bytes  data       = 1;        // Audio data (not used in dummy mode)
+  bytes data = 1; // Audio data
 }
 
 // Transcription result from SST service
 message Transcript {
-  string text       = 1;        // Recognized speech text (partial or complete)
+  string text = 1; // Recognized speech text (partial or complete)
+}
+
+// A response from the server can be one of many types
+message StreamResponse {
+  oneof response {
+    Transcript transcript = 1;
+    // Potentially other response types in the future
+    // e.g., EmotionAnalysisResult emotion = 2;
+  }
 }
