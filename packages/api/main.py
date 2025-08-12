@@ -1,88 +1,90 @@
 import asyncio
+import io
 import logging
-from collections.abc import AsyncGenerator
+import os
+from datetime import datetime
 
 import grpc
 from protos.generated.py import stt_pb2, stt_pb2_grpc
+from pydub import AudioSegment
 
-CHANNEL_OPTIONS = [
-    ("grpc.lb_policy_name", "pick_first"),
-    ("grpc.enable_retries", 0),
-    ("grpc.keepalive_timeout_ms", 10000),
-    ("grpc.grpclb_call_timeout_ms", 10000),
-]
-
-
-async def get_user_input(queue: asyncio.Queue, stop_event: asyncio.Event) -> None:
-    """Handle user input in a non-blocking way"""
-    while not stop_event.is_set():
-        # Run input() in a thread to avoid blocking the event loop
-        user_input = await asyncio.to_thread(
-            lambda: input("Enter text to transcribe (or 'bye' to quit): ")
-        )
-
-        if user_input.lower() == "bye":
-            stop_event.set()
-            break
-
-        # Put the user input in the queue for the audio generator
-        await queue.put(user_input)
+# Constants
+PORT = 50051
+RECORDINGS_DIR = "recordings"
+SAMPLE_RATE = 16000
+CHANNELS = 1
+SAMPLE_WIDTH = 2  # 2 bytes = 16 bits
 
 
-async def generate_audio_chunks(
-    queue: asyncio.Queue, stop_event: asyncio.Event
-) -> AsyncGenerator[stt_pb2.AudioChunk, None]:
-    """Generate audio chunks from user input via queue"""
-    while not stop_event.is_set():
-        try:
-            # Wait for input with a timeout so we can check stop_event
-            # periodically
-            user_input = await asyncio.wait_for(queue.get(), timeout=0.1)
-            yield stt_pb2.AudioChunk(data=user_input.encode())
-            queue.task_done()
-        except TimeoutError:
-            # No input available yet, continue loop
-            continue
+class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
+    """Provides methods that implement functionality of transcription service."""
 
-
-async def run() -> None:
-    # Create communication mechanisms
-    input_queue = asyncio.Queue()
-    stop_event = asyncio.Event()
-
-    async with grpc.aio.insecure_channel(
-        "localhost:50051", options=CHANNEL_OPTIONS
-    ) as channel:
-        stub = stt_pb2_grpc.TranscriptionServiceStub(channel)
-        msg: str = ""
-
-        # Start the user input task
-        input_task = asyncio.create_task(get_user_input(input_queue, stop_event))
+    async def Transcribe(self, request_iterator, context):
+        """Bidirectional streaming RPC for audio transcription."""
+        logging.info("Client connected.")
+        audio_data = bytearray()
+        transcription_count = 0
 
         try:
-            # Start receiving transcriptions
-            async for response in stub.Transcribe(
-                generate_audio_chunks(input_queue, stop_event)
-            ):
-                msg += response.text + " "
-                logging.debug(f"Client received: {response.text}")
+            async for audio_chunk in request_iterator:
+                if audio_chunk.data:
+                    audio_data.extend(audio_chunk.data)
+                    logging.debug(
+                        f"Received audio chunk of size: {len(audio_chunk.data)}"
+                    )
+
+                    # For MVP, send back a dummy transcription inside a StreamResponse
+                    transcription_count += 1
+                    response = stt_pb2.StreamResponse(
+                        transcript=stt_pb2.Transcript(
+                            text=f"Received chunk {transcription_count}."
+                        )
+                    )
+                    yield response
 
         except grpc.aio.AioRpcError as e:
-            logging.error("RPC error: %s", e)
-        except Exception as e:
-            logging.error("Error: %s", e)
+            logging.error(f"Error during transcription: {e}")
         finally:
-            # Ensure we clean up properly
-            if not input_task.done():
-                input_task.cancel()
-            try:  # noqa: SIM105
-                await input_task
-            except asyncio.CancelledError:
-                pass
+            logging.info("Client disconnected.")
+            if audio_data:
+                self.save_recording(audio_data)
 
-        logging.info(f"Final transcription: {msg}")
+    def save_recording(self, audio_data: bytearray):
+        """Saves the recorded audio to a WAV file."""
+        if not os.path.exists(RECORDINGS_DIR):
+            os.makedirs(RECORDINGS_DIR)
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        webm_filename = os.path.join(RECORDINGS_DIR, f"recording_{timestamp}.webm")
+        wav_filename = os.path.join(RECORDINGS_DIR, f"recording_{timestamp}.wav")
+
+        try:
+            with open(webm_filename, "wb") as f:
+                f.write(audio_data)
+
+            # Convert webm to wav using pydub
+            audio_segment = AudioSegment.from_file(
+                io.BytesIO(audio_data), format="webm"
+            )
+            audio_segment.export(wav_filename, format="wav")
+
+            logging.info(f"Recording saved to {webm_filename} and {wav_filename}")
+        except Exception as e:
+            logging.error(f"Failed to save recording: {e}")
+
+
+async def serve() -> None:
+    """Starts the gRPC server."""
+    server = grpc.aio.server()
+    stt_pb2_grpc.add_TranscriptionServiceServicer_to_server(
+        TranscriptionServiceServicer(), server
+    )
+    server.add_insecure_port(f"[::]:{PORT}")
+    logging.info(f"Server started on port {PORT}")
+    await server.start()
+    await server.wait_for_termination()
 
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    asyncio.run(run())
+    logging.basicConfig(level=logging.DEBUG)
+    asyncio.run(serve())
