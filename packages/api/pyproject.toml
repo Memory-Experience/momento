@@ -9,4 +9,8 @@ dependencies = [
     "grpcio==1.71.2",
     "protobuf==5.29.5",
     "pydub>=0.25.1",
+    "transformers>=4.55.1",
+    "torch>=2.8.0",
+    "numpy>=2.3.2",
+    "faster-whisper>=1.2.0",
 ]
