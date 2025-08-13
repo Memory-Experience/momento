@@ -66,12 +66,18 @@ export async function GET(request: NextRequest) {
 
         grpcStream.on("end", () => {
           console.log("gRPC stream ended");
-          const message = JSON.stringify({
-            type: "ended",
-            timestamp: Date.now(),
-          });
-          controller.enqueue(`data: ${message}\n\n`);
-          controller.close();
+          try {
+            controller.close();
+          } catch (error: unknown) {
+            if (
+              !(
+                error instanceof Error &&
+                error.message.includes("already closed")
+              )
+            ) {
+              console.error("Error closing controller:", error);
+            }
+          }
         });
 
         // Store the session
@@ -143,9 +149,9 @@ export async function POST(request: NextRequest) {
         data: audioBytes,
       };
 
-      console.log(
-        `Sending audio chunk: ${audioBytes.length} bytes for session ${sessionId}`,
-      );
+      // console.debug(
+      //   `Sending audio chunk: ${audioBytes.length} bytes for session ${sessionId}`,
+      // );
       session.grpcStream.write(audioChunk);
     } else {
       console.error("gRPC stream not available for session:", sessionId);
