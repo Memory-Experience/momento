@@ -2,6 +2,6 @@
 "packages/web/**/*.{ts,tsx}":
   - "prettier --ignore-unknown --write"
   - "pnpm run -r lint --max-warnings 0 --fix --file"
-"packages/api/**/*":
+"packages/api/**/*.{py,toml}":
   - "uvx ruff format"
   - "uvx ruff check --fix --show-fixes"
