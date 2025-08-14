@@ -8,7 +8,7 @@ A Python-based gRPC server that provides real-time speech transcription services
 - **uv** v0.8+ for Python package management
 - **FFmpeg** required for audio processing
 
-**Note**: For installation instructions, refer to the [root README](../../README.md#prerequisites).
+> **Note**: For installation instructions, refer to the [root README](../../README.md#prerequisites).
 
 ## Getting Started
 
