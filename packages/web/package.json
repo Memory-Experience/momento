@@ -1,8 +1,7 @@
 {
-  "name": "hume-evi-next-js-starter",
+  "name": "web",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://github.com/humeai/hume-evi-next-js-starter",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
