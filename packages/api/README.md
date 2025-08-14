@@ -35,11 +35,13 @@ uv add --dev package-name
 ### Available Scripts
 
 **Server Management:**
+
 ```bash
 pnpm run start        # Start the gRPC server
 ```
 
 **Code Quality:**
+
 ```bash
 # From project root (recommended)
 pnpm run format       # Format all files
