@@ -36,6 +36,7 @@ See [`pyproject.toml`](pyproject.toml) and [`package.json`](package.json) for co
 ### Available Scripts
 
 **Development & Build:**
+
 ```bash
 pnpm run build        # Run clean and generate
 pnpm run generate     # Generate protocol buffer code
@@ -43,6 +44,7 @@ pnpm run clean        # Remove generated code
 ```
 
 **Code Quality:**
+
 ```bash
 # From project root (recommended)
 pnpm run format       # Format all files
