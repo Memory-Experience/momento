@@ -112,3 +112,30 @@ pnpm run format       # Format all files
 pnpm run format:check # Check formatting
 pnpm run lint         # Run all linting
 ```
+
+## Troubleshooting
+
+### Husky Git Hooks on Windows/WSL
+
+When using Node.js version managers (like NVM) on Windows or WSL, you may encounter the following error during Git commits:
+
+```
+node_modules/.bin/lint-staged: 20: exec: node: not found
+husky - pre-commit script failed (code 127)
+husky - command not found in PATH=...
+```
+
+This occurs because Git hooks run in a minimal environment that doesn't load your shell configuration where the version manager sets up Node.js in the PATH.
+As per the [official documentation](https://typicode.github.io/husky/how-to.html#solution):
+
+**Solution:**
+
+Create or edit `~/.config/husky/init.sh` to initialize your Node.js version manager:
+
+```bash
+# ~/.config/husky/init.sh
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+```
+
+Husky automatically sources this file before each Git hook, ensuring Node.js is available in the hook environment.
