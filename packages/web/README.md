@@ -1,28 +1,12 @@
-# Web Frontend - Real-time Audio Recording Interface
+# Web Frontend
 
-A Next.js application that provides a modern web interface for real-time audio recording and transcription. Built with TypeScript, Tailwind CSS, and WebRTC audio capture.
-
-## Prerequisites
-
-- **Node.js** v22+
-- **pnpm** v10.14+
-- Modern web browser with WebRTC support
-
-> **Note**: For installation instructions, refer to the [root README](../../README.md#prerequisites).
+A Next.js application providing a modern web interface for real-time audio recording and transcription. Built with TypeScript, Tailwind CSS, and WebRTC audio capture.
 
 ## Getting Started
 
-### 1. Install Dependencies
+**Prerequisites**: Complete the setup steps in the [root README Prerequisites section](../../README.md#prerequisites) and follow the steps to install dependencies and protocol buffer definitions in the [root README Quick Start section](../../README.md#quick-start).
 
-Install all project dependencies from the root directory:
-
-```bash
-pnpm install
-```
-
-### 2. Start Development Server
-
-From the web package directory:
+### Start Development Server
 
 ```bash
 cd packages/web
@@ -31,7 +15,7 @@ pnpm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-### 3. Production Build
+### Production Build
 
 ```bash
 pnpm run build
@@ -48,19 +32,23 @@ See [`package.json`](package.json) for a complete list of dependencies.
 
 ### Available Scripts
 
-- `pnpm run dev` - Start development server with Turbopack
-- `pnpm run build` - Build for production
-- `pnpm run start` - Start production server
-- `pnpm run lint` - Run ESLint
-
-Global formatting scripts from the root workspace can be run using:
+**Development & Build:**
 ```bash
-# From the project root
-pnpm format          # Format all files
-pnpm format:check    # Check formatting
+pnpm run dev          # Start development server with Turbopack
+pnpm run build        # Build for production
+pnpm run start        # Start production server
+pnpm run lint         # Run ESLint
+```
 
-# Or from this package directory
-pnpm run -w format
+**Code Quality:**
+```bash
+# From project root (recommended)
+pnpm run format       # Format all files
+pnpm run format:check # Check formatting
+pnpm run lint         # Run all linting
+
+# Alternative workspace commands
+pnpm run -w format    # Format from any package directory
 ```
 
 ### Code Quality
