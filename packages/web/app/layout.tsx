@@ -8,8 +8,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "Hume AI - EVI - Next.js Starter",
-  description: "A Next.js starter using Hume AI's Empathic Voice Interface",
+  title: "Web",
+  description:
+    "A Next.js application providing a modern web interface for real-time audio recording and transcription. Built with TypeScript, Tailwind CSS, and WebRTC audio capture.",
 };
 
 export default function RootLayout({
