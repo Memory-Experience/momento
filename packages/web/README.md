@@ -1,25 +1,72 @@
-<div align="center">
-  <img src="https://storage.googleapis.com/hume-public-logos/hume/hume-banner.png">
-  <h1>EVI Next.js App Router Example</h1>
-</div>
+# Web Frontend - Real-time Audio Recording Interface
 
-![preview.png](preview.png)
+A Next.js application that provides a modern web interface for real-time audio recording and transcription. Built with TypeScript, Tailwind CSS, and WebRTC audio capture.
 
-## Overview
+## Prerequisites
 
-This project features a sample implementation of Hume's [Empathic Voice Interface](https://hume.docs.buildwithfern.com/docs/empathic-voice-interface-evi/overview) using Hume's React SDK. Here, we have a simple EVI that uses the Next.js App Router.
+- **Node.js** v22+
+- **pnpm** v10.14+
+- Modern web browser with WebRTC support
 
-## Project deployment
+> **Note**: For installation instructions, refer to the [root README](../../README.md#prerequisites).
 
-Click the button below to deploy this example project with Vercel:
+## Getting Started
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fhumeai%2Fhume-evi-next-js-starter&env=HUME_API_KEY,HUME_SECRET_KEY)
+### 1. Install Dependencies
 
-Below are the steps to completing deployment:
+Install all project dependencies from the root directory:
 
-1. Create a Git Repository for your project.
-2. Provide the required environment variables. To get your API key and Client Secret key, log into the portal and visit the [API keys page](https://beta.hume.ai/settings/keys).
+```bash
+pnpm install
+```
 
-## Support
+### 2. Start Development Server
 
-If you have questions, require assistance, or wish to engage in discussions pertaining to this starter template, [please reach out to us on Discord](https://link.hume.ai/discord).
+From the web package directory:
+
+```bash
+cd packages/web
+pnpm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+### 3. Production Build
+
+```bash
+pnpm run build
+pnpm run start
+```
+
+## Development
+
+### Managing Dependencies
+
+Use `pnpm add` or `pnpm install` to manage Node.js package dependencies.
+
+See [`package.json`](package.json) for a complete list of dependencies.
+
+### Available Scripts
+
+- `pnpm run dev` - Start development server with Turbopack
+- `pnpm run build` - Build for production
+- `pnpm run start` - Start production server
+- `pnpm run lint` - Run ESLint
+
+Global formatting scripts from the root workspace can be run using:
+```bash
+# From the project root
+pnpm format          # Format all files
+pnpm format:check    # Check formatting
+
+# Or from this package directory
+pnpm run -w format
+```
+
+### Code Quality
+
+This package uses ESLint and Prettier with automatic formatting via git hooks. Configuration is inherited from the [root workspace](../../.lintstagedrc.yaml).
+
+## Attribution
+
+This frontend package is based on the [HumeAI EVI Next.js starter template](https://github.com/HumeAI/hume-evi-next-js-starter), available via [Vercel](https://vercel.com/templates/ai/empathic-voice-interface-starter). The original HumeAI functionality has been removed and replaced with our speech transcription implementation, while retaining the base UI components and project structure.
