@@ -1,7 +1,7 @@
 {
   "name": "uzh-masterproject",
   "version": "0.1.0",
-  "description": "",
+  "description": "Real-time speech-to-text transcription system with gRPC backend and Next.js frontend",
   "main": "index.js",
   "scripts": {
     "format": "prettier --ignore-unknown --write . && uvx ruff format",
