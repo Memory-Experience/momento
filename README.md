@@ -6,9 +6,9 @@ A real-time speech-to-text transcription system built with gRPC, featuring a Pyt
 
 This monorepo contains three main packages:
 
-- **[`packages/api/`](packages/api/)** - Python gRPC server for speech transcription
-- **[`packages/protos/`](packages/protos/)** - Protocol Buffers definitions and code generation
-- **[`packages/web/`](packages/web/)** - Next.js frontend with real-time audio recording and transcription
+- **[`packages/api/`](packages/api/README.md)** - Python gRPC server for speech transcription
+- **[`packages/protos/`](packages/protos/README.md)** - Protocol Buffers definitions and code generation
+- **[`packages/web/`](packages/web/README.md)** - Next.js frontend with real-time audio recording and transcription
 
 ## Prerequisites
 
@@ -47,31 +47,35 @@ uv python install
 
 Follow the [FFmpeg download and installation](https://ffmpeg.org/download.html) instructions for your system.
 
-#### 4. Install Dependencies
+## Quick Start
+
+Follow these steps to get the application running:
+
+### 1. Install Dependencies
 
 ```bash
-# Install all dependencies
+# Install all dependencies from the project root
 pnpm install  # Node.js dependencies
 uv sync       # Python dependencies
 ```
 
-## Quick Start
-
-### 1. Generate Protocol Buffers
+### 2. Generate Protocol Buffers
 
 ```bash
 cd packages/protos
 pnpm run build
 ```
 
-### 2. Start the API Server
+### 3. Start the Application
+
+Start the API server:
 
 ```bash
 cd packages/api
 pnpm run start
 ```
 
-### 3. Start the Web Frontend
+In a new terminal, start the web frontend:
 
 ```bash
 cd packages/web
@@ -103,10 +107,8 @@ Python tools can be run using `uvx ruff` (similar to `npx` for Node.js).
 
 ### Available Scripts
 
-Run from the project root:
-
 ```bash
-pnpm format          # Format all files
-pnpm format:check    # Check formatting
-pnpm lint            # Run linting
+pnpm run format       # Format all files
+pnpm run format:check # Check formatting
+pnpm run lint         # Run all linting
 ```
