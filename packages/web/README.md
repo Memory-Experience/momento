@@ -33,6 +33,7 @@ See [`package.json`](package.json) for a complete list of dependencies.
 ### Available Scripts
 
 **Development & Build:**
+
 ```bash
 pnpm run dev          # Start development server with Turbopack
 pnpm run build        # Build for production
@@ -41,6 +42,7 @@ pnpm run lint         # Run ESLint
 ```
 
 **Code Quality:**
+
 ```bash
 # From project root (recommended)
 pnpm run format       # Format all files
