@@ -2,29 +2,11 @@
 
 Protocol Buffer definitions and code generation for the speech transcription gRPC service. Generates Python bindings for the API server and TypeScript definitions for web clients.
 
-## Prerequisites
-
-- **Node.js** v22
-- **Python** 3.12
-- **pnpm** v10.14+ for Node.js package management
-- **uv** v0.8+ for Python package management
-
-> **Note**: For installation instructions, refer to the [root README](../../README.md#prerequisites).
-
 ## Getting Started
 
-### 1. Install Dependencies
+**Prerequisites**: Complete the setup steps in the [root README Prerequisites section](../../README.md#prerequisites) first and follow the steps to install dependencies in the [root README Quick Start section](../../README.md#quick-start).
 
-Install all project dependencies from the root directory:
-
-```bash
-uv sync          # Python dependencies
-pnpm install     # Node.js dependencies
-```
-
-### 2. Generate Protocol Buffer Code
-
-Generate all required code from the protos package:
+### Generate Protocol Buffer Code
 
 ```bash
 cd packages/protos
@@ -53,11 +35,30 @@ See [`pyproject.toml`](pyproject.toml) and [`package.json`](package.json) for co
 
 ### Available Scripts
 
-- `pnpm run build` - Clean output directory and generate all Protocol Buffer code
-- `pnpm run generate` - Generate protocol buffer code
-- `pnpm run clean` - Remove generated code
+**Development & Build:**
+```bash
+pnpm run build        # Run clean and generate
+pnpm run generate     # Generate protocol buffer code
+pnpm run clean        # Remove generated code
+```
 
-For all available scripts, see [`package.json`](package.json).
+**Code Quality:**
+```bash
+# From project root (recommended)
+pnpm run format       # Format all files
+pnpm run format:check # Check formatting
+pnpm run lint         # Run all linting
+
+# Alternative workspace commands
+pnpm run -w format    # Format from any package directory
+
+# Python-specific tools (alternative)
+uvx ruff format       # Format Python code
+uvx ruff check        # Lint Python code
+uvx ruff check --fix  # Lint and automatically fix issues
+```
+
+For complete script details, see [`package.json`](package.json).
 
 ### Generated Code
 
