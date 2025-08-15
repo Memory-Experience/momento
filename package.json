@@ -4,6 +4,7 @@
   "description": "Real-time speech-to-text transcription system with gRPC backend and Next.js frontend",
   "main": "index.js",
   "scripts": {
+    "build": "pnpm run -r build",
     "format": "prettier --ignore-unknown --write . && uvx ruff format",
     "format:check": "prettier --ignore-unknown --check . && uvx ruff format --check",
     "lint": "pnpm run -r lint && uvx ruff check",
