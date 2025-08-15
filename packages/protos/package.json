@@ -1,0 +1,39 @@
+{
+  "name": "protos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "",
+  "config": {
+    "commonArgs": "-I ./ ./stt.proto",
+    "commonPyArgs": "--python_out=generated/py --pyi_out=generated/py --grpc_python_out=generated/py",
+    "commonTsArgs": "--ts_proto_opt=esModuleInterop=true --ts_proto_opt=emitDeclarationOnly=true",
+    "tsClientsArgs": "--ts_proto_opt=outputClientImpl=grpc-web --ts_proto_opt=outputServices=grpc-js"
+  },
+  "scripts": {
+    "build": "pnpm run clean && pnpm run generate && uv build",
+    "clean": "rimraf -rf generated",
+    "generate": "pnpm run generate:py && pnpm run generate:py:fix && pnpm run generate:ts && pnpm run generate:ts:clients",
+    "generate:py": "mkdir -p generated/py && uvx --from grpcio-tools==1.71.2 python -m grpc_tools.protoc $npm_package_config_commonPyArgs $npm_package_config_commonArgs",
+    "generate:py:fix": "uvx --from protoletariat protol --create-package --in-place -o generated/py protoc $npm_package_config_commonPyArgs --proto-path=. $npm_package_config_commonArgs --protoc-path \"uvx --from grpcio-tools==1.71.2 python -m grpc_tools.protoc\"",
+    "generate:ts": "mkdir -p generated/ts && $(pnpm bin)/protoc --plugin=protoc-gen-ts_proto=$(pnpm bin)/protoc-gen-ts_proto --ts_proto_out=generated/ts $npm_package_config_commonTsArgs $npm_package_config_commonArgs",
+    "generate:ts:clients": "mkdir -p generated/ts/clients && $(pnpm bin)/protoc --plugin=protoc-gen-ts_proto=$(pnpm bin)/protoc-gen-ts_proto --ts_proto_out=generated/ts/clients $npm_package_config_commonTsArgs $npm_package_config_tsClientsArgs $npm_package_config_commonArgs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.14.0",
+  "devDependencies": {
+    "@protobuf-ts/plugin": "^2.11.1",
+    "@protobuf-ts/protoc": "^2.11.1",
+    "rimraf": "^6.0.1",
+    "ts-proto": "^2.7.7"
+  },
+  "dependencies": {
+    "@bufbuild/protobuf": "^2.6.3",
+    "@grpc/grpc-js": "catalog:",
+    "rxjs": "^7.8.2"
+  },
+  "files": [
+    "generated/ts/**/*"
+  ]
+}

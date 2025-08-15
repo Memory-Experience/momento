@@ -1,0 +1,27 @@
+{
+  "name": "uzh-masterproject",
+  "version": "0.1.0",
+  "description": "Real-time speech-to-text transcription system with gRPC backend and Next.js frontend",
+  "main": "index.js",
+  "scripts": {
+    "format": "prettier --ignore-unknown --write . && uvx ruff format",
+    "format:check": "prettier --ignore-unknown --check . && uvx ruff format --check",
+    "lint": "pnpm run -r lint && uvx ruff check",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.14.0",
+  "devDependencies": {
+    "@eslint/js": "catalog:",
+    "@typescript-eslint/parser": "catalog:",
+    "eslint": "catalog:",
+    "globals": "^16.3.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.1.4",
+    "prettier": "^3.6.2",
+    "typescript-eslint": "catalog:"
+  }
+}
