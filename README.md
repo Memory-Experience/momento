@@ -1,4 +1,4 @@
-# UZH Master Project
+# UZH Master Project &middot; [![Build](https://github.com/oberpierre/uzh-masterproject/actions/workflows/build.yaml/badge.svg)](https://github.com/oberpierre/uzh-masterproject/actions/workflows/build.yaml)
 
 A real-time speech-to-text transcription system built with gRPC, featuring a Python backend API and Next.js web frontend.
 
