@@ -29,6 +29,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
         """Bidirectional streaming RPC for audio transcription."""
         logging.info("Client connected.")
         audio_data = bytearray()
+        transcription: list[str] = []
 
         try:
             logging.info("Received a new transcription request.")
@@ -50,6 +51,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                         / 32768.0
                     )
                     segments, _ = self.transcriber.transcribe(audio_array)
+                    transcription.extend(segment.text for segment in segments)
 
                     for segment in segments:
                         logging.debug(f"Transcribed segment: {segment.text}")
@@ -65,16 +67,18 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
             logging.error(f"Error during transcription: {e}")
         finally:
             logging.info("Client disconnected.")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             if audio_data:
-                self.save_recording(audio_data)
+                self.save_recording(f"recording_{timestamp}.wav", audio_data)
+            if transcription:
+                self.save_transcription(f"transcription_{timestamp}.txt", transcription)
 
-    def save_recording(self, audio_data: bytearray):
+    def save_recording(self, file_name: str, audio_data: bytearray):
         """Saves the recorded audio to a WAV file."""
         if not os.path.exists(RECORDINGS_DIR):
             os.makedirs(RECORDINGS_DIR)
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        wav_filename = os.path.join(RECORDINGS_DIR, f"recording_{timestamp}.wav")
+        wav_filename = os.path.join(RECORDINGS_DIR, file_name)
 
         try:
             # PCM signed 16-bit little-endian format
@@ -89,6 +93,20 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
             logging.info(f"Recording saved to {wav_filename}")
         except Exception as e:
             logging.error(f"Failed to save recording: {e}")
+
+    def save_transcription(self, file_name: str, transcription: list[str]) -> None:
+        """Saves the transcription to a text file."""
+        if not os.path.exists(RECORDINGS_DIR):
+            os.makedirs(RECORDINGS_DIR)
+
+        txt_filename = os.path.join(RECORDINGS_DIR, file_name)
+
+        try:
+            with open(txt_filename, "w") as f:
+                f.writelines("".join(transcription))
+            logging.info(f"Transcription saved to {txt_filename}")
+        except Exception as e:
+            logging.error(f"Failed to save transcription: {e}")
 
 
 async def serve() -> None:
