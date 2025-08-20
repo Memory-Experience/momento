@@ -3,8 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from domain.memory import Memory
-
-from packages.api.persistence.persistence_service import PersistenceService
+from persistence.persistence_service import PersistenceService
 
 
 @pytest.fixture
