@@ -2,9 +2,8 @@ import asyncio
 
 import pytest
 from domain.memory import Memory
-
-from packages.api.persistence.persistence_service import PersistenceService
-from packages.api.persistence.repositories.in_memory_repository import (
+from persistence.persistence_service import PersistenceService
+from persistence.repositories.in_memory_repository import (
     InMemoryRepository,
 )
 
