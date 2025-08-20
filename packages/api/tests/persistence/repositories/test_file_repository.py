@@ -2,9 +2,8 @@ import asyncio
 
 import pytest
 from domain.memory import Memory
-
-from packages.api.persistence.persistence_service import PersistenceService
-from packages.api.persistence.repositories.file_repository import FileRepository
+from persistence.persistence_service import PersistenceService
+from persistence.repositories.file_repository import FileRepository
 
 
 @pytest.fixture
