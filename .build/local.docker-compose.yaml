@@ -1,0 +1,17 @@
+name: masterproject
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: always
+    ports:
+      - 5432:5432
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d:ro
+    environment:
+      POSTGRES_USER: uzh
+      POSTGRES_PASSWORD: password
+
+volumes:
+  db_data:
