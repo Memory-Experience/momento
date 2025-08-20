@@ -75,7 +75,8 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
             if audio_data:
                 # Create a domain object using the factory method
                 memory = Memory.create(bytes(audio_data), transcription)
-                await self.persistence_service.save_memory(memory)
+                uri = await self.persistence_service.save_memory(memory)
+                logging.info(f"Memory saved with URI: {uri}")
 
 
 async def serve() -> None:

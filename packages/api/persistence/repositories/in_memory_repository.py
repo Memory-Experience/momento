@@ -19,10 +19,13 @@ class InMemoryRepository(Repository):
 
         self.memories[memory.id] = memory
         logging.info(f"Memory saved in memory with key: {memory.id}")
-        return memory.id
+        return f"in_memory://{memory.id}"
 
-    async def find_by_id(self, id: str) -> Memory | None:
-        """Find a memory by its ID."""
+    async def find_by_uri(self, uri: str) -> Memory | None:
+        """Find a memory by its URI."""
+        if not uri.startswith("in_memory://"):
+            raise ValueError(f"Invalid in-memory URI: {uri}")
+        id = uri[len("in_memory://") :]
         memory = self.memories.get(id)
         if memory:
             logging.info(f"Memory found with key: {id}")

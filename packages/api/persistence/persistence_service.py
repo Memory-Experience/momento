@@ -28,6 +28,18 @@ class PersistenceService:
             memory: The memory to save
 
         Returns:
-            The identifier for the saved memory
+            The URI for the saved memory
         """
         return await self.repository.save(memory)
+
+    async def load_memory(self, uri: str) -> Memory | None:
+        """
+        Load a memory by its URI.
+
+        Args:
+            uri: The memory URI
+
+        Returns:
+            The memory if found, None otherwise
+        """
+        return await self.repository.find_by_uri(uri)
