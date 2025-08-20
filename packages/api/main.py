@@ -1,13 +1,12 @@
 import asyncio
 import logging
-import os
 import sys
-from datetime import datetime
 
 import grpc
 import numpy as np
+from domain.memory import Memory
+from persistence import FileRepository, PersistenceService
 from protos.generated.py import stt_pb2, stt_pb2_grpc
-from pydub import AudioSegment
 from transcriber.faster_whisper_transcriber import FasterWhisperTranscriber
 
 _cleanup_coroutines = []
@@ -24,6 +23,10 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
     def __init__(self):
         self.transcriber = FasterWhisperTranscriber()
         self.transcriber.initialize()
+
+        # Initialize the persistence service with a file repository
+        repository = FileRepository(storage_dir=RECORDINGS_DIR, sample_rate=SAMPLE_RATE)
+        self.persistence_service = PersistenceService(repository)
 
     async def Transcribe(self, request_iterator, context):
         """Bidirectional streaming RPC for audio transcription."""
@@ -67,46 +70,10 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
             logging.error(f"Error during transcription: {e}")
         finally:
             logging.info("Client disconnected.")
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             if audio_data:
-                self.save_recording(f"recording_{timestamp}.wav", audio_data)
-            if transcription:
-                self.save_transcription(f"transcription_{timestamp}.txt", transcription)
-
-    def save_recording(self, file_name: str, audio_data: bytearray):
-        """Saves the recorded audio to a WAV file."""
-        if not os.path.exists(RECORDINGS_DIR):
-            os.makedirs(RECORDINGS_DIR)
-
-        wav_filename = os.path.join(RECORDINGS_DIR, file_name)
-
-        try:
-            # PCM signed 16-bit little-endian format
-            audio_segment = AudioSegment(
-                data=audio_data,
-                sample_width=2,  # 2 bytes for s16le
-                frame_rate=SAMPLE_RATE,
-                channels=1,  # Mono audio
-            )
-            audio_segment.export(wav_filename, format="wav")
-
-            logging.info(f"Recording saved to {wav_filename}")
-        except Exception as e:
-            logging.error(f"Failed to save recording: {e}")
-
-    def save_transcription(self, file_name: str, transcription: list[str]) -> None:
-        """Saves the transcription to a text file."""
-        if not os.path.exists(RECORDINGS_DIR):
-            os.makedirs(RECORDINGS_DIR)
-
-        txt_filename = os.path.join(RECORDINGS_DIR, file_name)
-
-        try:
-            with open(txt_filename, "w") as f:
-                f.writelines("".join(transcription))
-            logging.info(f"Transcription saved to {txt_filename}")
-        except Exception as e:
-            logging.error(f"Failed to save transcription: {e}")
+                # Create a domain object using the factory method
+                memory = Memory.create(bytes(audio_data), transcription)
+                await self.persistence_service.save_memory(memory)
 
 
 async def serve() -> None:
