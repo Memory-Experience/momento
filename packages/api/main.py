@@ -114,7 +114,6 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
 
 async def serve() -> None:
     """Starts the gRPC server."""
-    load_dotenv(".env.local")
     conn = psycopg2.connect(
         dbname=os.getenv("DB_NAME"),
         user=os.getenv("DB_USER"),
@@ -148,8 +147,18 @@ if __name__ == "__main__":
     log_level = logging.INFO
     if "-v" in sys.argv:
         log_level = logging.DEBUG
-
     logging.basicConfig(level=log_level)
+
+    if "-e" in sys.argv:
+        env_index = sys.argv.index("-e") + 1
+        if env_index < len(sys.argv):
+            env_file = sys.argv[env_index]
+            logging.info(f"Loading {env_file} file")
+            load_dotenv(env_file)
+    else:
+        logging.info("Loading default .env file")
+        load_dotenv()
+
     loop = asyncio.new_event_loop()
     try:
         loop.run_until_complete(serve())

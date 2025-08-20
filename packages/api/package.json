@@ -4,6 +4,7 @@
   "private": true,
   "description": "",
   "scripts": {
+    "dev": "uv run main.py -e .env.local",
     "start": "uv run main.py"
   },
   "keywords": [],

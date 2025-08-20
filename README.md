@@ -72,7 +72,7 @@ Start the API server:
 
 ```bash
 cd packages/api
-pnpm run start
+pnpm run dev
 ```
 
 In a new terminal, start the web frontend:
