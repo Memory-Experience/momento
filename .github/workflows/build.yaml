@@ -41,6 +41,20 @@ jobs:
           pnpm install --frozen-lockfile
           uv sync --locked
 
+      - name: Generate Protocol Buffers
+        run: pnpm --filter ./packages/protos run build
+
+      - name: Install Python packages (workspace)
+        run: |
+          uv pip install -e ./packages/protos
+          uv pip install -e ./packages/api[test]
+
+      - name: Run API tests
+        run: pnpm --filter ./packages/api run test:ci
+
+      - name: Clean up Protocol Buffers
+        run: pnpm --filter ./packages/protos run clean
+
       - name: Check code quality
         run: |
           pnpm run format:check
