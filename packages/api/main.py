@@ -5,7 +5,8 @@ import sys
 import grpc
 import numpy as np
 from domain.memory import Memory
-from persistence import FileRepository, PersistenceService
+from persistence.repositories.file_repository import FileRepository
+from persistence.service import PersistenceService
 from protos.generated.py import stt_pb2, stt_pb2_grpc
 from transcriber.faster_whisper_transcriber import FasterWhisperTranscriber
 
