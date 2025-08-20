@@ -4,7 +4,9 @@
   "private": true,
   "description": "",
   "scripts": {
-    "start": "uv run main.py"
+    "start": "uv run main.py",
+    "test": "uv run -p 3.12 -m pytest tests -v",
+    "test:ci": "uv run -p 3.12 -m pytest -q"
   },
   "keywords": [],
   "author": "",
