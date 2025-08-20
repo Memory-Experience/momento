@@ -15,17 +15,17 @@ class Repository(ABC):
             memory: The memory to save
 
         Returns:
-            The identifier for the saved memory
+            The URI for the saved memory
         """
         pass
 
     @abstractmethod
-    async def find_by_id(self, id: str) -> Memory | None:
+    async def find_by_uri(self, uri: str) -> Memory | None:
         """
-        Find a memory by its ID.
+        Find a memory by its URI.
 
         Args:
-            id: The memory identifier
+            uri: The memory URI
 
         Returns:
             The memory if found, None otherwise

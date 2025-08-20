@@ -64,15 +64,18 @@ class FileRepository(Repository):
                     f,
                 )
 
-            return memory.id
+            return f"file://{audio_filepath}"
 
         except Exception as e:
             logging.error(f"Failed to save memory: {e}")
             raise
 
-    async def find_by_id(self, id: str) -> Memory | None:
-        """Find a memory by its ID."""
-        audio_filepath = os.path.join(self.storage_dir, f"{id}.wav")
+    async def find_by_uri(self, uri: str) -> Memory | None:
+        """Find a memory by its URI."""
+        if not uri.startswith("file://"):
+            raise ValueError(f"Unsupported URI scheme: {uri}")
+        audio_filepath = uri[len("file://") :]
+        id = os.path.splitext(os.path.basename(audio_filepath))[0]
         transcript_filepath = os.path.join(self.storage_dir, f"{id}.txt")
 
         if not os.path.exists(audio_filepath):
