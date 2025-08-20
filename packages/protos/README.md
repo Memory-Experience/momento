@@ -71,7 +71,7 @@ Generated code is excluded from version control and built automatically by the C
 
 ## Usage Examples
 
-### Python (API Server)
+### Python
 
 ```python
 from protos.generated.py import stt_pb2, stt_pb2_grpc

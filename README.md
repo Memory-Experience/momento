@@ -6,7 +6,7 @@ A real-time speech-to-text transcription system built with gRPC, featuring a Pyt
 
 This monorepo contains three main packages:
 
-- **[`packages/api/`](packages/api/README.md)** - Python gRPC server for speech transcription
+- **[`packages/grpc-server/`](packages/grpc-server/README.md)** - Python gRPC server for speech transcription
 - **[`packages/protos/`](packages/protos/README.md)** - Protocol Buffers definitions and code generation
 - **[`packages/web/`](packages/web/README.md)** - Next.js frontend with real-time audio recording and transcription
 
@@ -18,7 +18,7 @@ This monorepo contains three main packages:
 - **Python** 3.12 (see [`.python-version`](.python-version))
 - **pnpm** v10.14+ for Node.js package management
 - **uv** v0.8+ for Python package management
-- **FFmpeg** required by the transcription API
+- **FFmpeg** required by grpc-server to process audio format
 - **libpq** required by psycopg2
 
 ### Installation
@@ -92,10 +92,10 @@ pnpm run build
 
 ### 4. Start the Application
 
-Start the API server:
+Start the gRPC server:
 
 ```bash
-cd packages/api
+cd packages/grpc-server
 pnpm run dev
 ```
 

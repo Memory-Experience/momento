@@ -1,4 +1,4 @@
-# API Package
+# gRPC server Package
 
 A Python-based gRPC server providing real-time speech transcription services using Faster Whisper and Protocol Buffers for efficient communication.
 
@@ -8,7 +8,7 @@ A Python-based gRPC server providing real-time speech transcription services usi
 
 ### Configuration
 
-The API requires database connection configuration via environment variables. You can provide these in several ways:
+The server requires database connection configuration via environment variables. You can provide these in several ways:
 
 #### Environment Variables
 
@@ -32,7 +32,7 @@ DB_HOST=localhost DB_PORT=5432 DB_NAME=uzh DB_USER=uzh pnpm run start
 You can use `.env` files to manage configuration:
 
 **Option 1: Default configuration**
-Create a `.env` file in the `api` package with your database settings:
+Create a `.env` file in the `grpc-server` package with your database settings:
 
 ```env
 DB_HOST=localhost
@@ -54,7 +54,7 @@ uv run main.py -e .env.production
 ### Start the Server
 
 ```bash
-cd packages/api
+cd packages/grpc-server
 pnpm run dev          # Uses .env.local configuration
 pnpm run start        # Uses default .env or system environment variables
 
