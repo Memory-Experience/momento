@@ -395,3 +395,6 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+# Allowing specific .env files for local development
+!.env.local

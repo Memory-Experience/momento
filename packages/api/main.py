@@ -6,6 +6,8 @@ from datetime import datetime
 
 import grpc
 import numpy as np
+import psycopg2
+from dotenv import load_dotenv
 from protos.generated.py import stt_pb2, stt_pb2_grpc
 from pydub import AudioSegment
 from transcriber.faster_whisper_transcriber import FasterWhisperTranscriber
@@ -21,7 +23,8 @@ SAMPLE_RATE = 16000
 class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
     """Provides methods that implement functionality of transcription service."""
 
-    def __init__(self):
+    def __init__(self, db_connection: psycopg2.extensions.connection):
+        self.db_connection = db_connection
         self.transcriber = FasterWhisperTranscriber()
         self.transcriber.initialize()
 
@@ -111,9 +114,17 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
 
 async def serve() -> None:
     """Starts the gRPC server."""
+    load_dotenv(".env.local")
+    conn = psycopg2.connect(
+        dbname=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+        host=os.getenv("DB_HOST"),
+        port=os.getenv("DB_PORT"),
+    )
     server = grpc.aio.server()
     stt_pb2_grpc.add_TranscriptionServiceServicer_to_server(
-        TranscriptionServiceServicer(), server
+        TranscriptionServiceServicer(db_connection=conn), server
     )
     listen_addr = f"[::]:{PORT}"
     server.add_insecure_port(listen_addr)
@@ -122,6 +133,7 @@ async def serve() -> None:
 
     async def server_graceful_shutdown():
         logging.info("Starting graceful shutdown...")
+        conn.close()
         # Shuts down the server with 5 seconds of grace period. During the
         # grace period, the server won't accept new connections and allow
         # existing RPCs to continue within the grace period.

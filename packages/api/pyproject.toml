@@ -13,4 +13,6 @@ dependencies = [
     "torch>=2.8.0",
     "numpy>=2.3.2",
     "faster-whisper>=1.2.0",
+    "psycopg2>=2.9.10",
+    "python-dotenv>=1.1.1",
 ]
