@@ -6,9 +6,10 @@ import grpc
 import numpy as np
 from domain.memory import Memory
 from persistence.repositories.file_repository import FileRepository
-from persistence.service import PersistenceService
 from protos.generated.py import stt_pb2, stt_pb2_grpc
 from transcriber.faster_whisper_transcriber import FasterWhisperTranscriber
+
+from packages.api.persistence.persistence_service import PersistenceService
 
 _cleanup_coroutines = []
 
