@@ -19,6 +19,7 @@ This monorepo contains three main packages:
 - **pnpm** v10.14+ for Node.js package management
 - **uv** v0.8+ for Python package management
 - **FFmpeg** required by the transcription API
+- **libpq** required by psycopg2
 
 ### Installation
 
@@ -47,6 +48,15 @@ uv python install
 
 Follow the [FFmpeg download and installation](https://ffmpeg.org/download.html) instructions for your system.
 
+#### 4. Install libpq
+
+The Python PostgreSQL adapter (`psycopg2`) requires `libpq`. Install the appropriate package for your system:
+
+- **Ubuntu/Debian**: `sudo apt-get install libpq-dev`
+- **MacOS**: `brew install libpq`
+
+For other systems or troubleshooting, see the [official psycopg installation guide](https://www.psycopg.org/docs/install.html#build-prerequisites).
+
 ## Quick Start
 
 Follow these steps to get the application running:
@@ -59,14 +69,28 @@ pnpm install  # Node.js dependencies
 uv sync       # Python dependencies
 ```
 
-### 2. Generate Protocol Buffers
+### 2. Start the Database
+
+Start the PostgreSQL database using Docker Compose:
+
+```bash
+docker compose -f .build/local.docker-compose.yaml up -d
+```
+
+This will start a local PostgreSQL database on port 5432 with the credentials:
+
+- User: `uzh`
+- Password: `password`
+- Database: `uzh` (auto-created)
+
+### 3. Generate Protocol Buffers
 
 ```bash
 cd packages/protos
 pnpm run build
 ```
 
-### 3. Start the Application
+### 4. Start the Application
 
 Start the API server:
 
