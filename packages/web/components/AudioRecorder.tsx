@@ -49,174 +49,175 @@ export default function AudioRecorder({}) {
     }
   }, []);
 
-  const recordAudio = useCallback(async () => {
-    console.log("Connecting to server...");
-
-    try {
-      chunks.current = [];
-      setTranscriptions([]);
-
-      // Generate session ID
-      sessionId.current = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-      // Start Server-Sent Events connection
-      eventSource.current = new EventSource(
-        `/api/transcribe?sessionId=${sessionId.current}`,
-      );
-
-      eventSource.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-
-          if (data.type === "connected") {
-            console.log("Connected to transcription service");
-            toast.success("Connected to transcription service");
-          } else if (data.type === "transcript") {
-            setTranscriptions((prev) => [...prev, data.text]);
-          }
-        } catch (error) {
-          console.error("Error parsing SSE data:", error);
-        }
-      };
-
-      eventSource.current.onerror = (error) => {
-        console.error("SSE connection error:", error);
-        toast.error("Connection error occurred");
-      };
-
-      // Request microphone with explicit constraints
-      const constraints = {
-        audio: {
-          channelCount: 1,
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-        video: false,
-      };
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      // Create AudioContext WITHOUT specifying sample rate - let it match the native rate
-      const audioCtx = new AudioContext({
-        latencyHint: "interactive",
-      });
-      audioCtxRef.current = audioCtx;
-
-      console.debug(
-        `Created AudioContext with sample rate: ${audioCtx.sampleRate}Hz and ${audioCtx}`,
-      );
-
-      if (audioCtx.state === "suspended") {
-        await audioCtx.resume();
-      }
-
-      // Create MediaStream source
-      const source = audioCtx.createMediaStreamSource(stream);
+  const recordAudio = useCallback(
+    async (type: "memory" | "question") => {
+      console.log("Connecting to server...");
 
       try {
-        await audioCtx.audioWorklet.addModule(
-          "/worklets/audio-recorder.worklet.js",
-        );
-      } catch (workletError) {
-        console.error("Error loading audio worklet:", workletError);
-        toast.error(
-          "Failed to load audio processing module. Please try again.",
-        );
-        return;
-      }
+        chunks.current = [];
+        setTranscriptions([]);
 
-      // Create recorder node with detailed parameters - now the worklet will handle resampling
-      const recorderNode = new AudioWorkletNode(
-        audioCtx,
-        "audio-recorder-processor",
-        {
-          numberOfInputs: 1,
-          numberOfOutputs: 1,
-          channelCount: 1,
-          processorOptions: {
-            nativeContextSampleRate: audioCtx.sampleRate,
-            targetSampleRate: 16000, // We still want 16kHz output for consistency
+        // Generate session ID
+        sessionId.current = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        // Start Server-Sent Events connection
+        eventSource.current = new EventSource(
+          `/api/transcribe?sessionId=${sessionId.current}`,
+        );
+
+        eventSource.current.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+
+            if (data.type === "connected") {
+              console.log("Connected to transcription service");
+              toast.success("Connected to transcription service");
+            } else if (data.type === "transcript") {
+              setTranscriptions((prev) => [...prev, data.text]);
+            }
+          } catch (error) {
+            console.error("Error parsing SSE data:", error);
+          }
+        };
+
+        eventSource.current.onerror = (error) => {
+          console.error("SSE connection error:", error);
+          toast.error("Connection error occurred");
+        };
+
+        // Request microphone with explicit constraints
+        const constraints = {
+          audio: {
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
           },
-        },
-      );
+          video: false,
+        };
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
-      // Enhanced message handler
-      recorderNode.port.onmessage = async (event: MessageEvent) => {
-        // Check if it's a debug message
-        if (event.data && event.data.type === "debug") {
+        // Create AudioContext WITHOUT specifying sample rate - let it match the native rate
+        const audioCtx = new AudioContext({
+          latencyHint: "interactive",
+        });
+        audioCtxRef.current = audioCtx;
+
+        console.debug(
+          `Created AudioContext with sample rate: ${audioCtx.sampleRate}Hz and ${audioCtx}`,
+        );
+
+        if (audioCtx.state === "suspended") {
+          await audioCtx.resume();
+        }
+
+        // Create MediaStream source
+        const source = audioCtx.createMediaStreamSource(stream);
+
+        try {
+          await audioCtx.audioWorklet.addModule(
+            "/worklets/audio-recorder.worklet.js",
+          );
+        } catch (workletError) {
+          console.error("Error loading audio worklet:", workletError);
+          toast.error(
+            "Failed to load audio processing module. Please try again.",
+          );
           return;
         }
 
-        // Check if it's an audio level message
-        if (event.data && event.data.type === "level") {
-          // This is where you would handle audio level updates
-          // setAudioLevel(event.data.value);
-          return;
-        }
+        // Create recorder node with detailed parameters - now the worklet will handle resampling
+        const recorderNode = new AudioWorkletNode(
+          audioCtx,
+          "audio-recorder-processor",
+          {
+            numberOfInputs: 1,
+            numberOfOutputs: 1,
+            channelCount: 1,
+            processorOptions: {
+              nativeContextSampleRate: audioCtx.sampleRate,
+              targetSampleRate: 16000, // We still want 16kHz output for consistency
+            },
+          },
+        );
 
-        // Otherwise it's audio data
-        const pcmBytes = event.data;
-        if (pcmBytes instanceof Uint8Array && pcmBytes.byteLength > 0) {
-          const byteCopy = new Uint8Array(pcmBytes);
-          sendData(byteCopy);
-        }
-      };
+        // Enhanced message handler
+        recorderNode.port.onmessage = async (event: MessageEvent) => {
+          // Check if it's a debug message
+          if (event.data && event.data.type === "debug") {
+            return;
+          }
 
-      // Configure worklet
-      recorderNode.port.postMessage({
-        command: "init",
-        config: {
-          bufferDuration: 100, // 100ms chunks
-          nativeSampleRate: audioCtx.sampleRate,
-          targetSampleRate: 16000,
-        },
-      });
+          // Check if it's an audio level message
+          if (event.data && event.data.type === "level") {
+            // This is where you would handle audio level updates
+            // setAudioLevel(event.data.value);
+            return;
+          }
 
-      // Connect nodes
-      source.connect(recorderNode);
+          // Otherwise it's audio data
+          const pcmBytes = event.data;
+          if (pcmBytes instanceof Uint8Array && pcmBytes.byteLength > 0) {
+            const byteCopy = new Uint8Array(pcmBytes);
+            sendData(byteCopy);
+          }
+        };
 
-      const silentGain = audioCtx.createGain();
-      silentGain.gain.value = 0;
-      recorderNode.connect(silentGain).connect(audioCtx.destination);
+        // Configure worklet
+        recorderNode.port.postMessage({
+          command: "init",
+          config: {
+            bufferDuration: 100, // 100ms chunks
+            nativeSampleRate: audioCtx.sampleRate,
+            targetSampleRate: 16000,
+          },
+        });
 
-      setIsRecording(true);
-      setRecordingTime(0);
-      // Start timer
-      timerRef.current = setInterval(() => {
-        setRecordingTime((prev) => prev + 1);
-      }, 1000);
-    } catch (error) {
-      setIsRecording(false);
-      setRecordingTime(0);
-      throw error;
-    }
-  }, [sendData, setIsRecording, setTranscriptions]);
+        // Connect nodes
+        source.connect(recorderNode);
+
+        const silentGain = audioCtx.createGain();
+        silentGain.gain.value = 0;
+        recorderNode.connect(silentGain).connect(audioCtx.destination);
+
+        setMode(type);
+        setIsRecording(true);
+        setRecordingTime(0);
+        // Start timer
+        timerRef.current = setInterval(() => {
+          setRecordingTime((prev) => prev + 1);
+        }, 1000);
+      } catch (error) {
+        setMode(undefined);
+        setIsRecording(false);
+        setRecordingTime(0);
+        throw error;
+      }
+    },
+    [sendData, setMode, setIsRecording, setTranscriptions],
+  );
 
   const startRecording = useCallback(async () => {
     try {
-      await recordAudio();
-      setMode("memory");
+      await recordAudio("memory");
     } catch (error) {
       toast.error(
         "Failed to record memory. Ensure microphone permissions are granted or try again later.",
       );
       console.error("Unable to start recording memory:", error);
-      setMode(undefined);
     }
-  }, [setMode, recordAudio]);
+  }, [recordAudio]);
 
   const askQuestion = useCallback(async () => {
     try {
-      await recordAudio();
-      setMode("question");
+      await recordAudio("question");
     } catch (error) {
       toast.error(
         "Failed to ask question. Ensure microphone permissions are granted or try again later.",
       );
       console.error("Unable to start recording question:", error);
-      setMode(undefined);
     }
-  }, [setMode, recordAudio]);
+  }, [recordAudio]);
 
   const stopRecording = useCallback(async () => {
     if (timerRef.current) {
