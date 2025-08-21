@@ -49,7 +49,7 @@ export default function AudioRecorder({}) {
     }
   }, []);
 
-  const startRecording = useCallback(async () => {
+  const recordAudio = useCallback(async () => {
     console.log("Connecting to server...");
 
     try {
@@ -179,25 +179,44 @@ export default function AudioRecorder({}) {
       silentGain.gain.value = 0;
       recorderNode.connect(silentGain).connect(audioCtx.destination);
 
-      setMode("memory");
       setIsRecording(true);
       setRecordingTime(0);
-
       // Start timer
       timerRef.current = setInterval(() => {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
     } catch (error) {
-      toast.error("Failed to access microphone. Please check permissions.");
-      console.error("Error starting recording:", error);
       setIsRecording(false);
       setRecordingTime(0);
+      throw error;
     }
-  }, [sendData, setMode, setIsRecording, setTranscriptions]);
+  }, [sendData, setIsRecording, setTranscriptions]);
+
+  const startRecording = useCallback(async () => {
+    try {
+      await recordAudio();
+      setMode("memory");
+    } catch (error) {
+      toast.error(
+        "Failed to record memory. Ensure microphone permissions are granted or try again later.",
+      );
+      console.error("Unable to start recording memory:", error);
+      setMode(undefined);
+    }
+  }, [setMode, recordAudio]);
 
   const askQuestion = useCallback(async () => {
-    setMode("question");
-  }, [setMode]);
+    try {
+      await recordAudio();
+      setMode("question");
+    } catch (error) {
+      toast.error(
+        "Failed to ask question. Ensure microphone permissions are granted or try again later.",
+      );
+      console.error("Unable to start recording question:", error);
+      setMode(undefined);
+    }
+  }, [setMode, recordAudio]);
 
   const stopRecording = useCallback(async () => {
     if (timerRef.current) {
@@ -226,10 +245,11 @@ export default function AudioRecorder({}) {
       }
     }
 
+    setMode(undefined);
     setIsRecording(false);
     setRecordingTime(0);
     sessionId.current = null;
-  }, [setIsRecording]);
+  }, [setMode, setIsRecording, setRecordingTime]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
