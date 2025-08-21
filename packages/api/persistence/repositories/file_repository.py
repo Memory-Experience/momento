@@ -79,6 +79,18 @@ class FileRepository(Repository):
             raise ValueError(f"Unsupported URI scheme: {uri}")
         audio_filepath = uri[len(FILE_URI_SCHEME) :]
 
+        # Security check: Ensure the file is within the storage directory
+        audio_abs_path = os.path.abspath(audio_filepath)
+        storage_abs_path = os.path.abspath(self.storage_dir)
+        if not audio_abs_path.startswith(storage_abs_path):
+            logging.warning(
+                "Security violation: Attempted to access file "
+                f"outside storage directory: {audio_filepath}"
+            )
+            raise ValueError(
+                "Access denied: Cannot access files outside the storage directory"
+            )
+
         id = os.path.splitext(os.path.basename(audio_filepath))[0]
         transcript_filepath = os.path.join(self.storage_dir, f"{id}.txt")
 
