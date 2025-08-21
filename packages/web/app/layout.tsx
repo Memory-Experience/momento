@@ -8,9 +8,9 @@ import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 export const metadata: Metadata = {
-  title: "Web",
+  title: "Momento",
   description:
-    "A Next.js application providing a modern web interface for real-time audio recording and transcription. Built with TypeScript, Tailwind CSS, and WebRTC audio capture.",
+    "An application providing a modern web interface for capturing memories and moments in your life. Allowing users to search through their past events and experiences.",
 };
 
 export default function RootLayout({
