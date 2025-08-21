@@ -10,6 +10,18 @@ service TranscriptionService {
 // Audio chunk from client (e.g., microphone input)
 message AudioChunk {
   bytes data = 1; // Audio data
+  SessionMetadata metadata = 2; // Optional metadata (only sent on first chunk)
+}
+
+// Session metadata to indicate the type of session
+message SessionMetadata {
+  string session_id = 1;
+  SessionType type = 2;
+}
+
+enum SessionType {
+  MEMORY = 0;
+  QUESTION = 1;
 }
 
 // Transcription result from SST service
@@ -17,11 +29,15 @@ message Transcript {
   string text = 1; // Recognized speech text (partial or complete)
 }
 
+// Answer to user question using RAG
+message Answer {
+  string text = 1;
+}
+
 // A response from the server can be one of many types
 message StreamResponse {
   oneof response {
     Transcript transcript = 1;
-    // Potentially other response types in the future
-    // e.g., EmotionAnalysisResult emotion = 2;
+    Answer answer = 2;
   }
 }
