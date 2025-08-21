@@ -29,20 +29,6 @@ dependencies = [
     { name = "transformers" },
 ]
 
-[package.optional-dependencies]
-test = [
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-mock" },
-]
-
-[package.dev-dependencies]
-test = [
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-mock" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "faster-whisper", specifier = ">=1.2.0" },
@@ -51,19 +37,8 @@ requires-dist = [
     { name = "protobuf", specifier = "==5.29.5" },
     { name = "protos", editable = "packages/protos" },
     { name = "pydub", specifier = ">=0.25.1" },
-    { name = "pytest", marker = "extra == 'test'", specifier = ">=8.0.0" },
-    { name = "pytest-asyncio", marker = "extra == 'test'", specifier = ">=0.23.0" },
-    { name = "pytest-mock", marker = "extra == 'test'", specifier = ">=3.12.0" },
     { name = "torch", specifier = ">=2.8.0", index = "https://download.pytorch.org/whl/cpu" },
     { name = "transformers", specifier = ">=4.55.1" },
-]
-provides-extras = ["test"]
-
-[package.metadata.requires-dev]
-test = [
-    { name = "pytest", specifier = ">=8.0.0" },
-    { name = "pytest-asyncio", specifier = ">=0.23.0" },
-    { name = "pytest-mock", specifier = ">=3.12.0" },
 ]
 
 [[package]]
@@ -962,6 +937,9 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-mock" },
     { name = "ruff" },
 ]
 
@@ -972,4 +950,9 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "ruff", specifier = ">=0.12.8" }]
+dev = [
+    { name = "pytest", specifier = ">=8.4.1" },
+    { name = "pytest-asyncio", specifier = ">=1.1.0" },
+    { name = "pytest-mock", specifier = ">=3.14.1" },
+    { name = "ruff", specifier = ">=0.12.8" },
+]
