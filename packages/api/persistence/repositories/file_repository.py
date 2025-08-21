@@ -8,6 +8,9 @@ from pydub import AudioSegment
 
 from .repository_interface import Repository
 
+# Constants
+FILE_URI_SCHEME = "file://"
+
 
 class FileRepository(Repository):
     """Repository implementation that stores memories in the filesystem."""
@@ -64,7 +67,7 @@ class FileRepository(Repository):
                     f,
                 )
 
-            return f"file://{audio_filepath}"
+            return f"{FILE_URI_SCHEME}{audio_filepath}"
 
         except Exception as e:
             logging.error(f"Failed to save memory: {e}")
@@ -72,9 +75,10 @@ class FileRepository(Repository):
 
     async def find_by_uri(self, uri: str) -> Memory | None:
         """Find a memory by its URI."""
-        if not uri.startswith("file://"):
+        if not uri.startswith(FILE_URI_SCHEME):
             raise ValueError(f"Unsupported URI scheme: {uri}")
-        audio_filepath = uri[len("file://") :]
+        audio_filepath = uri[len(FILE_URI_SCHEME) :]
+
         id = os.path.splitext(os.path.basename(audio_filepath))[0]
         transcript_filepath = os.path.join(self.storage_dir, f"{id}.txt")
 
