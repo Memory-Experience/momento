@@ -3,13 +3,24 @@ import { cn } from "@/utils";
 import { AnimatePresence, motion } from "motion/react";
 import { ComponentRef, forwardRef } from "react";
 import { Mic } from "lucide-react";
+import { TranscriptionItem } from "@/context/ChatContext";
 
 interface MessagesProps {
-  transcriptions: string[];
+  transcriptions: TranscriptionItem[];
 }
 
 const Messages = forwardRef<ComponentRef<typeof motion.div>, MessagesProps>(
   function Messages({ transcriptions }, ref) {
+    const messages = transcriptions.reduce((acc, curr) => {
+      const lastMessage = acc[acc.length - 1];
+      if (lastMessage && lastMessage.type === curr.type) {
+        lastMessage.text += curr.text;
+      } else {
+        acc.push({ ...curr });
+      }
+      return acc;
+    }, [] as TranscriptionItem[]);
+    console.debug("Rendering Messages component", transcriptions, messages);
     return (
       <motion.div
         layoutScroll
@@ -33,14 +44,26 @@ const Messages = forwardRef<ComponentRef<typeof motion.div>, MessagesProps>(
             </div>
           ) : (
             <AnimatePresence mode={"popLayout"}>
-              <div
-                className={cn(
-                  "w-full ml-auto bg-card",
-                  "border border-border rounded-xl p-4",
-                )}
-              >
-                {transcriptions.join(" ")}
-              </div>
+              {messages.map((item, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={cn(
+                    "w-full p-4 rounded-xl border",
+                    item.type === "transcript"
+                      ? "ml-auto bg-card border-border"
+                      : "mr-auto bg-primary/10 border-primary/20",
+                  )}
+                >
+                  {item.type === "answer" && (
+                    <div className="text-sm font-medium text-primary mb-2">
+                      Answer:
+                    </div>
+                  )}
+                  <div className="whitespace-pre-wrap">{item.text}</div>
+                </motion.div>
+              ))}
             </AnimatePresence>
           )}
         </motion.div>
