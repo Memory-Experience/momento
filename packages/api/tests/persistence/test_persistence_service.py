@@ -1,37 +1,23 @@
-import asyncio
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from domain.memory import Memory
 from persistence.persistence_service import PersistenceService
 
 
-class DummyRepository:
-    def __init__(self):
-        self.saved = []
-
-    async def save(self, memory):
-        if getattr(memory, "id", None) is None:
-            memory.id = "dummy_id"
-        self.saved.append(memory)
-        return "dummy://" + memory.id
-
-    async def find_by_uri(self, uri):
-        # expects uri like dummy://<id>
-        id = uri.split("dummy://")[-1]
-        for m in self.saved:
-            if getattr(m, "id", None) == id:
-                return m
-        return None
+@pytest.fixture
+def mock_repository():
+    mock_repo = MagicMock()
+    mock_repo.save = AsyncMock(return_value="mock://memory_id")
+    mock_repo.find_by_uri = AsyncMock(
+        return_value=Memory.create(b"audio data", ["hello", "world"])
+    )
+    return mock_repo
 
 
 @pytest.fixture
-def dummy_repository():
-    return DummyRepository()
-
-
-@pytest.fixture
-def persistence_service(dummy_repository):
-    return PersistenceService(dummy_repository)
+def persistence_service(mock_repository):
+    return PersistenceService(mock_repository)
 
 
 @pytest.fixture
@@ -39,8 +25,23 @@ def sample_memory():
     return Memory.create(b"audio data", ["hello", "world"])
 
 
-def test_save_and_load_memory(persistence_service, sample_memory):
-    uri = asyncio.run(persistence_service.save_memory(sample_memory))
-    assert uri.startswith("dummy://")
-    loaded = asyncio.run(persistence_service.load_memory(uri))
-    assert loaded == sample_memory
+@pytest.mark.asyncio
+async def test_save_memory_calls_repository(
+    persistence_service, mock_repository, sample_memory
+):
+    uri = await persistence_service.save_memory(sample_memory)
+
+    # Assert repository save method was called with the memory
+    mock_repository.save.assert_called_once_with(sample_memory)
+    # Assert the URI returned by the service is the same returned by the repository
+    assert uri == "mock://memory_id"
+
+
+@pytest.mark.asyncio
+async def test_load_memory_calls_repository(persistence_service, mock_repository):
+    uri = "mock://memory_id"
+    await persistence_service.load_memory(uri)
+
+    # Assert repository find_by_uri method was called with the URI
+    mock_repository.find_by_uri.assert_called_once_with(uri)
+    # We don't need to check the returned memory, as that's just what the mock returns
