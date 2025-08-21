@@ -5,8 +5,8 @@
   "description": "",
   "scripts": {
     "start": "uv run main.py",
-    "test": "uv run -p 3.12 -m pytest tests -v",
-    "test:ci": "uv run -p 3.12 -m pytest -q"
+    "test": "uv run -m pytest tests -v",
+    "test:ci": "uv run -m pytest -q"
   },
   "keywords": [],
   "author": "",
