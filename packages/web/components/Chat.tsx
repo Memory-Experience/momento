@@ -6,12 +6,22 @@ import { useState } from "react";
 import { ChatContext } from "@/context/ChatContext";
 
 export default function Chat() {
+  const [mode, setMode] = useState<"memory" | "question" | undefined>(
+    undefined,
+  );
   const [isRecording, setIsRecording] = useState(false);
   const [transcriptions, setTranscriptions] = useState<string[]>([]);
 
   return (
     <ChatContext.Provider
-      value={{ isRecording, setIsRecording, transcriptions, setTranscriptions }}
+      value={{
+        mode,
+        setMode,
+        isRecording,
+        setIsRecording,
+        transcriptions,
+        setTranscriptions,
+      }}
     >
       <Messages transcriptions={transcriptions} />
       <AudioRecorder />
