@@ -40,6 +40,19 @@ uv add --dev package-name
 pnpm run start        # Start the gRPC server
 ```
 
+**Testing:**
+
+```bash
+pnpm run test         # Run pytest with uv (Python 3.12)
+pnpm run test:ci      # Quiet test run for CI
+
+# Filter tests
+pnpm run test -- -k persistence
+
+# Run a single file
+pnpm run test -- tests/test_persistence_service.py -q
+```
+
 **Code Quality:**
 
 ```bash

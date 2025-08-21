@@ -48,3 +48,11 @@ jobs:
 
       - name: Build project
         run: pnpm run build
+
+      - name: Install Python packages (workspace)
+        run: |
+          uv pip install ./packages/protos
+          uv pip install ./packages/api[test]
+
+      - name: Run API tests
+        run: pnpm --filter ./packages/api run test:ci
