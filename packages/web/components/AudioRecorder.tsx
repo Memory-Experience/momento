@@ -1,14 +1,14 @@
 "use client";
 
 import { cn } from "@/utils";
-import { Mic, Square } from "lucide-react";
+import { MessageCircleQuestionMark, Mic, Square } from "lucide-react";
 import { Button } from "./ui/button";
 import { useCallback, useContext, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ChatContext } from "@/context/ChatContext";
 
 export default function AudioRecorder({}) {
-  const { isRecording, setIsRecording, setTranscriptions } =
+  const { setMode, isRecording, setIsRecording, setTranscriptions } =
     useContext(ChatContext);
   const [recordingTime, setRecordingTime] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -179,6 +179,7 @@ export default function AudioRecorder({}) {
       silentGain.gain.value = 0;
       recorderNode.connect(silentGain).connect(audioCtx.destination);
 
+      setMode("memory");
       setIsRecording(true);
       setRecordingTime(0);
 
@@ -192,7 +193,11 @@ export default function AudioRecorder({}) {
       setIsRecording(false);
       setRecordingTime(0);
     }
-  }, [sendData, setIsRecording, setTranscriptions]);
+  }, [sendData, setMode, setIsRecording, setTranscriptions]);
+
+  const askQuestion = useCallback(async () => {
+    setMode("question");
+  }, [setMode]);
 
   const stopRecording = useCallback(async () => {
     if (timerRef.current) {
@@ -240,14 +245,15 @@ export default function AudioRecorder({}) {
       )}
     >
       {!isRecording ? (
-        <div className="p-4 bg-card flex flex-col items-center gap-2">
+        <div className="p-4 bg-card flex flex-row items-center gap-2">
           <Button onClick={startRecording} className="rounded-full" size="lg">
             <Mic className="mr-2 h-4 w-4" />
-            Connect
+            Record a Memory
           </Button>
-          <p className="text-xs text-muted-foreground">
-            Click to start recording
-          </p>
+          <Button onClick={askQuestion} className="rounded-full" size="lg">
+            <MessageCircleQuestionMark className="mr-2 h-4 w-4" />
+            Ask a Question
+          </Button>
         </div>
       ) : (
         <div className="p-4 bg-card border border-border/50 rounded-full flex items-center gap-4 max-w-4xl">
