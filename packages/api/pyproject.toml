@@ -28,20 +28,3 @@ py-modules = ["main"]
 where = ["."]
 include = ["domain*", "persistence*", "transcriber*"]
 exclude = ["tests*", "recordings*", "recordings/*", "**/__pycache__"]
-
-[project.optional-dependencies]
-# Extras for pip/uv (e.g. uv pip install -e .[test])
-test = [
-    "pytest>=8.0.0",
-    "pytest-mock>=3.12.0",
-    "pytest-asyncio>=0.23.0",
-]
-
-[dependency-groups]
-# uv-specific install group: uv sync --group test
-# Keeps parity with the [project.optional-dependencies].
-test = [
-    "pytest>=8.0.0",
-    "pytest-mock>=3.12.0",
-    "pytest-asyncio>=0.23.0",
-]
