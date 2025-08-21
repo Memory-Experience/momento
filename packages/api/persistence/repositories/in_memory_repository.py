@@ -4,6 +4,9 @@ from domain.memory import Memory
 
 from .repository_interface import Repository
 
+# Constants
+IN_MEMORY_URI_SCHEME = "in_memory://"
+
 
 class InMemoryRepository(Repository):
     """Repository implementation that stores data in memory."""
@@ -19,13 +22,13 @@ class InMemoryRepository(Repository):
 
         self.memories[memory.id] = memory
         logging.info(f"Memory saved in memory with key: {memory.id}")
-        return f"in_memory://{memory.id}"
+        return f"{IN_MEMORY_URI_SCHEME}{memory.id}"
 
     async def find_by_uri(self, uri: str) -> Memory | None:
         """Find a memory by its URI."""
-        if not uri.startswith("in_memory://"):
+        if not uri.startswith(IN_MEMORY_URI_SCHEME):
             raise ValueError(f"Invalid in-memory URI: {uri}")
-        id = uri[len("in_memory://") :]
+        id = uri[len(IN_MEMORY_URI_SCHEME) :]
         memory = self.memories.get(id)
         if memory:
             logging.info(f"Memory found with key: {id}")
