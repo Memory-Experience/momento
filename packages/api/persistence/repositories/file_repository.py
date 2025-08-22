@@ -3,8 +3,9 @@ import logging
 import os
 from datetime import datetime
 
-from domain.memory import Memory
 from pydub import AudioSegment
+
+from packages.api.domain.memory_request import MemoryRequest
 
 from .repository_interface import Repository
 
@@ -25,7 +26,7 @@ class FileRepository(Repository):
 
         logging.info(f"Initialized FileRepository with storage dir: {self.storage_dir}")
 
-    async def save(self, memory: Memory) -> str:
+    async def save(self, memory: MemoryRequest) -> str:
         """Save a memory to files (audio + transcript)."""
         # Generate ID if not present
         if memory.id is None:
@@ -66,7 +67,7 @@ class FileRepository(Repository):
             logging.error(f"Failed to save memory: {e}")
             raise
 
-    async def find_by_uri(self, uri: str) -> Memory | None:
+    async def find_by_uri(self, uri: str) -> MemoryRequest | None:
         """Find a memory by its URI."""
         if not uri.startswith(FILE_URI_SCHEME):
             raise ValueError(f"Unsupported URI scheme: {uri}")
@@ -114,7 +115,7 @@ class FileRepository(Repository):
                 except ValueError:
                     timestamp = datetime.fromtimestamp(os.path.getctime(audio_filepath))
 
-            return Memory.create(
+            return MemoryRequest.create(
                 id=id,
                 timestamp=timestamp,
                 audio_data=audio_data,
