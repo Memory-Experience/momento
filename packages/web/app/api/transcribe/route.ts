@@ -4,6 +4,7 @@ import {
   AudioChunk,
   StreamResponse,
   TranscriptionServiceClient,
+  SessionType,
 } from "protos/generated/ts/clients/stt";
 
 // Store active sessions with their gRPC streams
@@ -13,6 +14,8 @@ const sessions = new Map<
     controller: ReadableStreamDefaultController;
     grpcStream: grpc.ClientDuplexStream<AudioChunk, StreamResponse>;
     audioBuffer: Uint8Array[];
+    sessionType: SessionType;
+    isFirstChunk: boolean;
   }
 >();
 
@@ -25,10 +28,14 @@ const grpcClient = new TranscriptionServiceClient(
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const sessionId = searchParams.get("sessionId");
+  const sessionTypeParam = searchParams.get("type");
 
   if (!sessionId) {
     return new Response("Missing sessionId", { status: 400 });
   }
+
+  const sessionType =
+    sessionTypeParam === "question" ? SessionType.QUESTION : SessionType.MEMORY;
 
   // Create Server-Sent Events stream
   const stream = new ReadableStream({
@@ -43,6 +50,12 @@ export async function GET(request: NextRequest) {
         grpcStream.on("data", (response: StreamResponse) => {
           console.log("Received gRPC response:", response);
 
+          // Check if controller is still open before trying to enqueue
+          if (controller.desiredSize === null) {
+            console.log("Controller already closed, ignoring response");
+            return;
+          }
+
           if (response.transcript) {
             const message = JSON.stringify({
               type: "transcript",
@@ -50,7 +63,26 @@ export async function GET(request: NextRequest) {
               timestamp: Date.now(),
             });
 
-            controller.enqueue(`data: ${message}\n\n`);
+            try {
+              controller.enqueue(`data: ${message}\n\n`);
+            } catch (error) {
+              console.log("Failed to enqueue transcript message:", error);
+            }
+          } else if (response.answer) {
+            const message = JSON.stringify({
+              type: "answer",
+              text: response.answer.text,
+              timestamp: Date.now(),
+            });
+
+            try {
+              controller.enqueue(`data: ${message}\n\n`);
+              console.log("Answer sent, closing connection");
+              // Close the controller after sending the answer
+              controller.close();
+            } catch (error) {
+              console.log("Failed to enqueue answer message:", error);
+            }
           }
         });
 
@@ -66,8 +98,12 @@ export async function GET(request: NextRequest) {
 
         grpcStream.on("end", () => {
           console.log("gRPC stream ended");
+          // Clean up the session
+          sessions.delete(sessionId);
           try {
-            controller.close();
+            if (controller.desiredSize !== null) {
+              controller.close();
+            }
           } catch (error: unknown) {
             if (
               !(
@@ -85,6 +121,8 @@ export async function GET(request: NextRequest) {
           controller,
           grpcStream,
           audioBuffer: [],
+          sessionType,
+          isFirstChunk: true,
         });
 
         // Send initial connection message
@@ -145,9 +183,20 @@ export async function POST(request: NextRequest) {
 
     // Send audio chunk to gRPC server
     if (session.grpcStream && !session.grpcStream.destroyed) {
-      const audioChunk = {
+      const audioChunk: AudioChunk = {
         data: audioBytes,
+        metadata: session.isFirstChunk
+          ? {
+              sessionId,
+              type: session.sessionType,
+            }
+          : undefined,
       };
+
+      // Mark that we've sent the first chunk
+      if (session.isFirstChunk) {
+        session.isFirstChunk = false;
+      }
 
       // console.debug(
       //   `Sending audio chunk: ${audioBytes.length} bytes for session ${sessionId}`,
@@ -192,12 +241,29 @@ export async function DELETE(request: NextRequest) {
 
   const session = sessions.get(sessionId);
   if (session) {
-    // End the gRPC stream gracefully
-    if (session.grpcStream && !session.grpcStream.destroyed) {
-      session.grpcStream.end();
+    // For question sessions, we need to wait for the answer before fully closing
+    if (session.sessionType === SessionType.QUESTION) {
+      console.log(
+        `Question session ${sessionId} - ending audio stream, waiting for answer`,
+      );
+      // End the gRPC stream to signal no more audio is coming
+      if (session.grpcStream && !session.grpcStream.destroyed) {
+        session.grpcStream.end();
+      }
+      // Don't delete the session yet - let the answer handler close the controller
+    } else {
+      // For memory sessions, close immediately
+      console.log(`Memory session ${sessionId} ended`);
+      if (session.grpcStream && !session.grpcStream.destroyed) {
+        session.grpcStream.end();
+      }
+      try {
+        session.controller.close();
+      } catch (error) {
+        console.log("Controller already closed:", error);
+      }
+      sessions.delete(sessionId);
     }
-    sessions.delete(sessionId);
-    console.log(`Session ${sessionId} ended`);
   }
 
   return new Response(JSON.stringify({ success: true }), {

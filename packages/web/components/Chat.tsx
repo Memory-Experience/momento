@@ -3,15 +3,25 @@
 import AudioRecorder from "@/components/AudioRecorder";
 import Messages from "./Messages";
 import { useState } from "react";
-import { ChatContext } from "@/context/ChatContext";
+import { ChatContext, TranscriptionItem } from "@/context/ChatContext";
 
 export default function Chat() {
+  const [mode, setMode] = useState<"memory" | "question" | undefined>(
+    undefined,
+  );
   const [isRecording, setIsRecording] = useState(false);
-  const [transcriptions, setTranscriptions] = useState<string[]>([]);
+  const [transcriptions, setTranscriptions] = useState<TranscriptionItem[]>([]);
 
   return (
     <ChatContext.Provider
-      value={{ isRecording, setIsRecording, transcriptions, setTranscriptions }}
+      value={{
+        mode,
+        setMode,
+        isRecording,
+        setIsRecording,
+        transcriptions,
+        setTranscriptions,
+      }}
     >
       <Messages transcriptions={transcriptions} />
       <AudioRecorder />
