@@ -1,6 +1,6 @@
 import logging
 
-from domain.memory import Memory
+from packages.api.domain.memory_request import MemoryRequest
 
 from .repository_interface import Repository
 
@@ -12,10 +12,10 @@ class InMemoryRepository(Repository):
     """Repository implementation that stores data in memory."""
 
     def __init__(self):
-        self.memories: dict[str, Memory] = {}
+        self.memories: dict[str, MemoryRequest] = {}
         logging.info("Initialized InMemoryRepository")
 
-    async def save(self, memory: Memory) -> str:
+    async def save(self, memory: MemoryRequest) -> str:
         """Save a memory to in-memory storage."""
         if memory.id is None:
             memory.id = memory.timestamp.strftime("%Y%m%d_%H%M%S")
@@ -24,7 +24,7 @@ class InMemoryRepository(Repository):
         logging.info(f"Memory saved in memory with key: {memory.id}")
         return f"{IN_MEMORY_URI_SCHEME}{memory.id}"
 
-    async def find_by_uri(self, uri: str) -> Memory | None:
+    async def find_by_uri(self, uri: str) -> MemoryRequest | None:
         """Find a memory by its URI."""
         if not uri.startswith(IN_MEMORY_URI_SCHEME):
             raise ValueError(f"Invalid in-memory URI: {uri}")
