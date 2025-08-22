@@ -4,12 +4,13 @@ import sys
 
 import grpc
 import numpy as np
-from domain.memory import Memory
 from persistence.persistence_service import PersistenceService
 from persistence.repositories.file_repository import FileRepository
 from protos.generated.py import stt_pb2, stt_pb2_grpc
 from rag.rag_service import SimpleRAGService
 from transcriber.faster_whisper_transcriber import FasterWhisperTranscriber
+
+from packages.api.domain.request import MemoryRequest
 
 _cleanup_coroutines = []
 
@@ -89,7 +90,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
             if session_type == stt_pb2.MEMORY:
                 if audio_data:
                     # Create a domain object using the factory method
-                    memory = Memory.create(
+                    memory = MemoryRequest.create(
                         audio_data=bytes(audio_data), text=transcription
                     )
                     uri = await self.persistence_service.save_memory(memory)
