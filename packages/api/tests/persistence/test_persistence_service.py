@@ -10,7 +10,7 @@ def mock_repository():
     mock_repo = MagicMock()
     mock_repo.save = AsyncMock(return_value="mock://memory_id")
     mock_repo.find_by_uri = AsyncMock(
-        return_value=Memory.create(b"audio data", ["hello", "world"])
+        return_value=Memory.create(audio_data=b"audio data", text=["hello", "world"])
     )
     return mock_repo
 
@@ -22,7 +22,7 @@ def persistence_service(mock_repository):
 
 @pytest.fixture
 def sample_memory():
-    return Memory.create(b"audio data", ["hello", "world"])
+    return Memory.create(audio_data=b"audio data", text=["hello", "world"])
 
 
 @pytest.mark.asyncio
