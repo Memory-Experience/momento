@@ -9,12 +9,18 @@ class Memory:
     """
 
     id: str | None
-    timestamp: datetime
-    audio_data: bytes
-    transcription: list[str]
+    timestamp: datetime | None
+    audio_data: bytes | None
+    text: list[str]
 
     @classmethod
-    def create(cls, audio_data: bytes, transcription: list[str]) -> "Memory":
+    def create(
+        cls,
+        id=None,
+        timestamp: datetime = None,
+        audio_data: bytes = None,
+        text: list[str] = None,
+    ) -> "Memory":
         """
         Factory method to create a new Memory instance.
 
@@ -26,12 +32,8 @@ class Memory:
             A new Memory instance
         """
         return cls(
-            id=None,  # ID will be assigned when persisted
-            timestamp=datetime.now(),
+            id=id,  # ID will be assigned when persisted
+            timestamp=timestamp or datetime.now(),
             audio_data=audio_data,
-            transcription=transcription,
+            text=text or [],
         )
-
-    def get_text(self) -> str:
-        """Get the full transcription as a single string."""
-        return "".join(self.transcription)

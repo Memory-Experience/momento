@@ -19,7 +19,7 @@ def persistence_service_file(file_repository):
 
 @pytest.fixture
 def sample_memory():
-    return Memory.create(b"audio data", ["hello", "world"])
+    return Memory.create(audio_data=b"audio data", text=["hello", "world"])
 
 
 def test_save_memory_file(persistence_service_file, sample_memory):

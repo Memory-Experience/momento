@@ -46,13 +46,6 @@ class FileRepository(Repository):
             audio_segment.export(audio_filepath, format="wav")
             logging.info(f"Audio saved to {audio_filepath}")
 
-            # Save transcription
-            transcript_filename = f"{memory.id}.txt"
-            transcript_filepath = os.path.join(self.storage_dir, transcript_filename)
-            with open(transcript_filepath, "w") as f:
-                f.write(memory.get_text())
-            logging.info(f"Transcription saved to {transcript_filepath}")
-
             # Save metadata (could be used for searching later)
             metadata_filename = f"{memory.id}.json"
             metadata_filepath = os.path.join(self.storage_dir, metadata_filename)
@@ -62,7 +55,7 @@ class FileRepository(Repository):
                         "id": memory.id,
                         "timestamp": memory.timestamp.isoformat(),
                         "duration_seconds": len(audio_segment) / 1000,
-                        "has_transcription": bool(memory.transcription),
+                        "text": memory.text,
                     },
                     f,
                 )
@@ -92,7 +85,7 @@ class FileRepository(Repository):
             )
 
         id = os.path.splitext(os.path.basename(audio_filepath))[0]
-        transcript_filepath = os.path.join(self.storage_dir, f"{id}.txt")
+        metadata_filepath = os.path.join(self.storage_dir, f"{id}.json")
 
         if not os.path.exists(audio_filepath):
             return None
@@ -102,23 +95,30 @@ class FileRepository(Repository):
             audio_segment = AudioSegment.from_wav(audio_filepath)
             audio_data = audio_segment.raw_data
 
-            # Load transcription if available
-            transcription = []
-            if os.path.exists(transcript_filepath):
-                with open(transcript_filepath) as f:
-                    transcription = [f.read()]
+            # Load metadata if available
+            text = []
+            timestamp = None
 
-            # Parse timestamp from ID or use file creation time
-            try:
-                timestamp = datetime.strptime(id, "%Y%m%d_%H%M%S")
-            except ValueError:
-                timestamp = datetime.fromtimestamp(os.path.getctime(audio_filepath))
+            assert os.path.exists(metadata_filepath)
+            with open(metadata_filepath) as f:
+                metadata = json.load(f)
+                if "text" in metadata:
+                    text = metadata["text"]
+                if "timestamp" in metadata:
+                    timestamp = datetime.fromisoformat(metadata["timestamp"])
 
-            return Memory(
+            # Fall back to parsing timestamp from ID or using file creation time
+            if timestamp is None:
+                try:
+                    timestamp = datetime.strptime(id, "%Y%m%d_%H%M%S")
+                except ValueError:
+                    timestamp = datetime.fromtimestamp(os.path.getctime(audio_filepath))
+
+            return Memory.create(
                 id=id,
                 timestamp=timestamp,
                 audio_data=audio_data,
-                transcription=transcription,
+                text=text,
             )
 
         except Exception as e:
