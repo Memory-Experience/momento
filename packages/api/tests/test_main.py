@@ -1,68 +1,8 @@
-import os
-import sys
-import types
 from unittest.mock import AsyncMock, MagicMock
 
+import main
 import pytest
-
-# Ensure we can import the api package in flat layout
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-# Stub protos modules to avoid requiring generated code installation
-protos_mod = types.ModuleType("protos")
-protos_generated_mod = types.ModuleType("protos.generated")
-protos_generated_py_mod = types.ModuleType("protos.generated.py")
-
-stt_pb2 = types.ModuleType("stt_pb2")
-
-
-class Transcript:
-    def __init__(self, text: str):
-        self.text = text
-
-
-class StreamResponse:
-    def __init__(self, transcript):
-        self.transcript = transcript
-
-
-stt_pb2.Transcript = Transcript
-stt_pb2.StreamResponse = StreamResponse
-
-stt_pb2_grpc = types.ModuleType("stt_pb2_grpc")
-
-
-class TranscriptionServiceServicer:
-    pass
-
-
-def add_TranscriptionServiceServicer_to_server(servicer, server):
-    return None
-
-
-stt_pb2_grpc.TranscriptionServiceServicer = TranscriptionServiceServicer
-stt_pb2_grpc.add_TranscriptionServiceServicer_to_server = (
-    add_TranscriptionServiceServicer_to_server
-)
-
-sys.modules["protos"] = protos_mod
-sys.modules["protos.generated"] = protos_generated_mod
-sys.modules["protos.generated.py"] = protos_generated_py_mod
-sys.modules["protos.generated.py.stt_pb2"] = stt_pb2
-sys.modules["protos.generated.py.stt_pb2_grpc"] = stt_pb2_grpc
-
-# Stub pydub to avoid audioop issues on Python 3.13 and unnecessary imports
-pydub_mod = types.ModuleType("pydub")
-
-
-class AudioSegment:
-    pass
-
-
-pydub_mod.AudioSegment = AudioSegment
-sys.modules["pydub"] = pydub_mod
-
-import main  # noqa: E402  # import after stubbing heavy deps
+from protos.generated.py.stt_pb2 import AudioChunk
 
 
 @pytest.mark.asyncio
@@ -86,8 +26,12 @@ async def test_transcribe_saves_memory(mocker):
 
     # Create servicer and simulate request
     servicer = main.TranscriptionServiceServicer()
-    chunk = MagicMock()
-    chunk.data = b"\x00" * (main.SAMPLE_RATE * 4)
+    chunk = AudioChunk(
+        data=b"\x00" * (main.SAMPLE_RATE * 4),
+        metadata=main.stt_pb2.SessionMetadata(
+            type=main.stt_pb2.MEMORY, session_id="test_session"
+        ),
+    )
 
     async def request_iterator():
         yield chunk

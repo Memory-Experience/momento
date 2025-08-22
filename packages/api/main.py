@@ -8,6 +8,7 @@ from domain.memory import Memory
 from persistence.persistence_service import PersistenceService
 from persistence.repositories.file_repository import FileRepository
 from protos.generated.py import stt_pb2, stt_pb2_grpc
+from rag.rag_service import SimpleRAGService
 from transcriber.faster_whisper_transcriber import FasterWhisperTranscriber
 
 _cleanup_coroutines = []
@@ -24,6 +25,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
     def __init__(self):
         self.transcriber = FasterWhisperTranscriber()
         self.transcriber.initialize()
+        self.rag_service = SimpleRAGService()
 
         # Initialize the persistence service with a file repository
         repository = FileRepository(storage_dir=RECORDINGS_DIR, sample_rate=SAMPLE_RATE)
@@ -34,11 +36,24 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
         logging.info("Client connected.")
         audio_data = bytearray()
         transcription: list[str] = []
+        session_type = stt_pb2.MEMORY  # Default to memory
+        session_id = None
 
         try:
             logging.info("Received a new transcription request.")
             buffer = b""
+            first_chunk = True
+
             async for chunk in request_iterator:
+                # Handle session metadata from first chunk
+                if first_chunk and chunk.metadata:
+                    session_type = chunk.metadata.type
+                    session_id = chunk.metadata.session_id
+                    logging.info(
+                        f"Session {session_id} started with type: {session_type}"
+                    )
+                    first_chunk = False
+
                 buffer += chunk.data
                 audio_data += chunk.data
                 logging.debug(
@@ -71,11 +86,26 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
             logging.error(f"Error during transcription: {e}")
         finally:
             logging.info("Client disconnected.")
-            if audio_data:
-                # Create a domain object using the factory method
-                memory = Memory.create(bytes(audio_data), transcription)
-                uri = await self.persistence_service.save_memory(memory)
-                logging.info(f"Memory saved with URI: {uri}")
+            if session_type == stt_pb2.MEMORY:
+                if audio_data:
+                    # Create a domain object using the factory method
+                    memory = Memory.create(bytes(audio_data), transcription)
+                    uri = await self.persistence_service.save_memory(memory)
+                    logging.info(f"Memory saved with URI: {uri}")
+                    self.rag_service.add_memory("".join(transcription), uri)
+
+            elif session_type == stt_pb2.QUESTION:
+                # Generate answer for question sessions
+                full_transcription = "".join(transcription)
+                logging.info(f"Processing question: {full_transcription}")
+                answer_text = self.rag_service.search_memories(full_transcription)
+
+                # Send answer back to client
+                answer_response = stt_pb2.StreamResponse(
+                    answer=stt_pb2.Answer(text=answer_text)
+                )
+                yield answer_response
+                logging.info(f"Sent answer: {answer_text[:50]}...")
 
 
 async def serve() -> None:
