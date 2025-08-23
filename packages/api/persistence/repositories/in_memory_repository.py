@@ -1,6 +1,6 @@
 import logging
 
-from packages.api.domain.memory_request import MemoryRequest
+from domain.memory_request import MemoryRequest
 
 from .repository_interface import Repository
 
