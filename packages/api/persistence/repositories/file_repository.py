@@ -3,7 +3,7 @@ import logging
 import os
 from datetime import datetime
 
-from domain.memory import Memory
+from domain.memory_request import MemoryRequest, MemoryType
 from pydub import AudioSegment
 
 from .repository_interface import Repository
@@ -25,7 +25,7 @@ class FileRepository(Repository):
 
         logging.info(f"Initialized FileRepository with storage dir: {self.storage_dir}")
 
-    async def save(self, memory: Memory) -> str:
+    async def save(self, memory: MemoryRequest) -> str:
         """Save a memory to files (audio + transcript)."""
         # Generate ID if not present
         if memory.id is None:
@@ -46,13 +46,6 @@ class FileRepository(Repository):
             audio_segment.export(audio_filepath, format="wav")
             logging.info(f"Audio saved to {audio_filepath}")
 
-            # Save transcription
-            transcript_filename = f"{memory.id}.txt"
-            transcript_filepath = os.path.join(self.storage_dir, transcript_filename)
-            with open(transcript_filepath, "w") as f:
-                f.write(memory.get_text())
-            logging.info(f"Transcription saved to {transcript_filepath}")
-
             # Save metadata (could be used for searching later)
             metadata_filename = f"{memory.id}.json"
             metadata_filepath = os.path.join(self.storage_dir, metadata_filename)
@@ -62,7 +55,8 @@ class FileRepository(Repository):
                         "id": memory.id,
                         "timestamp": memory.timestamp.isoformat(),
                         "duration_seconds": len(audio_segment) / 1000,
-                        "has_transcription": bool(memory.transcription),
+                        "text": memory.text,
+                        "memory_type": memory.memory_type.value,
                     },
                     f,
                 )
@@ -73,7 +67,7 @@ class FileRepository(Repository):
             logging.error(f"Failed to save memory: {e}")
             raise
 
-    async def find_by_uri(self, uri: str) -> Memory | None:
+    async def find_by_uri(self, uri: str) -> MemoryRequest | None:
         """Find a memory by its URI."""
         if not uri.startswith(FILE_URI_SCHEME):
             raise ValueError(f"Unsupported URI scheme: {uri}")
@@ -92,7 +86,7 @@ class FileRepository(Repository):
             )
 
         id = os.path.splitext(os.path.basename(audio_filepath))[0]
-        transcript_filepath = os.path.join(self.storage_dir, f"{id}.txt")
+        metadata_filepath = os.path.join(self.storage_dir, f"{id}.json")
 
         if not os.path.exists(audio_filepath):
             return None
@@ -102,23 +96,35 @@ class FileRepository(Repository):
             audio_segment = AudioSegment.from_wav(audio_filepath)
             audio_data = audio_segment.raw_data
 
-            # Load transcription if available
-            transcription = []
-            if os.path.exists(transcript_filepath):
-                with open(transcript_filepath) as f:
-                    transcription = [f.read()]
+            # Load metadata if available
+            text = []
+            timestamp = None
+            memory_type = MemoryType.MEMORY  # Default to memory type
 
-            # Parse timestamp from ID or use file creation time
-            try:
-                timestamp = datetime.strptime(id, "%Y%m%d_%H%M%S")
-            except ValueError:
-                timestamp = datetime.fromtimestamp(os.path.getctime(audio_filepath))
+            assert os.path.exists(metadata_filepath)
+            with open(metadata_filepath) as f:
+                metadata = json.load(f)
+                if "text" in metadata:
+                    text = metadata["text"]
+                if "timestamp" in metadata:
+                    timestamp = datetime.fromisoformat(metadata["timestamp"])
+                if "memory_type" in metadata:
+                    # Convert the integer value back to enum
+                    memory_type = MemoryType(metadata["memory_type"])
 
-            return Memory(
+            # Fall back to parsing timestamp from ID or using file creation time
+            if timestamp is None:
+                try:
+                    timestamp = datetime.strptime(id, "%Y%m%d_%H%M%S")
+                except ValueError:
+                    timestamp = datetime.fromtimestamp(os.path.getctime(audio_filepath))
+
+            return MemoryRequest.create(
                 id=id,
                 timestamp=timestamp,
                 audio_data=audio_data,
-                transcription=transcription,
+                text=text,
+                memory_type=memory_type,
             )
 
         except Exception as e:
