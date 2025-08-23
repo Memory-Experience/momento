@@ -1,10 +1,8 @@
 from unittest.mock import AsyncMock
 
 import pytest
+from domain.memory_context import MemoryContext
 from domain.memory_request import MemoryRequest
-from vector_store.repositories.vector_store_repository_interface import (
-    MemorySearchResult,
-)
 from vector_store.vector_store_service import VectorStoreService
 
 
@@ -71,9 +69,7 @@ async def test_search_calls_repository(
 ):
     """Test that search calls the repository's search_similar method."""
     # Set up mock return value
-    mock_results = [
-        MemorySearchResult(memory=sample_memory, score=0.95, matched_text="Test result")
-    ]
+    mock_results = MemoryContext.create(query_memory=sample_memory)
     mock_repository.search_similar.return_value = mock_results
 
     # Call the service method

@@ -1,9 +1,9 @@
 import logging
 
+from domain.memory_context import MemoryContext
 from domain.memory_request import MemoryRequest
 
 from vector_store.repositories.vector_store_repository_interface import (
-    MemorySearchResult,
     VectorStoreRepository,
 )
 
@@ -48,7 +48,7 @@ class VectorStoreService:
         self,
         query: str,
         limit: int = 5,
-    ) -> list[MemorySearchResult]:
+    ) -> MemoryContext:
         """
         Search for relevant memories using a text query.
 
@@ -58,13 +58,15 @@ class VectorStoreService:
             filters: Optional filters to apply
 
         Returns:
-            List of memory search results
+            MemoryContext containing the search results
         """
         # The repository is responsible for converting the query to embeddings
-        results = await self.repository.search_similar(query_text=query, limit=limit)
+        context = await self.repository.search_similar(query_text=query, limit=limit)
 
-        logging.info(f"Search for '{query}' returned {len(results)} results")
-        return results
+        logging.info(
+            f"Search for '{query}' returned {len(context.get_memory_objects())} results"
+        )
+        return context
 
     async def delete_memory(self, memory_id: str) -> None:
         """
