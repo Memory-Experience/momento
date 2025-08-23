@@ -1,13 +1,12 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from typing import Any, Union
 
 from domain.memory_context import MemoryContext
 from domain.memory_request import MemoryRequest
-
-from packages.api.models.embedding_model_interface import EmbeddingModel
-from packages.api.models.text_chunker_interface import TextChunker
+from models.embedding_model_interface import EmbeddingModel
+from models.text_chunker_interface import TextChunker
 
 
 class FilterOperator(Enum):
@@ -37,7 +36,7 @@ class FilterCondition:
 class FilterGroup:
     """Group of filter conditions with logical operator."""
 
-    conditions: list["FilterGroup" | FilterCondition]
+    conditions: list[Union["FilterGroup", FilterCondition]]
     operator: str = "AND"  # "AND" or "OR"
 
 
