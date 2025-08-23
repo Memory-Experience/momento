@@ -22,7 +22,7 @@ async def test_transcribe_saves_memory(mocker):
     mock_memory = MagicMock()
     mock_memory_instance = MagicMock()
     mock_memory.create.return_value = mock_memory_instance
-    mocker.patch("main.Memory", mock_memory)
+    mocker.patch("main.MemoryRequest", mock_memory)
 
     # Create servicer and simulate request
     servicer = main.TranscriptionServiceServicer()

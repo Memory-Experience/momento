@@ -3,9 +3,8 @@ import logging
 import os
 from datetime import datetime
 
+from domain.memory_request import MemoryRequest, MemoryType
 from pydub import AudioSegment
-
-from packages.api.domain.memory_request import MemoryRequest
 
 from .repository_interface import Repository
 
@@ -57,6 +56,7 @@ class FileRepository(Repository):
                         "timestamp": memory.timestamp.isoformat(),
                         "duration_seconds": len(audio_segment) / 1000,
                         "text": memory.text,
+                        "memory_type": memory.memory_type.value,
                     },
                     f,
                 )
@@ -99,6 +99,7 @@ class FileRepository(Repository):
             # Load metadata if available
             text = []
             timestamp = None
+            memory_type = MemoryType.MEMORY  # Default to memory type
 
             assert os.path.exists(metadata_filepath)
             with open(metadata_filepath) as f:
@@ -107,6 +108,9 @@ class FileRepository(Repository):
                     text = metadata["text"]
                 if "timestamp" in metadata:
                     timestamp = datetime.fromisoformat(metadata["timestamp"])
+                if "memory_type" in metadata:
+                    # Convert the integer value back to enum
+                    memory_type = MemoryType(metadata["memory_type"])
 
             # Fall back to parsing timestamp from ID or using file creation time
             if timestamp is None:
@@ -120,6 +124,7 @@ class FileRepository(Repository):
                 timestamp=timestamp,
                 audio_data=audio_data,
                 text=text,
+                memory_type=memory_type,
             )
 
         except Exception as e:
