@@ -54,16 +54,30 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                     )
                     first_chunk = False
 
-                buffer += chunk.data
-                audio_data += chunk.data
-                logging.debug(
-                    f"Received chunk of size: {len(chunk.data)} bytes, "
-                    + f"buffer size: {len(buffer)} bytes"
-                )
+                # Handle different input types (audio or text)
+                if chunk.HasField("audio_data"):
+                    buffer += chunk.audio_data
+                    audio_data += chunk.audio_data
+                    logging.debug(
+                        f"Received audio chunk of size: {len(chunk.audio_data)} bytes, "
+                        + f"buffer size: {len(buffer)} bytes"
+                    )
+                elif chunk.HasField("text_data"):
+                    # Direct text input - process immediately
+                    logging.info(f"Received text input: {chunk.text_data}")
+                    transcription.append(chunk.text_data)
+                    # Return the text directly as a transcript
+                    response = stt_pb2.StreamResponse(
+                        transcript=stt_pb2.Transcript(text=chunk.text_data)
+                    )
+                    yield response
+                    continue
 
-                # Process audio when buffer exceeds 1 second
+                # Process audio when buffer exceeds 1 second and we have audio data
                 # (16000 samples for 16kHz)
-                if len(buffer) >= SAMPLE_RATE * 4:  # 2 bytes per sample
+                if (
+                    chunk.HasField("audio_data") and len(buffer) >= SAMPLE_RATE * 4
+                ):  # 2 bytes per sample
                     logging.debug("Processing audio buffer for transcription.")
                     audio_array = (
                         np.frombuffer(buffer, dtype=np.int16).astype(np.float32)
@@ -86,26 +100,28 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
             logging.error(f"Error during transcription: {e}")
         finally:
             logging.info("Client disconnected.")
+            full_transcription = "".join(transcription)
+
             if session_type == stt_pb2.MEMORY:
-                if audio_data:
+                # For memory sessions, save the data (audio if available)
+                if audio_data or transcription:
                     # Create a domain object using the factory method
                     memory = MemoryRequest.create(
-                        audio_data=bytes(audio_data),
+                        audio_data=bytes(audio_data) if audio_data else None,
                         text=transcription,
                         memory_type=MemoryType.MEMORY,
                     )
                     uri = await self.persistence_service.save_memory(memory)
                     logging.info(f"Memory saved with URI: {uri}")
-                    self.rag_service.add_memory("".join(transcription), uri)
+                    self.rag_service.add_memory(full_transcription, uri)
 
             elif session_type == stt_pb2.QUESTION:
                 # Generate answer for question sessions
-                full_transcription = "".join(transcription)
                 logging.info(f"Processing question: {full_transcription}")
 
                 # Create a domain object for the question as well
                 question_memory = MemoryRequest.create(
-                    audio_data=bytes(audio_data),
+                    audio_data=bytes(audio_data) if audio_data else None,
                     text=transcription,
                     memory_type=MemoryType.QUESTION,
                 )
