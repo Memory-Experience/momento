@@ -1,9 +1,8 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from domain.memory_request import MemoryRequest
 from persistence.persistence_service import PersistenceService
-
-from packages.api.domain.memory_request import MemoryRequest
 
 
 @pytest.fixture

@@ -1,12 +1,11 @@
 import asyncio
 
 import pytest
+from domain.memory_request import MemoryRequest
 from persistence.persistence_service import PersistenceService
 from persistence.repositories.in_memory_repository import (
     InMemoryRepository,
 )
-
-from packages.api.domain.memory_request import MemoryRequest
 
 
 @pytest.fixture
