@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 import * as grpc from "@grpc/grpc-js";
 import {
-  AudioChunk,
+  InputChunk,
   StreamResponse,
   TranscriptionServiceClient,
   SessionType,
@@ -12,7 +12,7 @@ const sessions = new Map<
   string,
   {
     controller: ReadableStreamDefaultController;
-    grpcStream: grpc.ClientDuplexStream<AudioChunk, StreamResponse>;
+    grpcStream: grpc.ClientDuplexStream<InputChunk, StreamResponse>;
     audioBuffer: Uint8Array[];
     sessionType: SessionType;
     isFirstChunk: boolean;
@@ -167,10 +167,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { sessionId, audioData } = await request.json();
+    const body = await request.json();
+    const { sessionId } = body;
 
-    if (!sessionId || !audioData) {
-      return new Response("Missing sessionId or audioData", { status: 400 });
+    if (!sessionId) {
+      return new Response("Missing sessionId", { status: 400 });
     }
 
     const session = sessions.get(sessionId);
@@ -178,50 +179,105 @@ export async function POST(request: NextRequest) {
       return new Response("Session not found", { status: 404 });
     }
 
-    // Convert audio data back to Uint8Array
-    const audioBytes = new Uint8Array(audioData);
+    // Check if this is a text or audio input
+    if (body.textData !== undefined) {
+      // Handle text input
+      const { textData } = body;
 
-    // Send audio chunk to gRPC server
-    if (session.grpcStream && !session.grpcStream.destroyed) {
-      const audioChunk: AudioChunk = {
-        data: audioBytes,
-        metadata: session.isFirstChunk
-          ? {
-              sessionId,
-              type: session.sessionType,
-            }
-          : undefined,
-      };
-
-      // Mark that we've sent the first chunk
-      if (session.isFirstChunk) {
-        session.isFirstChunk = false;
+      if (!textData) {
+        return new Response("Empty text data", { status: 400 });
       }
 
-      // console.debug(
-      //   `Sending audio chunk: ${audioBytes.length} bytes for session ${sessionId}`,
-      // );
-      session.grpcStream.write(audioChunk);
+      console.log(
+        `Processing text input for session ${sessionId}: ${textData}`,
+      );
+
+      // Send text data to gRPC server
+      if (session.grpcStream && !session.grpcStream.destroyed) {
+        const textChunk: InputChunk = {
+          textData,
+          metadata: session.isFirstChunk
+            ? {
+                sessionId,
+                type: session.sessionType,
+              }
+            : undefined,
+        };
+
+        // Mark that we've sent the first chunk
+        if (session.isFirstChunk) {
+          session.isFirstChunk = false;
+        }
+
+        session.grpcStream.write(textChunk);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            type: "text",
+            textLength: textData.length,
+          }),
+          {
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+    } else if (body.audioData !== undefined) {
+      // Handle audio input (existing functionality)
+      const { audioData } = body;
+
+      if (!audioData) {
+        return new Response("Empty audio data", { status: 400 });
+      }
+
+      // Convert audio data back to Uint8Array
+      const audioBytes = new Uint8Array(audioData);
+
+      // Send audio chunk to gRPC server
+      if (session.grpcStream && !session.grpcStream.destroyed) {
+        const audioChunk: InputChunk = {
+          audioData: audioBytes,
+          metadata: session.isFirstChunk
+            ? {
+                sessionId,
+                type: session.sessionType,
+              }
+            : undefined,
+        };
+
+        // Mark that we've sent the first chunk
+        if (session.isFirstChunk) {
+          session.isFirstChunk = false;
+        }
+
+        // console.debug(
+        //   `Sending audio chunk: ${audioBytes.length} bytes for session ${sessionId}`,
+        // );
+        session.grpcStream.write(audioChunk);
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            type: "audio",
+            bytesReceived: audioBytes.length,
+          }),
+          {
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
     } else {
-      console.error("gRPC stream not available for session:", sessionId);
-      return new Response("gRPC stream not available", { status: 500 });
+      return new Response("Missing audioData or textData", { status: 400 });
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        bytesReceived: audioBytes.length,
-      }),
-      {
-        headers: { "Content-Type": "application/json" },
-      },
-    );
+    console.error("gRPC stream not available for session:", sessionId);
+    return new Response("gRPC stream not available", { status: 500 });
   } catch (error) {
-    console.error("Error processing audio data:", error);
+    console.error("Error processing input data:", error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: "Failed to process audio data",
+        error: "Failed to process input data",
       }),
       {
         status: 500,
