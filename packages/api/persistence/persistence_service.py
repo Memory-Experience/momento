@@ -1,8 +1,8 @@
 import logging
 
-from domain.memory import Memory
+from domain.memory_request import MemoryRequest
 
-from .repositories.repository_interface import Repository
+from persistence.repositories.repository_interface import Repository
 
 
 class PersistenceService:
@@ -20,7 +20,7 @@ class PersistenceService:
             f"Initialized PersistenceService with {repository.__class__.__name__}"
         )
 
-    async def save_memory(self, memory: Memory) -> str:
+    async def save_memory(self, memory: MemoryRequest) -> str:
         """
         Save a memory.
 
@@ -32,7 +32,7 @@ class PersistenceService:
         """
         return await self.repository.save(memory)
 
-    async def load_memory(self, uri: str) -> Memory | None:
+    async def load_memory(self, uri: str) -> MemoryRequest | None:
         """
         Load a memory by its URI.
 
