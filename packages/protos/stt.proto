@@ -2,15 +2,18 @@ syntax = "proto3";
 package sst;
 
 service TranscriptionService {
-  // Bidirectional streaming: client sends audio, server responds with various messages
+  // Bidirectional streaming: client sends input (audio or text), server responds with various messages
   // NOTE: This works for Node.js clients but NOT for gRPC-Web (browsers)
-  rpc Transcribe(stream AudioChunk) returns (stream StreamResponse);
+  rpc Transcribe(stream InputChunk) returns (stream StreamResponse);
 }
 
-// Audio chunk from client (e.g., microphone input)
-message AudioChunk {
-  bytes data = 1; // Audio data
-  SessionMetadata metadata = 2; // Optional metadata (only sent on first chunk)
+// Input chunk from client (either audio or text)
+message InputChunk {
+  oneof data {
+    bytes audio_data = 1; // Audio data from microphone
+    string text_data = 2; // Text data for direct text input
+  }
+  SessionMetadata metadata = 3; // Optional metadata (only sent on first chunk)
 }
 
 // Session metadata to indicate the type of session
