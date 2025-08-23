@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import main
 import pytest
-from protos.generated.py.stt_pb2 import AudioChunk
+from protos.generated.py.stt_pb2 import InputChunk
 
 
 @pytest.mark.asyncio
@@ -26,8 +26,8 @@ async def test_transcribe_saves_memory(mocker):
 
     # Create servicer and simulate request
     servicer = main.TranscriptionServiceServicer()
-    chunk = AudioChunk(
-        data=b"\x00" * (main.SAMPLE_RATE * 4),
+    chunk = InputChunk(
+        audio_data=b"\x00" * (main.SAMPLE_RATE * 4),
         metadata=main.stt_pb2.SessionMetadata(
             type=main.stt_pb2.MEMORY, session_id="test_session"
         ),
@@ -44,6 +44,50 @@ async def test_transcribe_saves_memory(mocker):
 
     assert any(r.transcript.text == "test" for r in responses)
     mock_persistence.return_value.save_memory.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_transcribe_text_input(mocker):
+    # Patch RAG service
+    mocker.patch.object(main.SimpleRAGService, "__init__", return_value=None)
+    mocker.patch.object(main.SimpleRAGService, "add_memory", return_value=None)
+    mocker.patch.object(
+        main.SimpleRAGService, "search_memories", return_value="test answer"
+    )
+
+    # Patch PersistenceService
+    mock_persistence = mocker.patch("main.PersistenceService")
+    mock_persistence.return_value.save_memory = AsyncMock(return_value="test-uri")
+
+    # Patch MemoryRequest.create
+    mock_memory = MagicMock()
+    mock_memory_instance = MagicMock()
+    mock_memory.create.return_value = mock_memory_instance
+    mocker.patch("main.MemoryRequest", mock_memory)
+
+    # Create servicer and simulate text request
+    servicer = main.TranscriptionServiceServicer()
+    text_chunk = InputChunk(
+        text_data="Hello, this is a test question.",
+        metadata=main.stt_pb2.SessionMetadata(
+            type=main.stt_pb2.QUESTION, session_id="test_text_session"
+        ),
+    )
+
+    async def request_iterator():
+        yield text_chunk
+
+    context = MagicMock()
+
+    responses = []
+    async for response in servicer.Transcribe(request_iterator(), context):
+        responses.append(response)
+
+    # First response should be the direct transcript from the text input
+    assert responses[0].transcript.text == "Hello, this is a test question."
+
+    # Verify save_memory was called with text data
+    mock_persistence.return_value.save_memory.assert_called_once()
 
 
 @pytest.mark.asyncio
