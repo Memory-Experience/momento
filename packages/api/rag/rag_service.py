@@ -8,11 +8,11 @@ class SimpleRAGService:
     def __init__(self):
         self.memories = []
 
-    def add_memory(self, transcription: str, audio_filename: str | None = None):
+    def add_memory(self, text: str, audio_filename: str | None = None):
         """Add a new memory to the RAG corpus."""
         memory = {
             "id": len(self.memories),
-            "text": transcription,
+            "text": text,
             "timestamp": datetime.now().isoformat(),
             "audio_file": audio_filename,
         }

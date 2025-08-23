@@ -1,13 +1,13 @@
 from abc import ABC, abstractmethod
 
-from domain.memory import Memory
+from domain.memory_request import MemoryRequest
 
 
 class Repository(ABC):
     """Repository interface for persistence operations."""
 
     @abstractmethod
-    async def save(self, memory: Memory) -> str:
+    async def save(self, memory: MemoryRequest) -> str:
         """
         Save a memory to the repository.
 
@@ -20,7 +20,7 @@ class Repository(ABC):
         pass
 
     @abstractmethod
-    async def find_by_uri(self, uri: str) -> Memory | None:
+    async def find_by_uri(self, uri: str) -> MemoryRequest | None:
         """
         Find a memory by its URI.
 

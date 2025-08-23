@@ -1,7 +1,7 @@
 import asyncio
 
 import pytest
-from domain.memory import Memory
+from domain.memory_request import MemoryRequest
 from persistence.persistence_service import PersistenceService
 from persistence.repositories.in_memory_repository import (
     InMemoryRepository,
@@ -20,7 +20,7 @@ def persistence_service_in_memory(in_memory_repository):
 
 @pytest.fixture
 def sample_memory():
-    return Memory.create(b"audio data", ["hello", "world"])
+    return MemoryRequest.create(audio_data=b"audio data", text=["hello", "world"])
 
 
 def test_save_memory_in_memory(persistence_service_in_memory, sample_memory):
