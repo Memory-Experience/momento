@@ -1,0 +1,16 @@
+id,text,user_intent
+query_0,Tell me about my vacation in Location0,recall_memory
+query_1,What did I learn about Subject1?,recall_memory
+query_2,Recall my work meeting about Topic2,recall_memory
+query_3,What book did I read recently?,recall_memory
+query_4,What exercise did I do?,recall_memory
+query_5,Where did I travel to?,recall_memory
+query_6,What did I cook?,recall_memory
+query_7,Who did I meet socially?,recall_memory
+query_8,What insights did I gain?,recall_memory
+query_9,What conversations did I have?,recall_memory
+query_10,Tell me about my vacation in Location0,recall_memory
+query_11,What did I learn about Subject1?,recall_memory
+query_12,Recall my work meeting about Topic0,recall_memory
+query_13,What book did I read recently?,recall_memory
+query_14,What exercise did I do?,recall_memory

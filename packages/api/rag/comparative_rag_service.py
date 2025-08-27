@@ -1,6 +1,6 @@
 """
-Comparative RAG Service: Run your simple RAG alongside MS MARCO evaluation
-This gives you the best of both worlds - production stability + evaluation insights
+Comparative RAG Service: Run the simple RAG alongside MS MARCO evaluation
+This gives the best of both worlds - production stability + evaluation insights
 """
 
 import logging
@@ -14,14 +14,14 @@ if str(eval_path) not in sys.path:
     sys.path.append(str(eval_path))
 
 try:
-    from dataset_marco.metrics import precision_at_k, recall_at_k
-    from dataset_marco.prepare_ms_marco import MSMarcoDataset
-    from dataset_marco.run_marco_eval import convert_ms_marco_to_dataframes
+    from evaluation.dataset_marco.metrics import precision_at_k, recall_at_k
+    from evaluation.dataset_marco.prepare_ms_marco import MSMarcoDataset
+    from evaluation.dataset_marco.run_marco_eval import convert_ms_marco_to_dataframes
 
     MARCO_AVAILABLE = True
-    logging.info("✅ MS MARCO evaluation modules loaded successfully")
+    logging.info("MS MARCO evaluation modules loaded successfully")
 except ImportError as e:
-    logging.warning(f"⚠️  MS MARCO evaluation not available: {e}")
+    logging.warning(f"MS MARCO evaluation not available: {e}")
     MARCO_AVAILABLE = False
 
 
@@ -45,7 +45,7 @@ class ComparativeRAGService:
     def _load_marco_data(self):
         """Load MS MARCO data for comparison (non-blocking)."""
         try:
-            logging.info("🔄 Loading MS MARCO dataset for comparison...")
+            logging.info("Loading MS MARCO dataset for comparison...")
             marco_dataset = MSMarcoDataset("msmarco-passage/dev/small")
             queries, docs, qrels = convert_ms_marco_to_dataframes(
                 marco_dataset, limit=1000
@@ -56,14 +56,14 @@ class ComparativeRAGService:
                 "passages": docs,  # docs contains 'id' and 'content' columns
                 "qrels": qrels,
             }
-            logging.info(f"✅ Loaded {len(docs)} MS MARCO passages for comparison")
+            logging.info(f"Loaded {len(docs)} MS MARCO passages for comparison")
             logging.info(
-                f"📊 DataFrame columns - Passages: {list(docs.columns)}, "
+                f"DataFrame columns - Passages: {list(docs.columns)}, "
                 f"Queries: {list(queries.columns)}, QRELs: {list(qrels.columns)}"
             )
 
         except Exception as e:
-            logging.warning(f"⚠️  Could not load MS MARCO: {e}")
+            logging.warning(f"Could not load MS MARCO: {e}")
             self.marco_enabled = False
 
     def add_memory(self, text: str, audio_filename: str = None):
@@ -245,7 +245,7 @@ class ComparativeRAGService:
 
         if comparison_data.get("metrics"):
             response_parts.append("\n" + "=" * 50)
-            response_parts.append("📊 PERFORMANCE ANALYSIS vs MS MARCO BENCHMARK:")
+            response_parts.append("PERFORMANCE ANALYSIS vs MS MARCO BENCHMARK:")
 
             metrics = comparison_data["metrics"]
             for metric, value in metrics.items():
@@ -253,7 +253,7 @@ class ComparativeRAGService:
 
             perf = comparison_data.get("algorithm_performance", {})
             if perf.get("total_results"):
-                response_parts.append("\n🔍 Algorithm Analysis:")
+                response_parts.append("\nAlgorithm Analysis:")
                 response_parts.append(
                     f"   Found {perf['total_results']} relevant passages"
                 )
@@ -271,7 +271,7 @@ class ComparativeRAGService:
         if comparison_data.get("similar_query"):
             sim_query = comparison_data["similar_query"]
             response_parts.append(
-                f'\n🎯 Similar MS MARCO query: "{sim_query["text"]}" '
+                f'\nSimilar MS MARCO query: "{sim_query["text"]}" '
                 f"(similarity: {sim_query['similarity']:.2f})"
             )
 

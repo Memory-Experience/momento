@@ -2,7 +2,7 @@
 
 A comprehensive evaluation suite for Retrieval-Augmented Generation (RAG) systems, designed to measure performance across multiple dimensions: retrieval quality, generation quality, and system latency.
 
-## 🏗️ Architecture
+## Architecture
 
 ```
 evaluation/
@@ -20,7 +20,7 @@ evaluation/
     └── eval_latency.py    # Performance evaluation
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Quick Test (10 queries)
 ```bash
@@ -37,7 +37,7 @@ python main.py --config eval_config.yaml
 python orchestrator.py --dataset msmarco --sample-size 100 --output-dir ./my_results
 ```
 
-## 📊 What Gets Evaluated
+## What Gets Evaluated
 
 ### **Retrieval Quality**
 - **Precision@K**: How many retrieved documents are relevant
@@ -55,7 +55,7 @@ python orchestrator.py --dataset msmarco --sample-size 100 --output-dir ./my_res
 - **Generation Latency**: P50, P90, P95 percentiles
 - **End-to-End Latency**: Total pipeline time
 
-## 🔧 Configuration
+## Configuration
 
 Edit `eval_config.yaml` to customize evaluation:
 
@@ -74,7 +74,7 @@ rag_service:
   endpoint: "localhost:50051"  # Your RAG service endpoint
 ```
 
-## 📈 Output
+## Output
 
 Results are saved in multiple formats:
 
@@ -86,7 +86,7 @@ eval_results/
 └── latency_summary.json       # Performance metrics
 ```
 
-## 🔌 Integration with Your RAG Service
+## Integration with Your RAG Service
 
 The evaluator interfaces with your RAG service through the `run_rag_pipeline()` method in `orchestrator.py`. Update this method to call your actual service:
 
@@ -103,7 +103,7 @@ def run_rag_pipeline(self, query: str, k: int = 10) -> Dict[str, Any]:
     }
 ```
 
-## 📚 Dataset Support
+## Dataset Support
 
 ### MS MARCO (Built-in)
 - Automatically downloads and processes MS MARCO passage dataset
@@ -113,7 +113,7 @@ def run_rag_pipeline(self, query: str, k: int = 10) -> Dict[str, Any]:
 - Support for any dataset with docs/queries/qrels format
 - CSV/JSON input formats supported
 
-## 🧪 Testing
+## Testing
 
 ```bash
 # Run unit tests
@@ -123,7 +123,7 @@ python -m pytest test_ms_dataset.py
 python main.py --quick-test --sample-size 5
 ```
 
-## 📋 Requirements
+## Requirements
 
 - Python 3.10+
 - pandas, numpy
@@ -131,14 +131,14 @@ python main.py --quick-test --sample-size 5
 - pyyaml (for configuration)
 - Your RAG service running
 
-## 🎯 Use Cases
+## Use Cases
 
 1. **Benchmark Comparison**: Compare different retrieval models
 2. **A/B Testing**: Evaluate system changes
 3. **Performance Monitoring**: Track system performance over time
 4. **Research**: Academic evaluation following standard metrics
 
-## 🤝 Contributing
+## Contributing
 
 The framework is designed to be extensible:
 
@@ -146,7 +146,7 @@ The framework is designed to be extensible:
 - Add new metrics in `common/metrics.py`
 - Add new evaluation pipelines in `pipelines/`
 
-## 📊 Example Output
+## Example Output
 
 ```
 RAG SYSTEM EVALUATION SUMMARY

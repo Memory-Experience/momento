@@ -63,7 +63,7 @@ def convert_ms_marco_to_dataframes(ms_marco_dataset: MSMarcoDataset, limit: int 
         })
     qrels_df = pd.DataFrame(qrels_data)
     
-    print(f"✅ Converted: {len(docs_df)} docs, {len(queries_df)} queries, {len(qrels_df)} qrels")
+    print(f" Converted: {len(docs_df)} docs, {len(queries_df)} queries, {len(qrels_df)} qrels")
     return docs_df, queries_df, qrels_df
 
 def evaluate_retrieval_metrics(dataset: DataFrameDataset, sample_size: int = 100):
@@ -76,7 +76,7 @@ def evaluate_retrieval_metrics(dataset: DataFrameDataset, sample_size: int = 100
     Returns:
         dict: Evaluation results
     """
-    print(f"🔍 Evaluating retrieval metrics on {sample_size} queries...")
+    print(f" Evaluating retrieval metrics on {sample_size} queries...")
     
     results = {
         'precision@1': [], 'precision@3': [], 'precision@5': [], 'precision@10': [],
@@ -153,7 +153,7 @@ def evaluate_retrieval_metrics(dataset: DataFrameDataset, sample_size: int = 100
 
 def run_marco_eval():
     """Main function to run MS MARCO evaluation with retrieval metrics only."""
-    print("🚀 Starting MS MARCO Retrieval Evaluation")
+    print(" Starting MS MARCO Retrieval Evaluation")
     print("=" * 50)
     
     # Load MS MARCO dataset (small variant for speed)
