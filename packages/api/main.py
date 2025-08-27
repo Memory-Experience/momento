@@ -1,6 +1,6 @@
+import argparse
 import asyncio
 import logging
-import sys
 
 import grpc
 import numpy as np
@@ -8,6 +8,7 @@ from domain.memory_request import MemoryRequest, MemoryType
 from persistence.persistence_service import PersistenceService
 from persistence.repositories.file_repository import FileRepository
 from protos.generated.py import stt_pb2, stt_pb2_grpc
+from rag.comparative_rag_service import ComparativeRAGService
 from rag.rag_service import SimpleRAGService
 from transcriber.faster_whisper_transcriber import FasterWhisperTranscriber
 
@@ -22,10 +23,19 @@ SAMPLE_RATE = 16000
 class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
     """Provides methods that implement functionality of transcription service."""
 
-    def __init__(self):
+    def __init__(self, enable_marco_comparison=False):
         self.transcriber = FasterWhisperTranscriber()
         self.transcriber.initialize()
-        self.rag_service = SimpleRAGService()
+
+        # Use comparative RAG service if MS MARCO comparison is enabled
+        if enable_marco_comparison:
+            logging.info("🔬 Initializing RAG service with MS MARCO comparison...")
+            self.rag_service = ComparativeRAGService(enable_marco_comparison=True)
+            self.marco_comparison_enabled = True
+        else:
+            logging.info("📝 Initializing simple RAG service...")
+            self.rag_service = SimpleRAGService()
+            self.marco_comparison_enabled = False
 
         # Initialize the persistence service with a file repository
         repository = FileRepository(storage_dir=RECORDINGS_DIR, sample_rate=SAMPLE_RATE)
@@ -128,7 +138,15 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                 # Save the question for future reference if needed
                 await self.persistence_service.save_memory(question_memory)
 
-                answer_text = self.rag_service.search_memories(full_transcription)
+                # Use MS MARCO comparison if enabled
+                if self.marco_comparison_enabled:
+                    answer_text = self.rag_service.search_memories(
+                        full_transcription, include_comparison=True
+                    )
+                    logging.info("📊 Generated answer with MS MARCO comparison")
+                else:
+                    answer_text = self.rag_service.search_memories(full_transcription)
+                    logging.info("📝 Generated answer with simple RAG")
 
                 # Send answer back to client
                 answer_response = stt_pb2.StreamResponse(
@@ -138,15 +156,27 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                 logging.info(f"Sent answer: {answer_text[:50]}...")
 
 
-async def serve() -> None:
+async def serve(enable_marco_comparison=False) -> None:
     """Starts the gRPC server."""
     server = grpc.aio.server()
-    stt_pb2_grpc.add_TranscriptionServiceServicer_to_server(
-        TranscriptionServiceServicer(), server
+    servicer = TranscriptionServiceServicer(
+        enable_marco_comparison=enable_marco_comparison
     )
+    stt_pb2_grpc.add_TranscriptionServiceServicer_to_server(servicer, server)
     listen_addr = f"[::]:{PORT}"
     server.add_insecure_port(listen_addr)
-    logging.info("🚀 SST Microservice is running on %s", listen_addr)
+
+    if enable_marco_comparison:
+        logging.info(
+            "🚀 SST Microservice with MS MARCO comparison running on %s", listen_addr
+        )
+        # Print performance summary
+        if hasattr(servicer.rag_service, "get_performance_summary"):
+            summary = servicer.rag_service.get_performance_summary()
+            logging.info(f"📊 Performance tracking: {summary}")
+    else:
+        logging.info("🚀 SST Microservice (simple mode) running on %s", listen_addr)
+
     await server.start()
 
     async def server_graceful_shutdown():
@@ -161,15 +191,44 @@ async def serve() -> None:
 
 
 if __name__ == "__main__":
-    # check if args contain -v
-    log_level = logging.INFO
-    if "-v" in sys.argv:
-        log_level = logging.DEBUG
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(
+        description="SST Microservice with optional MS MARCO evaluation"
+    )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="Enable debug logging"
+    )
+    parser.add_argument(
+        "--marco", action="store_true", help="Enable MS MARCO comparison and evaluation"
+    )
+    parser.add_argument(
+        "--marco-light",
+        action="store_true",
+        help="Enable MS MARCO with lightweight dataset",
+    )
 
-    logging.basicConfig(level=log_level)
+    args = parser.parse_args()
+
+    # Set logging level
+    log_level = logging.DEBUG if args.verbose else logging.INFO
+    logging.basicConfig(
+        level=log_level, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+
+    # Determine MS MARCO mode
+    enable_marco = args.marco or args.marco_light
+
+    if enable_marco:
+        logging.info("🔬 Starting with MS MARCO evaluation enabled")
+        logging.info("📋 Features:")
+        logging.info("   • Real-time performance metrics")
+        logging.info("   • Precision@K, Recall@K, NDCG calculations")
+        logging.info("   • Comparison with industry-standard dataset")
+        logging.info("   • Algorithm performance analysis")
+
     loop = asyncio.new_event_loop()
     try:
-        loop.run_until_complete(serve())
+        loop.run_until_complete(serve(enable_marco_comparison=enable_marco))
     finally:
         logging.info("Cleaning up...")
         loop.run_until_complete(*_cleanup_coroutines)
