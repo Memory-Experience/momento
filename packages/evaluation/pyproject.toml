@@ -1,0 +1,15 @@
+[project]
+name = "evaluation"
+version = "0.1.0"
+description = "Evaluation suite for RAG: datasets, metrics, and pipelines"
+requires-python = ">=3.10"
+dependencies = [
+    "grpcio>=1.71.2",
+    "ir-datasets>=0.5.11",
+    "numpy>=2.3.2",
+    "pandas>=2.3.2",
+    "pyyaml>=6.0.2",
+]
+
+[tool.uv]
+# No special config needed; present so this package is a valid workspace member
