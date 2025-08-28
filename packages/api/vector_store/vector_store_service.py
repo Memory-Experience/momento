@@ -1,4 +1,5 @@
 import logging
+from uuid import UUID
 
 from domain.memory_context import MemoryContext
 from domain.memory_request import MemoryRequest
@@ -68,7 +69,7 @@ class VectorStoreService:
         )
         return context
 
-    async def delete_memory(self, memory_id: str) -> None:
+    async def delete_memory(self, memory_id: UUID) -> None:
         """
         Delete all vector records for a specific memory.
         The repository is responsible for deciding how to handle related chunks.

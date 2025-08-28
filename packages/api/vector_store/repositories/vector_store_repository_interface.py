@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Union
+from uuid import UUID
 
 from domain.memory_context import MemoryContext
 from domain.memory_request import MemoryRequest
@@ -78,7 +79,7 @@ class VectorStoreRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_memory(self, memory_id: str) -> MemoryRequest | None:
+    async def get_memory(self, memory_id: UUID) -> MemoryRequest | None:
         """
         Get a memory by its ID.
 
@@ -108,7 +109,7 @@ class VectorStoreRepository(ABC):
         pass
 
     @abstractmethod
-    async def delete_memory(self, memory_id: str) -> None:
+    async def delete_memory(self, memory_id: UUID) -> None:
         """
         Delete all vector embeddings for a memory.
         The repository is responsible for:
