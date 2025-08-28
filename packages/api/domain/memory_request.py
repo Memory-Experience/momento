@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from uuid import UUID
 
 
 class MemoryType(Enum):
@@ -18,7 +19,7 @@ class MemoryRequest:
     Domain model representing a recorded memory with audio and transcription.
     """
 
-    id: str | None
+    id: UUID | None
     timestamp: datetime | None
     audio_data: bytes | None
     text: list[str]
