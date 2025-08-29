@@ -2,8 +2,7 @@ import asyncio
 
 import pytest
 from domain.memory_request import MemoryRequest
-from persistence.persistence_service import PersistenceService
-from persistence.repositories.file_repository import FileRepository
+from persistence.repositories.file_repository import FILE_URI_SCHEME, FileRepository
 
 
 @pytest.fixture
@@ -13,18 +12,13 @@ def file_repository(tmp_path):
 
 
 @pytest.fixture
-def persistence_service_file(file_repository):
-    return PersistenceService(file_repository)
-
-
-@pytest.fixture
 def sample_memory():
     return MemoryRequest.create(audio_data=b"audio data", text=["hello", "world"])
 
 
-def test_save_memory_file(persistence_service_file, sample_memory):
-    uri = asyncio.run(persistence_service_file.save_memory(sample_memory))
-    assert uri.startswith("file://")
-    loaded = asyncio.run(persistence_service_file.load_memory(uri))
+def test_save_memory_file(file_repository, sample_memory):
+    uri = asyncio.run(file_repository.save(sample_memory))
+    assert uri.startswith(FILE_URI_SCHEME)
+    loaded = asyncio.run(file_repository.find_by_uri(uri))
     assert loaded is not None
     assert loaded.id == sample_memory.id
