@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from uuid import UUID
+from uuid import UUID, uuid4
 
 
 class MemoryType(Enum):
@@ -48,7 +48,7 @@ class MemoryRequest:
             A new Memory instance
         """
         return cls(
-            id=id,  # ID will be assigned when persisted
+            id=id or uuid4(),  # ID will be assigned when persisted
             timestamp=timestamp or datetime.now(),
             audio_data=audio_data,
             text=text or [],
