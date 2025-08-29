@@ -38,10 +38,6 @@ class VectorStoreService:
         Args:
             memory: The memory to index
         """
-        if not memory.text.strip():
-            logging.warning(f"No text content to index for memory {memory.id}")
-            return
-
         await self.repository.index_memory(memory)
         logging.info(f"Indexed memory {memory.id}")
 

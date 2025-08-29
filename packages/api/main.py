@@ -5,11 +5,20 @@ import sys
 import grpc
 import numpy as np
 from domain.memory_request import MemoryRequest, MemoryType
+from models.character_text_chunker import CharacterTextChunker
 from persistence.persistence_service import PersistenceService
 from persistence.repositories.file_repository import FileRepository
 from protos.generated.py import stt_pb2, stt_pb2_grpc
 from rag.rag_service import SimpleRAGService
+from tests.vector_store.test_qdrant_vector_store_repository import MockEmbeddingModel
 from transcriber.faster_whisper_transcriber import FasterWhisperTranscriber
+from vector_store.repositories.qdrant_vector_store_repository import (
+    InMemoryQdrantVectorStoreRepository,
+)
+from vector_store.repositories.vector_store_repository_interface import (
+    VectorStoreRepository,
+)
+from vector_store.vector_store_service import VectorStoreService
 
 _cleanup_coroutines = []
 
@@ -25,7 +34,15 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
     def __init__(self):
         self.transcriber = FasterWhisperTranscriber()
         self.transcriber.initialize()
-        self.rag_service = SimpleRAGService()
+
+        embedding_model = MockEmbeddingModel()
+        text_chunker = CharacterTextChunker()
+        vector_store_repo: VectorStoreRepository = InMemoryQdrantVectorStoreRepository(
+            embedding_model, text_chunker
+        )
+        self.vector_store_service = VectorStoreService(vector_store_repo)
+
+        self.rag_service = SimpleRAGService(vector_store_repo)
 
         # Initialize the persistence service with a file repository
         repository = FileRepository(storage_dir=RECORDINGS_DIR, sample_rate=SAMPLE_RATE)
@@ -113,7 +130,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                     )
                     uri = await self.persistence_service.save_memory(memory)
                     logging.info(f"Memory saved with URI: {uri}")
-                    self.rag_service.add_memory(full_transcription, uri)
+                    await self.vector_store_service.index_memory(memory)
 
             elif session_type == stt_pb2.QUESTION:
                 # Generate answer for question sessions
@@ -128,7 +145,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                 # Save the question for future reference if needed
                 await self.persistence_service.save_memory(question_memory)
 
-                answer_text = self.rag_service.search_memories(full_transcription)
+                answer_text = await self.rag_service.search_memories(question_memory)
 
                 # Send answer back to client
                 answer_response = stt_pb2.StreamResponse(
