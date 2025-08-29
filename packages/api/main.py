@@ -6,12 +6,12 @@ import grpc
 import numpy as np
 from domain.memory_request import MemoryRequest, MemoryType
 from models.character_text_chunker import CharacterTextChunker
+from models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
 from persistence.persistence_service import PersistenceService
 from persistence.repositories.file_repository import FileRepository
 from protos.generated.py import stt_pb2, stt_pb2_grpc
 from rag.rag_service import SimpleRAGService
 from tests.vector_store.test_qdrant_vector_store_repository import MockEmbeddingModel
-from transcriber.faster_whisper_transcriber import FasterWhisperTranscriber
 from vector_store.repositories.qdrant_vector_store_repository import (
     InMemoryQdrantVectorStoreRepository,
 )
