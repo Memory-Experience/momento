@@ -216,6 +216,9 @@ class QdrantVectorStoreRepository(VectorStoreRepository):
 
         for result in search_results.points:
             memory, matched_text = self._get_or_create_memory(result)
+
+            logging.info(f"Found memory {memory.text} with score: {result.score:.4f}")
+
             context.add_memory(
                 memory=memory,
                 score=result.score,
