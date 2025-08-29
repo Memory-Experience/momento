@@ -83,20 +83,20 @@ class VectorStoreService:
     async def list_memories(
         self,
         limit: int = 100,
-        offset: int = 0,
+        offset: UUID | None = None,
     ) -> list[MemoryRequest]:
         """
         List memories stored in the vector database.
 
         Args:
             limit: Maximum number of memories to return
-            offset: Number of memories to skip
+            offset: Lowest memory ID to start from (for pagination)
             filters: Optional filters to apply
 
         Returns:
             List of Memory objects
         """
-        memories = await self.repository.list_memories(
+        memories, _ = await self.repository.list_memories(
             limit=limit,
             offset=offset,
         )

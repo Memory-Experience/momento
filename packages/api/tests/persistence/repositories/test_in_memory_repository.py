@@ -1,9 +1,10 @@
 import asyncio
+from uuid import uuid4
 
 import pytest
 from domain.memory_request import MemoryRequest
-from persistence.persistence_service import PersistenceService
 from persistence.repositories.in_memory_repository import (
+    IN_MEMORY_URI_SCHEME,
     InMemoryRepository,
 )
 
@@ -14,23 +15,14 @@ def in_memory_repository():
 
 
 @pytest.fixture
-def persistence_service_in_memory(in_memory_repository):
-    return PersistenceService(in_memory_repository)
-
-
-@pytest.fixture
 def sample_memory():
-    return MemoryRequest.create(audio_data=b"audio data", text=["hello", "world"])
+    return MemoryRequest.create(
+        id=uuid4(), audio_data=b"audio data", text=["hello", "world"]
+    )
 
 
-def test_save_memory_in_memory(persistence_service_in_memory, sample_memory):
-    uri = asyncio.run(persistence_service_in_memory.save_memory(sample_memory))
-    assert uri.startswith("in_memory://")
-    loaded = asyncio.run(persistence_service_in_memory.load_memory(uri))
-    assert loaded == sample_memory
-
-
-def test_load_memory_in_memory(persistence_service_in_memory, sample_memory):
-    uri = asyncio.run(persistence_service_in_memory.save_memory(sample_memory))
-    loaded = asyncio.run(persistence_service_in_memory.load_memory(uri))
+def test_save_memory_in_memory(in_memory_repository, sample_memory):
+    uri = asyncio.run(in_memory_repository.save(sample_memory))
+    assert uri.startswith(IN_MEMORY_URI_SCHEME)
+    loaded = asyncio.run(in_memory_repository.find_by_uri(uri))
     assert loaded == sample_memory

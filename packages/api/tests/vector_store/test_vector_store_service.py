@@ -1,4 +1,5 @@
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 from domain.memory_context import MemoryContext
@@ -106,11 +107,11 @@ async def test_list_memories_calls_repository(vector_store_service, mock_reposit
         MemoryRequest.create(id="mem-1", text=["Test 1"]),
         MemoryRequest.create(id="mem-2", text=["Test 2"]),
     ]
-    mock_repository.list_memories.return_value = mock_memories
+    mock_repository.list_memories.return_value = mock_memories, None
 
     # Call the service method
     limit = 50
-    offset = 10
+    offset = uuid4()
     memories = await vector_store_service.list_memories(limit, offset)
 
     # Assert the repository method was called with the correct arguments

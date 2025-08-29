@@ -122,24 +122,9 @@ class VectorStoreRepository(ABC):
         pass
 
     @abstractmethod
-    async def delete_by_filter(self, filters: FilterArg) -> None:
-        """
-        Delete all vector embeddings that match the given filter criteria.
-
-        Args:
-            filters: Filter criteria to apply using the abstract filter system
-
-        Example:
-            delete_by_filter(FilterCondition(field="metadata.parent_memory_id",
-                                           operator=FilterOperator.EQUALS,
-                                           value="some-id"))
-        """
-        pass
-
-    @abstractmethod
     async def list_memories(
         self, limit: int = 100, offset: int = 0, filters: FilterArg = None
-    ) -> list[MemoryRequest]:
+    ) -> tuple[list[MemoryRequest], UUID | None]:
         """
         List memories in the vector store.
 
