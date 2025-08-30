@@ -53,8 +53,9 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
         logging.info("Client connected.")
         audio_data = bytearray()
         transcription: list[str] = []
-        session_type = stt_pb2.MEMORY  # Default to memory
+        session_type = stt_pb2.ChunkType.MEMORY  # Default to memory
         session_id = None
+        memory_id = None
 
         try:
             logging.info("Received a new transcription request.")
@@ -66,8 +67,10 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                 if first_chunk and chunk.metadata:
                     session_type = chunk.metadata.type
                     session_id = chunk.metadata.session_id
+                    memory_id = chunk.metadata.memory_id
                     logging.info(
-                        f"Session {session_id} started with type: {session_type}"
+                        f"Session {session_id} started with type: {session_type}, "
+                        f"memory ID: {memory_id}"
                     )
                     first_chunk = False
 
@@ -84,8 +87,13 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                     logging.info(f"Received text input: {chunk.text_data}")
                     transcription.append(chunk.text_data)
                     # Return the text directly as a transcript
-                    response = stt_pb2.StreamResponse(
-                        transcript=stt_pb2.Transcript(text=chunk.text_data)
+                    response = stt_pb2.MemoryChunk(
+                        text_data=chunk.text_data,
+                        metadata=stt_pb2.ChunkMetadata(
+                            session_id=session_id,
+                            memory_id=memory_id,
+                            type=stt_pb2.ChunkType.TRANSCRIPT,
+                        ),
                     )
                     yield response
                     continue
@@ -105,8 +113,13 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
 
                     for segment in segments:
                         logging.debug(f"Transcribed segment: {segment.text}")
-                        response = stt_pb2.StreamResponse(
-                            transcript=stt_pb2.Transcript(text=segment.text)
+                        response = stt_pb2.MemoryChunk(
+                            text_data=segment.text,
+                            metadata=stt_pb2.ChunkMetadata(
+                                session_id=session_id,
+                                memory_id=memory_id,
+                                type=stt_pb2.ChunkType.TRANSCRIPT,
+                            ),
                         )
                         yield response
 
@@ -117,9 +130,9 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
             logging.error(f"Error during transcription: {e}")
         finally:
             logging.info("Client disconnected.")
-            full_transcription = "".join(transcription)
+            full_transcription = " ".join(transcription)
 
-            if session_type == stt_pb2.MEMORY:
+            if session_type == stt_pb2.ChunkType.MEMORY:
                 # For memory sessions, save the data (audio if available)
                 if audio_data or transcription:
                     # Create a domain object using the factory method
@@ -132,7 +145,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                     logging.info(f"Memory saved with URI: {uri}")
                     await self.vector_store_service.index_memory(memory)
 
-            elif session_type == stt_pb2.QUESTION:
+            elif session_type == stt_pb2.ChunkType.QUESTION:
                 # Generate answer for question sessions
                 logging.info(f"Processing question: {full_transcription}")
 
@@ -147,9 +160,14 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
 
                 answer_text = await self.rag_service.search_memories(question_memory)
 
-                # Send answer back to client
-                answer_response = stt_pb2.StreamResponse(
-                    answer=stt_pb2.Answer(text=answer_text)
+                # Send answer back to client using the new MemoryChunk format
+                answer_response = stt_pb2.MemoryChunk(
+                    text_data=answer_text,
+                    metadata=stt_pb2.ChunkMetadata(
+                        session_id=session_id,
+                        memory_id=memory_id,
+                        type=stt_pb2.ChunkType.ANSWER,
+                    ),
                 )
                 yield answer_response
                 logging.info(f"Sent answer: {answer_text[:50]}...")
