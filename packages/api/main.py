@@ -42,7 +42,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
         )
         self.vector_store_service = VectorStoreService(vector_store_repo)
 
-        self.rag_service = SimpleRAGService(vector_store_repo)
+        self.rag_service = SimpleRAGService()
 
         # Initialize the persistence service with a file repository
         repository = FileRepository(storage_dir=RECORDINGS_DIR, sample_rate=SAMPLE_RATE)
@@ -155,22 +155,38 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                     text=transcription,
                     memory_type=MemoryType.QUESTION,
                 )
-                # Save the question for future reference if needed
-                await self.persistence_service.save_memory(question_memory)
 
-                answer_text = await self.rag_service.answer_question(question_memory)
-
-                # Send answer back to client using the new MemoryChunk format
-                answer_response = stt_pb2.MemoryChunk(
-                    text_data=answer_text,
-                    metadata=stt_pb2.ChunkMetadata(
-                        session_id=session_id,
-                        memory_id=memory_id,
-                        type=stt_pb2.ChunkType.ANSWER,
-                    ),
+                # Use the vector store repository to search for relevant memories
+                memory_context = await self.vector_store_service.search(
+                    question_memory, limit=5
                 )
-                yield answer_response
-                logging.info(f"Sent answer: {answer_text[:50]}...")
+
+                answer_task = asyncio.create_task(
+                    self.rag_service.answer_question(question_memory, memory_context)
+                )
+
+                # Stream memory context results to client
+                if memory_context and memory_context.memories:
+                    logging.info(
+                        f"Sending {len(memory_context.memories)} memories from context"
+                    )
+                    for memory in memory_context.memories.values():
+                        # Convert to chunk and stream to client with MEMORY_PREVIEW type
+                        memory_chunk = memory.to_chunk(
+                            session_id=session_id, chunk_type=stt_pb2.ChunkType.MEMORY
+                        )
+
+                        yield memory_chunk
+                        logging.debug(f"Sent memory preview: {memory.text[:50]}...")
+
+                # Send answer back to client
+                answer_request = await answer_task
+                answer_chunk = answer_request.to_chunk(
+                    session_id=session_id, chunk_type=stt_pb2.ChunkType.ANSWER
+                )
+
+                yield answer_chunk
+                logging.info(f"Sent answer: {answer_chunk.text_data[:50]}...")
 
 
 async def serve() -> None:

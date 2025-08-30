@@ -181,7 +181,7 @@ class QdrantVectorStoreRepository(VectorStoreRepository):
 
     async def search_similar(
         self,
-        query_memory: MemoryRequest,
+        query: MemoryRequest,
         limit: int = 5,
         filters: FilterArg = None,
         search_chunks: bool = True,
@@ -199,7 +199,7 @@ class QdrantVectorStoreRepository(VectorStoreRepository):
         Returns:
             MemoryContext containing the search results
         """
-        query_text = " ".join(query_memory.text)
+        query_text = " ".join(query.text)
         query_vector = await self.embedding_model.embed_text(query_text)
 
         query_filter = self._create_search_filter(filters, search_chunks)
@@ -212,7 +212,7 @@ class QdrantVectorStoreRepository(VectorStoreRepository):
             with_payload=True,
         )
 
-        context = MemoryContext.create(query_memory)
+        context = MemoryContext.create(query)
 
         for result in search_results.points:
             memory, matched_text = self._get_or_create_memory(result)
