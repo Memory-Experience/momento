@@ -1,0 +1,15 @@
+{
+  "name": "evaluation",
+  "version": "0.1.0",
+  "private": true,
+  "description": "",
+  "scripts": {
+    "start": "uv run main.py",
+    "test": "uv run -m pytest tests -v",
+    "test:ci": "uv run -m pytest -q"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.14.0"
+}
