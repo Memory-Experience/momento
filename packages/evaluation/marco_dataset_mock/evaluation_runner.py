@@ -1,21 +1,20 @@
 """
 MS MARCO Retrieval System Evaluation
 
-Clean implementation for evaluating retrieval systems on MS MARCO dataset.
-Tests multiple queries to ensure robust evaluation results.
+Implementation for evaluating retrieval systems on MS MARCO dataset.
 """
 
-from typing import List, Dict, Tuple
-from collections import Counter
 import random
 import pandas as pd
+from typing import List, Dict
+from collections import Counter
 from .marco_dataset import MSMarcoDataset
 from .metrics import EvaluationMetrics
 from .evaluator import MarcoTopKEvaluator
 
 
 class MarcoRetrievalSystem:
-    """Retrieval system implementation for MS MARCO dataset."""
+    """Retrieval system implementation for MS MARCO evaluation."""
     
     def __init__(self, docs_df: pd.DataFrame, method: str = "tfidf"):
         self.docs_df = docs_df
@@ -26,7 +25,7 @@ class MarcoRetrievalSystem:
         self._build_index()
     
     def _build_index(self):
-        """Build inverted index for efficient retrieval."""
+        """Build inverted index for retrieval."""
         print(f"Building {self.method} index...")
         
         for _, row in self.docs_df.iterrows():
@@ -46,7 +45,7 @@ class MarcoRetrievalSystem:
         print(f"Index built: {len(self.term_index)} unique terms, {len(self.doc_index)} documents")
     
     def _preprocess_text(self, text: str) -> List[str]:
-        """Simple text preprocessing."""
+        """Basic text preprocessing."""
         return text.lower().split()
     
     def retrieve(self, query: str, top_k: int = 10) -> List[str]:
@@ -55,11 +54,11 @@ class MarcoRetrievalSystem:
             return self._random_retrieval(top_k)
         elif self.method == "bm25":
             return self._bm25_retrieval(query, top_k)
-        else:  # default to tfidf
+        else:
             return self._tfidf_retrieval(query, top_k)
     
     def _tfidf_retrieval(self, query: str, top_k: int) -> List[str]:
-        """TF-IDF based retrieval."""
+        """TF-IDF retrieval implementation."""
         query_tokens = self._preprocess_text(query)
         doc_scores = {}
         
@@ -77,7 +76,7 @@ class MarcoRetrievalSystem:
         return [doc_id for doc_id, _ in sorted_docs[:top_k]]
     
     def _bm25_retrieval(self, query: str, top_k: int) -> List[str]:
-        """BM25 based retrieval."""
+        """BM25 retrieval implementation."""
         query_tokens = self._preprocess_text(query)
         doc_scores = {}
         avg_doc_length = sum(self.doc_lengths.values()) / len(self.doc_lengths)
@@ -104,8 +103,6 @@ class MarcoRetrievalSystem:
         doc_ids = list(self.doc_index.keys())
         return random.sample(doc_ids, min(top_k, len(doc_ids)))
 
-
-# Update the evaluate_multiple_queries function to show the queries:
 
 def evaluate_multiple_queries():
     """Evaluate retrieval systems on multiple queries for robust testing."""
@@ -152,7 +149,6 @@ def evaluate_multiple_queries():
         print("No valid queries found with relevant documents")
         return
     
-    # DISPLAY THE QUERIES BEING TESTED
     print(f"\n{'='*80}")
     print(f"QUERIES BEING TESTED ({len(valid_queries)} queries)")
     print(f"{'='*80}")
@@ -288,8 +284,6 @@ def evaluate_multiple_queries():
     return system_results, valid_queries
 
 
-# Also update test_specific_query to show the query details:
-
 def test_specific_query():
     """Test a specific query to verify evaluation is working correctly."""
     
@@ -302,7 +296,6 @@ def test_specific_query():
         print("Failed to load dataset")
         return
     
-    # Get first valid query
     sample_query = dataset.get_sample_query()
     if not sample_query:
         print("No valid query found")
@@ -315,9 +308,8 @@ def test_specific_query():
     print(f"  Relevant document IDs: {sample_query['relevant_docs']}")
     print(f"  Relevance scores: {sample_query['relevance_scores']}")
     
-    # Show content of relevant documents
     print("\nRELEVANT DOCUMENT CONTENT:")
-    for doc_id in sample_query['relevant_docs'][:2]:  # Show first 2 relevant docs
+    for doc_id in sample_query['relevant_docs'][:2]:
         doc_row = dataset.docs[dataset.docs['id'].astype(str) == doc_id]
         if not doc_row.empty:
             content = str(doc_row.iloc[0]['content'])[:200]
@@ -355,7 +347,6 @@ def test_specific_query():
         print(f"  Precision@3: {p3:.3f}")
         print(f"  MRR: {mrr:.3f}")
         
-        # Show content of top retrieved docs
         print(f"  Content of top retrieved docs:")
         for i, doc_id in enumerate(retrieved_docs[:3]):
             doc_row = dataset.docs[dataset.docs['id'].astype(str) == doc_id]
@@ -377,25 +368,20 @@ def evaluate_with_marco_evaluator():
         print("Failed to load dataset")
         return
     
-    # Add get_name method if not present
     if not hasattr(dataset, 'get_name'):
         dataset.get_name = lambda: "MS MARCO (dev/small, limit=500)"
     
-    # Create evaluator
     evaluator = MarcoTopKEvaluator(dataset, k_values=[1, 3, 5, 10])
     
-    # Create systems
     tfidf_system = MarcoRetrievalSystem(dataset.docs, method="tfidf")
     bm25_system = MarcoRetrievalSystem(dataset.docs, method="bm25")
     
-    # Evaluate systems
     print("Evaluating TF-IDF system...")
     tfidf_results = evaluator.evaluate_system_top_k(tfidf_system, max_queries=50, verbose=False)
     
     print("Evaluating BM25 system...")
     bm25_results = evaluator.evaluate_system_top_k(bm25_system, max_queries=50, verbose=False)
     
-    # Display results
     print("\nTF-IDF Results:")
     for metric, value in tfidf_results['aggregate_metrics'].items():
         print(f"  {metric}: {value:.4f}")
@@ -460,21 +446,18 @@ def main():
     print("MS MARCO Retrieval System Evaluation")
     print("="*80)
     
-    # Test 1: Multiple queries evaluation
     print("TEST 1: Multiple Queries Evaluation")
     try:
         evaluate_multiple_queries()
     except Exception as e:
         print(f"Error in multiple queries evaluation: {e}")
     
-    # Test 2: Marco evaluator comparison
     print("\nTEST 2: Marco Evaluator Comparison")
     try:
         evaluate_with_marco_evaluator()
     except Exception as e:
         print(f"Error in marco evaluator: {e}")
     
-    # Test 3: Specific query test
     print("\nTEST 3: Specific Query Test")
     try:
         test_specific_query()
