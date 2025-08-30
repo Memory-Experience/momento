@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
 import * as grpc from "@grpc/grpc-js";
 import {
-  InputChunk,
-  StreamResponse,
+  MemoryChunk,
+  ChunkMetadata,
+  ChunkType,
   TranscriptionServiceClient,
-  SessionType,
 } from "protos/generated/ts/clients/stt";
 
 // Store active sessions with their gRPC streams
@@ -12,9 +12,10 @@ const sessions = new Map<
   string,
   {
     controller: ReadableStreamDefaultController;
-    grpcStream: grpc.ClientDuplexStream<InputChunk, StreamResponse>;
+    grpcStream: grpc.ClientDuplexStream<MemoryChunk, MemoryChunk>;
     audioBuffer: Uint8Array[];
-    sessionType: SessionType;
+    sessionType: ChunkType;
+    memoryId: string;
     isFirstChunk: boolean;
   }
 >();
@@ -29,13 +30,14 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const sessionId = searchParams.get("sessionId");
   const sessionTypeParam = searchParams.get("type");
+  const memoryId = searchParams.get("memoryId") || crypto.randomUUID();
 
   if (!sessionId) {
     return new Response("Missing sessionId", { status: 400 });
   }
 
   const sessionType =
-    sessionTypeParam === "question" ? SessionType.QUESTION : SessionType.MEMORY;
+    sessionTypeParam === "question" ? ChunkType.QUESTION : ChunkType.MEMORY;
 
   // Create Server-Sent Events stream
   const stream = new ReadableStream({
@@ -47,7 +49,7 @@ export async function GET(request: NextRequest) {
         const grpcStream = grpcClient.transcribe();
 
         // Handle responses from gRPC server
-        grpcStream.on("data", (response: StreamResponse) => {
+        grpcStream.on("data", (response: MemoryChunk) => {
           console.log("Received gRPC response:", response);
 
           // Check if controller is still open before trying to enqueue
@@ -56,10 +58,12 @@ export async function GET(request: NextRequest) {
             return;
           }
 
-          if (response.transcript) {
+          const responseType = response.metadata?.type;
+
+          if (responseType === ChunkType.TRANSCRIPT && response.textData) {
             const message = JSON.stringify({
               type: "transcript",
-              text: response.transcript.text,
+              text: response.textData,
               timestamp: Date.now(),
             });
 
@@ -68,10 +72,10 @@ export async function GET(request: NextRequest) {
             } catch (error) {
               console.log("Failed to enqueue transcript message:", error);
             }
-          } else if (response.answer) {
+          } else if (responseType === ChunkType.ANSWER && response.textData) {
             const message = JSON.stringify({
               type: "answer",
-              text: response.answer.text,
+              text: response.textData,
               timestamp: Date.now(),
             });
 
@@ -122,6 +126,7 @@ export async function GET(request: NextRequest) {
           grpcStream,
           audioBuffer: [],
           sessionType,
+          memoryId,
           isFirstChunk: true,
         });
 
@@ -129,6 +134,7 @@ export async function GET(request: NextRequest) {
         const connectMessage = JSON.stringify({
           type: "connected",
           sessionId,
+          memoryId,
           timestamp: Date.now(),
         });
         controller.enqueue(`data: ${connectMessage}\n\n`);
@@ -194,14 +200,15 @@ export async function POST(request: NextRequest) {
 
       // Send text data to gRPC server
       if (session.grpcStream && !session.grpcStream.destroyed) {
-        const textChunk: InputChunk = {
+        const metadata: ChunkMetadata = {
+          sessionId,
+          memoryId: session.memoryId,
+          type: session.sessionType,
+        };
+
+        const textChunk: MemoryChunk = {
           textData,
-          metadata: session.isFirstChunk
-            ? {
-                sessionId,
-                type: session.sessionType,
-              }
-            : undefined,
+          metadata: session.isFirstChunk ? metadata : undefined,
         };
 
         // Mark that we've sent the first chunk
@@ -235,14 +242,15 @@ export async function POST(request: NextRequest) {
 
       // Send audio chunk to gRPC server
       if (session.grpcStream && !session.grpcStream.destroyed) {
-        const audioChunk: InputChunk = {
+        const metadata: ChunkMetadata = {
+          sessionId,
+          memoryId: session.memoryId,
+          type: session.sessionType,
+        };
+
+        const audioChunk: MemoryChunk = {
           audioData: audioBytes,
-          metadata: session.isFirstChunk
-            ? {
-                sessionId,
-                type: session.sessionType,
-              }
-            : undefined,
+          metadata: session.isFirstChunk ? metadata : undefined,
         };
 
         // Mark that we've sent the first chunk
@@ -250,9 +258,6 @@ export async function POST(request: NextRequest) {
           session.isFirstChunk = false;
         }
 
-        // console.debug(
-        //   `Sending audio chunk: ${audioBytes.length} bytes for session ${sessionId}`,
-        // );
         session.grpcStream.write(audioChunk);
 
         return new Response(
@@ -298,7 +303,7 @@ export async function DELETE(request: NextRequest) {
   const session = sessions.get(sessionId);
   if (session) {
     // For question sessions, we need to wait for the answer before fully closing
-    if (session.sessionType === SessionType.QUESTION) {
+    if (session.sessionType === ChunkType.QUESTION) {
       console.log(
         `Question session ${sessionId} - ending audio stream, waiting for answer`,
       );

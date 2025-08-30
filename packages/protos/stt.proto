@@ -4,43 +4,28 @@ package sst;
 service TranscriptionService {
   // Bidirectional streaming: client sends input (audio or text), server responds with various messages
   // NOTE: This works for Node.js clients but NOT for gRPC-Web (browsers)
-  rpc Transcribe(stream InputChunk) returns (stream StreamResponse);
+  rpc Transcribe(stream MemoryChunk) returns (stream MemoryChunk);
 }
 
 // Input chunk from client (either audio or text)
-message InputChunk {
+message MemoryChunk {
   oneof data {
     bytes audio_data = 1; // Audio data from microphone
     string text_data = 2; // Text data for direct text input
   }
-  SessionMetadata metadata = 3; // Optional metadata (only sent on first chunk)
+  ChunkMetadata metadata = 10; // Optional metadata (only sent on first chunk)
 }
 
 // Session metadata to indicate the type of session
-message SessionMetadata {
+message ChunkMetadata {
   string session_id = 1;
-  SessionType type = 2;
+  string memory_id = 2;
+  ChunkType type = 3;
 }
 
-enum SessionType {
+enum ChunkType {
   MEMORY = 0;
   QUESTION = 1;
-}
-
-// Transcription result from SST service
-message Transcript {
-  string text = 1; // Recognized speech text (partial or complete)
-}
-
-// Answer to user question using RAG
-message Answer {
-  string text = 1;
-}
-
-// A response from the server can be one of many types
-message StreamResponse {
-  oneof response {
-    Transcript transcript = 1;
-    Answer answer = 2;
-  }
+  TRANSCRIPT = 2;
+  ANSWER = 3;
 }
