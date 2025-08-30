@@ -1,17 +1,12 @@
 """
-Basic MS MARCO Top-K Evaluation Class
+MS MARCO Top-K Evaluation Class
 
-This class provides the missing link between your existing components:
-- MSMarcoDataset (loading data)
-- EvaluationMetrics (calculating metrics)
-- RetrievalSystem (getting top-k results)
-
-It orchestrates the evaluation process to get top-k evaluation results.
+Orchestrates evaluation process for retrieval systems on MS MARCO dataset.
 """
 
 import pandas as pd
-from typing import List, Dict, Any, Optional, Protocol
 import time
+from typing import List, Dict, Any, Optional, Protocol
 from collections import defaultdict
 
 from .marco_dataset import MSMarcoDataset
@@ -22,8 +17,7 @@ class RetrievalSystemInterface(Protocol):
     """Interface for retrieval systems to be evaluated."""
     
     def retrieve(self, query: str, top_k: int = 10) -> List[str]:
-        """
-        Retrieve top-k document IDs for a query.
+        """Retrieve top-k document IDs for a query.
         
         Args:
             query: Search query string
@@ -36,28 +30,18 @@ class RetrievalSystemInterface(Protocol):
 
 
 class MarcoTopKEvaluator:
-    """
-    Basic MS MARCO Top-K evaluation class that connects all existing components.
-    
-    This class:
-    1. Takes a loaded MSMarcoDataset
-    2. Takes a retrieval system 
-    3. Runs queries through the system to get top-k results
-    4. Uses EvaluationMetrics to calculate performance scores
-    """
+    """MS MARCO Top-K evaluation orchestrator."""
     
     def __init__(self, dataset: MSMarcoDataset, k_values: Optional[List[int]] = None):
-        """
-        Initialize evaluator with MS MARCO dataset.
+        """Initialize evaluator with MS MARCO dataset.
         
         Args:
             dataset: Loaded MSMarcoDataset instance
-            k_values: List of k values to evaluate (default: [1, 3, 5, 10])
+            k_values: K values to evaluate (default: [1, 3, 5, 10])
         """
         self.dataset = dataset
         self.k_values = k_values or [1, 3, 5, 10]
         
-        # Build lookup structures for efficient evaluation
         self.relevance_lookup = self._build_relevance_lookup()
         
         print(f"Marco Top-K Evaluator initialized:")
@@ -67,19 +51,17 @@ class MarcoTopKEvaluator:
         print(f"  Relevance judgments: {len(dataset.qrels)}")
         print(f"  K values: {self.k_values}")
     
-    # In your eval.py MarcoTopKEvaluator class, update _build_relevance_lookup:
     def _build_relevance_lookup(self) -> Dict[str, Dict[str, float]]:
         """Build efficient query_id -> {doc_id: relevance_score} lookup."""
         lookup = defaultdict(dict)
         
         for _, row in self.dataset.qrels.iterrows():
-            query_id = str(row['query_id'])  # Convert to string
-            doc_id = str(row['doc_id'])      # Convert to string
+            query_id = str(row['query_id'])
+            doc_id = str(row['doc_id'])
             relevance = float(row['relevance'])
             lookup[query_id][doc_id] = relevance
         
         print(f"Built relevance lookup for {len(lookup)} queries")
-        # Debug: show sample
         if lookup:
             sample_query_id = list(lookup.keys())[0]
             sample_docs = list(lookup[sample_query_id].keys())[:3]
@@ -89,8 +71,7 @@ class MarcoTopKEvaluator:
     
     def evaluate_query_top_k(self, query_id: str, query_text: str, 
                             retrieval_system: RetrievalSystemInterface) -> Dict[str, Any]:
-        """
-        Evaluate top-k results for a single query.
+        """Evaluate top-k results for a single query.
         
         Args:
             query_id: Query identifier
@@ -100,21 +81,17 @@ class MarcoTopKEvaluator:
         Returns:
             Dictionary with evaluation results for this query
         """
-        # Step 1: Get top-k results from retrieval system
         max_k = max(self.k_values)
         retrieved_doc_ids = retrieval_system.retrieve(query_text, max_k)
-        retrieved_doc_ids = [str(doc_id) for doc_id in retrieved_doc_ids]  # Ensure strings
+        retrieved_doc_ids = [str(doc_id) for doc_id in retrieved_doc_ids]
         
-        # Step 2: Get ground truth relevance for this query
         query_relevance = self.relevance_lookup.get(query_id, {})
         relevant_doc_ids = [doc_id for doc_id, score in query_relevance.items() if score > 0]
         
-        # Step 3: Calculate metrics for each k value
         query_metrics = {}
         
         for k in self.k_values:
             if k <= len(retrieved_doc_ids):
-                # Calculate standard metrics using your existing EvaluationMetrics class
                 precision_k = EvaluationMetrics.precision_at_k(retrieved_doc_ids, relevant_doc_ids, k)
                 recall_k = EvaluationMetrics.recall_at_k(retrieved_doc_ids, relevant_doc_ids, k)
                 ndcg_k = EvaluationMetrics.ndcg_at_k(retrieved_doc_ids, query_relevance, k)
@@ -123,7 +100,6 @@ class MarcoTopKEvaluator:
                 query_metrics[f'recall@{k}'] = recall_k
                 query_metrics[f'ndcg@{k}'] = ndcg_k
         
-        # Step 4: Calculate MRR
         mrr = EvaluationMetrics.mean_reciprocal_rank(retrieved_doc_ids, relevant_doc_ids)
         query_metrics['mrr'] = mrr
         

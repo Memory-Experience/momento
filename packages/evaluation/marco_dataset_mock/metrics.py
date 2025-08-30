@@ -1,8 +1,7 @@
 """
 Evaluation Metrics Calculator
 
-Standardized metrics for information retrieval evaluation.
-Consolidated from various scattered implementations.
+Standard information retrieval evaluation metrics implementation.
 """
 
 import math
@@ -10,16 +9,15 @@ from typing import List, Dict
 
 
 class EvaluationMetrics:
-    """Standardized evaluation metrics calculator."""
+    """Standard evaluation metrics for information retrieval systems."""
     
     @staticmethod
     def precision_at_k(retrieved_ids: List[str], relevant_ids: List[str], k: int) -> float:
-        """
-        Calculate Precision@k - how many of the top-k retrieved items are relevant.
+        """Calculate Precision@k - fraction of top-k results that are relevant.
         
         Args:
-            retrieved_ids: List of retrieved document IDs in ranking order
-            relevant_ids: List of relevant document IDs (ground truth)
+            retrieved_ids: Retrieved document IDs in ranking order
+            relevant_ids: Ground truth relevant document IDs
             k: Number of top results to consider
             
         Returns:
@@ -35,12 +33,11 @@ class EvaluationMetrics:
     
     @staticmethod
     def recall_at_k(retrieved_ids: List[str], relevant_ids: List[str], k: int) -> float:
-        """
-        Calculate Recall@k - how many of the relevant items are in top-k results.
+        """Calculate Recall@k - fraction of relevant items found in top-k results.
         
         Args:
-            retrieved_ids: List of retrieved document IDs in ranking order
-            relevant_ids: List of relevant document IDs (ground truth)
+            retrieved_ids: Retrieved document IDs in ranking order
+            relevant_ids: Ground truth relevant document IDs
             k: Number of top results to consider
             
         Returns:
@@ -56,13 +53,11 @@ class EvaluationMetrics:
     
     @staticmethod
     def ndcg_at_k(retrieved_ids: List[str], relevance_scores: Dict[str, float], k: int) -> float:
-        """
-        Calculate NDCG@k - Normalized Discounted Cumulative Gain.
-        Measures ranking quality with position awareness.
+        """Calculate NDCG@k - Normalized Discounted Cumulative Gain.
         
         Args:
-            retrieved_ids: List of retrieved document IDs in ranking order
-            relevance_scores: Dictionary mapping doc_id to relevance score
+            retrieved_ids: Retrieved document IDs in ranking order
+            relevance_scores: Document ID to relevance score mapping
             k: Number of top results to consider
             
         Returns:
@@ -73,13 +68,13 @@ class EvaluationMetrics:
             
         retrieved_k = retrieved_ids[:k]
         
-        # Calculate DCG (Discounted Cumulative Gain)
+        # Calculate DCG
         dcg = 0.0
         for i, doc_id in enumerate(retrieved_k):
             relevance = relevance_scores.get(doc_id, 0.0)
-            dcg += relevance / math.log2(i + 2)  # i+2 because log2(1) is undefined
+            dcg += relevance / math.log2(i + 2)
         
-        # Calculate IDCG (Ideal DCG - perfect ranking)
+        # Calculate IDCG (perfect ranking)
         sorted_relevance = sorted(relevance_scores.values(), reverse=True)[:k]
         idcg = 0.0
         for i, relevance in enumerate(sorted_relevance):
@@ -89,13 +84,11 @@ class EvaluationMetrics:
     
     @staticmethod
     def mean_reciprocal_rank(retrieved_ids: List[str], relevant_ids: List[str]) -> float:
-        """
-        Calculate MRR - Mean Reciprocal Rank.
-        Measures how quickly users find relevant results.
+        """Calculate MRR - Mean Reciprocal Rank.
         
         Args:
-            retrieved_ids: List of retrieved document IDs in ranking order
-            relevant_ids: List of relevant document IDs (ground truth)
+            retrieved_ids: Retrieved document IDs in ranking order
+            relevant_ids: Ground truth relevant document IDs
             
         Returns:
             MRR score (0.0 to 1.0)
@@ -108,14 +101,13 @@ class EvaluationMetrics:
     @classmethod
     def calculate_all_metrics(cls, retrieved_ids: List[str], relevant_ids: List[str], 
                             relevance_scores: Dict[str, float], k_values: List[int]) -> Dict[str, float]:
-        """
-        Calculate all metrics for given results.
+        """Calculate all metrics for given retrieval results.
         
         Args:
-            retrieved_ids: List of retrieved document IDs in ranking order
-            relevant_ids: List of relevant document IDs (ground truth)
-            relevance_scores: Dictionary mapping doc_id to relevance score
-            k_values: List of k values to calculate metrics for
+            retrieved_ids: Retrieved document IDs in ranking order
+            relevant_ids: Ground truth relevant document IDs
+            relevance_scores: Document ID to relevance score mapping
+            k_values: K values to calculate metrics for
             
         Returns:
             Dictionary with all calculated metrics
