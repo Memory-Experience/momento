@@ -43,7 +43,7 @@ class VectorStoreService:
 
     async def search(
         self,
-        query: str,
+        query: MemoryRequest,
         limit: int = 5,
     ) -> MemoryContext:
         """
@@ -58,10 +58,11 @@ class VectorStoreService:
             MemoryContext containing the search results
         """
         # The repository is responsible for converting the query to embeddings
-        context = await self.repository.search_similar(query_text=query, limit=limit)
+        context = await self.repository.search_similar(query=query, limit=limit)
 
         logging.info(
-            f"Search for '{query}' returned {len(context.get_memory_objects())} results"
+            f"Search for '{query.text}' "
+            f"returned {len(context.get_memory_objects())} results"
         )
         return context
 
