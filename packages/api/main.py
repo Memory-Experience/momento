@@ -158,7 +158,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                 # Save the question for future reference if needed
                 await self.persistence_service.save_memory(question_memory)
 
-                answer_text = await self.rag_service.search_memories(question_memory)
+                answer_text = await self.rag_service.answer_question(question_memory)
 
                 # Send answer back to client using the new MemoryChunk format
                 answer_response = stt_pb2.MemoryChunk(

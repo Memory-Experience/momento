@@ -16,14 +16,14 @@ class SimpleRAGService:
     def __init__(self, vector_store_repo: VectorStoreRepository):
         self.vector_store_repo = vector_store_repo
 
-    async def search_memories(self, query: MemoryRequest) -> str:
+    async def answer_question(self, query: MemoryRequest) -> str:
         """Search memories and return a relevant answer."""
         logging.info(f"Searching memories for: {query.text}")
 
         # Use the vector store repository to search for relevant memories
-        search_results = await self.vector_store_repo.search_similar(query, limit=5)
+        memory_context = await self.vector_store_repo.search_similar(query, limit=5)
 
-        if not search_results:
+        if not memory_context.memories:
             return (
                 "I don't have any memories that match your question. "
                 + "Try asking about something you've recorded before."
@@ -32,7 +32,7 @@ class SimpleRAGService:
         # Generate answer based on retrieved memories
         answer_parts = ["Based on your memories, here's what I found:"]
 
-        for i, memory in enumerate(search_results.memories.values(), 1):
+        for i, memory in enumerate(memory_context.memories.values(), 1):
             # Format the timestamp nicely
             timestamp = (
                 datetime.fromisoformat(memory.timestamp)
