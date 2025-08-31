@@ -2,6 +2,7 @@ import json
 import logging
 import os
 from datetime import datetime
+from uuid import UUID, uuid4
 
 from domain.memory_request import MemoryRequest, MemoryType
 from pydub import AudioSegment
@@ -29,7 +30,7 @@ class FileRepository(Repository):
         """Save a memory to files (audio + transcript)."""
         # Generate ID if not present
         if memory.id is None:
-            memory.id = memory.timestamp.strftime("%Y%m%d_%H%M%S")
+            memory.id = uuid4()
 
         # Save audio file
         audio_filename = f"{memory.id}.wav"
@@ -52,7 +53,7 @@ class FileRepository(Repository):
             with open(metadata_filepath, "w") as f:
                 json.dump(
                     {
-                        "id": memory.id,
+                        "id": str(memory.id),
                         "timestamp": memory.timestamp.isoformat(),
                         "duration_seconds": len(audio_segment) / 1000,
                         "text": memory.text,
@@ -120,7 +121,7 @@ class FileRepository(Repository):
                     timestamp = datetime.fromtimestamp(os.path.getctime(audio_filepath))
 
             return MemoryRequest.create(
-                id=id,
+                id=UUID(id),
                 timestamp=timestamp,
                 audio_data=audio_data,
                 text=text,

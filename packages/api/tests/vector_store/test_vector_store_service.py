@@ -1,4 +1,5 @@
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 from domain.memory_context import MemoryContext
@@ -49,21 +50,6 @@ async def test_index_memory_calls_repository(
 
 
 @pytest.mark.asyncio
-async def test_index_memory_validates_content(
-    vector_store_service, mock_repository, sample_memory
-):
-    """Test that index_memory validates the memory has content."""
-    # Create a memory with empty text
-    sample_memory.text = ""
-
-    # Call the service method
-    await vector_store_service.index_memory(sample_memory)
-
-    # Assert the repository method was not called due to empty content
-    mock_repository.index_memory.assert_not_called()
-
-
-@pytest.mark.asyncio
 async def test_search_calls_repository(
     vector_store_service, mock_repository, sample_memory
 ):
@@ -73,13 +59,13 @@ async def test_search_calls_repository(
     mock_repository.search_similar.return_value = mock_results
 
     # Call the service method
-    query = "test query"
+    query = sample_memory
     limit = 10
     results = await vector_store_service.search(query, limit)
 
     # Assert the repository method was called with the correct arguments
     mock_repository.search_similar.assert_called_once_with(
-        query_text=query,
+        query=query,
         limit=limit,
     )
 
@@ -106,11 +92,11 @@ async def test_list_memories_calls_repository(vector_store_service, mock_reposit
         MemoryRequest.create(id="mem-1", text=["Test 1"]),
         MemoryRequest.create(id="mem-2", text=["Test 2"]),
     ]
-    mock_repository.list_memories.return_value = mock_memories
+    mock_repository.list_memories.return_value = mock_memories, None
 
     # Call the service method
     limit = 50
-    offset = 10
+    offset = uuid4()
     memories = await vector_store_service.list_memories(limit, offset)
 
     # Assert the repository method was called with the correct arguments

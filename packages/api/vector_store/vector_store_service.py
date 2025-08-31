@@ -1,4 +1,5 @@
 import logging
+from uuid import UUID
 
 from domain.memory_context import MemoryContext
 from domain.memory_request import MemoryRequest
@@ -37,16 +38,12 @@ class VectorStoreService:
         Args:
             memory: The memory to index
         """
-        if not memory.text.strip():
-            logging.warning(f"No text content to index for memory {memory.id}")
-            return
-
         await self.repository.index_memory(memory)
         logging.info(f"Indexed memory {memory.id}")
 
     async def search(
         self,
-        query: str,
+        query: MemoryRequest,
         limit: int = 5,
     ) -> MemoryContext:
         """
@@ -61,14 +58,15 @@ class VectorStoreService:
             MemoryContext containing the search results
         """
         # The repository is responsible for converting the query to embeddings
-        context = await self.repository.search_similar(query_text=query, limit=limit)
+        context = await self.repository.search_similar(query=query, limit=limit)
 
         logging.info(
-            f"Search for '{query}' returned {len(context.get_memory_objects())} results"
+            f"Search for '{query.text}' "
+            f"returned {len(context.get_memory_objects())} results"
         )
         return context
 
-    async def delete_memory(self, memory_id: str) -> None:
+    async def delete_memory(self, memory_id: UUID) -> None:
         """
         Delete all vector records for a specific memory.
         The repository is responsible for deciding how to handle related chunks.
@@ -82,20 +80,20 @@ class VectorStoreService:
     async def list_memories(
         self,
         limit: int = 100,
-        offset: int = 0,
+        offset: UUID | None = None,
     ) -> list[MemoryRequest]:
         """
         List memories stored in the vector database.
 
         Args:
             limit: Maximum number of memories to return
-            offset: Number of memories to skip
+            offset: Lowest memory ID to start from (for pagination)
             filters: Optional filters to apply
 
         Returns:
             List of Memory objects
         """
-        memories = await self.repository.list_memories(
+        memories, _ = await self.repository.list_memories(
             limit=limit,
             offset=offset,
         )

@@ -151,25 +151,23 @@ class BatchedInferencePipeline:
                 segment_duration=duration,
                 seek=0,
             )
-            segmented_outputs.append(
-                [
-                    dict(
-                        text=tokenizer.decode(subsegment["tokens"]),
-                        avg_logprob=output["avg_logprob"],
-                        no_speech_prob=output["no_speech_prob"],
-                        tokens=subsegment["tokens"],
-                        start=subsegment["start"],
-                        end=subsegment["end"],
-                        compression_ratio=get_compression_ratio(
-                            tokenizer.decode(subsegment["tokens"])
-                        ),
-                        seek=int(
-                            chunk_metadata["start_time"] * self.model.frames_per_second
-                        ),
-                    )
-                    for subsegment in subsegments
-                ]
-            )
+            segmented_outputs.append([
+                dict(
+                    text=tokenizer.decode(subsegment["tokens"]),
+                    avg_logprob=output["avg_logprob"],
+                    no_speech_prob=output["no_speech_prob"],
+                    tokens=subsegment["tokens"],
+                    start=subsegment["start"],
+                    end=subsegment["end"],
+                    compression_ratio=get_compression_ratio(
+                        tokenizer.decode(subsegment["tokens"])
+                    ),
+                    seek=int(
+                        chunk_metadata["start_time"] * self.model.frames_per_second
+                    ),
+                )
+                for subsegment in subsegments
+            ])
         if options.word_timestamps:
             self.last_speech_timestamp = self.model.add_word_timestamps(
                 segmented_outputs,
@@ -1554,9 +1552,9 @@ class WhisperModel:
         )
         median_max_durations = []
         for alignment in alignments:
-            word_durations = np.array(
-                [word["end"] - word["start"] for word in alignment]
-            )
+            word_durations = np.array([
+                word["end"] - word["start"] for word in alignment
+            ])
             word_durations = word_durations[word_durations.nonzero()]
             median_duration = (
                 np.median(word_durations) if len(word_durations) > 0 else 0.0
@@ -1716,25 +1714,23 @@ class WhisperModel:
                 for i, j in zip(word_boundaries[:-1], word_boundaries[1:], strict=False)
             ]
 
-            return_list.append(
-                [
-                    dict(
-                        word=word,
-                        tokens=tokens,
-                        start=start,
-                        end=end,
-                        probability=probability,
-                    )
-                    for word, tokens, start, end, probability in zip(
-                        words,
-                        word_tokens,
-                        start_times,
-                        end_times,
-                        word_probabilities,
-                        strict=False,
-                    )
-                ]
-            )
+            return_list.append([
+                dict(
+                    word=word,
+                    tokens=tokens,
+                    start=start,
+                    end=end,
+                    probability=probability,
+                )
+                for word, tokens, start, end, probability in zip(
+                    words,
+                    word_tokens,
+                    start_times,
+                    end_times,
+                    word_probabilities,
+                    strict=False,
+                )
+            ])
         return return_list
 
     def detect_language(
@@ -1865,15 +1861,13 @@ def get_suppressed_tokens(
     else:
         assert isinstance(suppress_tokens, list), "suppress_tokens must be a list"
 
-    suppress_tokens.extend(
-        [
-            tokenizer.transcribe,
-            tokenizer.translate,
-            tokenizer.sot,
-            tokenizer.sot_prev,
-            tokenizer.sot_lm,
-        ]
-    )
+    suppress_tokens.extend([
+        tokenizer.transcribe,
+        tokenizer.translate,
+        tokenizer.sot,
+        tokenizer.sot_prev,
+        tokenizer.sot_lm,
+    ])
 
     return tuple(sorted(set(suppress_tokens)))
 
