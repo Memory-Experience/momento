@@ -1,1 +1,4 @@
 recordings/
+
+# Ignore model files
+*.gguf

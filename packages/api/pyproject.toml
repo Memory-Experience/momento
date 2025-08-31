@@ -14,6 +14,8 @@ dependencies = [
     "numpy>=2.3.2",
     "faster-whisper>=1.2.0",
     "qdrant-client>=1.15.1",
+    "llama-cpp-python>=0.3.16",
+    "huggingface-hub>=0.34.4",
 ]
 
 [build-system]
