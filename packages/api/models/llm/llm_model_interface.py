@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from collections.abc import AsyncIterator
 
 from domain.memory_context import MemoryContext
 from domain.memory_request import MemoryRequest
@@ -10,7 +11,6 @@ class MemoryResponse:
     def __init__(
         self,
         response: MemoryRequest,
-        context: MemoryContext,
         model_name: str,
         tokens_used: int,
         metadata: dict = None,
@@ -19,7 +19,6 @@ class MemoryResponse:
         self.tokens_used = tokens_used
         self.metadata = metadata or {}
         self.response = response
-        self.context = context
 
 
 class LLMModel(ABC):
@@ -32,15 +31,21 @@ class LLMModel(ABC):
         self,
         prompt: str,
         memory_context: MemoryContext,
-    ) -> MemoryResponse:
+        chunk_size_tokens: int = 1,
+    ) -> AsyncIterator[MemoryResponse]:
         """
         Generate a text response based on the prompt and conversation history.
+        Returns an async iterator that yields chunks of the response.
 
         Args:
             prompt: The user prompt to generate a response for
             memory_context: Memory context object containing relevant memories
                 (from vector search)
+            chunk_size_tokens: Number of tokens to coalesce per streaming chunk.
+                Higher values reduce object churn but increase latency between
+                visible updates.
+                Setting a very large value effectively creates non-streaming behavior.
         Returns:
-            LLMResponse object containing the generated text and metadata
+            AsyncIterator[MemoryResponse]: Stream of response chunks
         """
         pass

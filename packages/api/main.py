@@ -5,12 +5,10 @@ import sys
 import grpc
 import numpy as np
 from domain.memory_request import MemoryRequest, MemoryType
-from models.character_text_chunker import CharacterTextChunker
-from models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
 from persistence.persistence_service import PersistenceService
 from persistence.repositories.file_repository import FileRepository
 from protos.generated.py import stt_pb2, stt_pb2_grpc
-from rag.rag_service import SimpleRAGService
+from rag.llm_rag_service import LLMRAGService
 from tests.vector_store.test_qdrant_vector_store_repository import MockEmbeddingModel
 from vector_store.repositories.qdrant_vector_store_repository import (
     InMemoryQdrantVectorStoreRepository,
@@ -19,6 +17,10 @@ from vector_store.repositories.vector_store_repository_interface import (
     VectorStoreRepository,
 )
 from vector_store.vector_store_service import VectorStoreService
+
+from models.character_text_chunker import CharacterTextChunker
+from models.llm.qwen3 import Qwen3
+from models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
 
 _cleanup_coroutines = []
 
@@ -42,7 +44,11 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
         )
         self.vector_store_service = VectorStoreService(vector_store_repo)
 
-        self.rag_service = SimpleRAGService()
+        # Initialize LLM model using defaults from the Qwen3 class
+        self.llm_model = Qwen3()
+
+        # Inject the LLM model into the RAG service
+        self.rag_service = LLMRAGService(llm_model=self.llm_model)
 
         # Initialize the persistence service with a file repository
         repository = FileRepository(storage_dir=RECORDINGS_DIR, sample_rate=SAMPLE_RATE)
@@ -162,7 +168,11 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                 )
 
                 answer_task = asyncio.create_task(
-                    self.rag_service.answer_question(question_memory, memory_context)
+                    self.rag_service.answer_question(
+                        question_memory,
+                        memory_context,
+                        # Use default chunk_size_tokens from model
+                    )
                 )
 
                 # Stream memory context results to client
@@ -186,7 +196,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                 )
 
                 yield answer_chunk
-                logging.info(f"Sent answer: {answer_chunk.text_data[:50]}...")
+                logging.info(f"Sent answer: {answer_chunk.text_data}")
 
 
 async def serve() -> None:
@@ -217,6 +227,14 @@ if __name__ == "__main__":
     if "-v" in sys.argv:
         log_level = logging.DEBUG
 
+    logging.basicConfig(level=log_level)
+    loop = asyncio.new_event_loop()
+    try:
+        loop.run_until_complete(serve())
+    finally:
+        logging.info("Cleaning up...")
+        loop.run_until_complete(*_cleanup_coroutines)
+        loop.close()
     logging.basicConfig(level=log_level)
     loop = asyncio.new_event_loop()
     try:
