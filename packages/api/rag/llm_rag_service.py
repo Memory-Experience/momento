@@ -1,7 +1,8 @@
 import logging
+from collections.abc import AsyncIterator
 
 from domain.memory_context import MemoryContext
-from domain.memory_request import MemoryRequest, MemoryType
+from domain.memory_request import MemoryRequest
 
 from models.llm.llm_model_interface import LLMModel, MemoryResponse
 
@@ -25,10 +26,10 @@ class LLMRAGService:
         self,
         query: MemoryRequest,
         memory_context: MemoryContext,
-        chunk_size_tokens: int = 32,  # Higher value to reduce streaming granularity
-    ) -> MemoryRequest:
+        chunk_size_tokens: int = 8,  # Medium value for smoother streaming
+    ) -> AsyncIterator[MemoryResponse]:
         """
-        Search memories and use the LLM model to generate a response based on
+        Search memories and use the LLM model to generate a streaming response based on
         the retrieved context.
 
         Args:
@@ -37,53 +38,27 @@ class LLMRAGService:
             chunk_size_tokens: Controls streaming granularity, higher values produce
                                smoother output with less character-by-character display
 
-        Returns:
-            MemoryRequest: The generated answer as a memory request
+        Yields:
+            MemoryResponse: Streaming chunks of the generated answer
         """
         logging.info(f"Processing question: {query.text}")
 
         # Join the text list into a single string for the prompt
         prompt = " ".join(query.text)
 
-        # Generate response using the LLM
-        accumulated_text: list[str] = []  # Use a list to collect all text segments
-        tokens_used = 0
-        final_response: MemoryResponse | None = None
+        # Log the number of memories in the context
+        if memory_context and not memory_context.is_empty():
+            logging.info(f"Using {len(memory_context.memories)} memories for context")
 
-        # Stream responses and accumulate them
+        # Stream responses directly without accumulating
         async for chunk in self.llm_model.generate_with_memory(
             prompt=prompt,
             memory_context=memory_context,
             chunk_size_tokens=chunk_size_tokens,
         ):
-            # Simply extend our list with the text from the response
-            accumulated_text.extend(chunk.response.text)
-            tokens_used = chunk.tokens_used
-
-            # Store the final chunk for metadata
+            # Log tokens used for monitoring
             if chunk.metadata.get("is_final", False):
-                final_response = chunk
-                logging.info(f"LLM response completed: {tokens_used} tokens used")
+                logging.info(f"LLM response completed: {chunk.tokens_used} tokens used")
 
-        # Always create a new MemoryRequest with the accumulated text
-        # Regardless of whether we have a final response or not
-        answer_request = MemoryRequest.create(
-            # Use the ID and timestamp from final response if available
-            id=final_response.response.id if final_response else None,
-            timestamp=final_response.response.timestamp if final_response else None,
-            # Always use our accumulated text which contains the complete response
-            text=accumulated_text,
-            memory_type=MemoryType.ANSWER,
-        )
-
-        # Log additional information
-        if tokens_used > 0:
-            logging.debug(
-                f"Generated response using {tokens_used} "
-                f"tokens from {self.llm_model.model_name}"
-            )
-            # Log a preview of the accumulated text for debugging
-            preview = " ".join(accumulated_text)
-            logging.debug(f"Response preview: {preview}")
-
-        return answer_request
+            # Pass through each chunk directly to the caller
+            yield chunk

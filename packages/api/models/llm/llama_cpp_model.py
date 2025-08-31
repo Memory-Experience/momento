@@ -218,7 +218,7 @@ class LlamaCppModel(LLMModel):
             # This ensures consistent handling in the RAG service
             yield MemoryResponse(
                 response=MemoryRequest.create(
-                    id=None, text=[buf_text.strip()], memory_type=MemoryType.ANSWER
+                    text=[buf_text.strip()], memory_type=MemoryType.ANSWER
                 ),
                 model_name=self.model_name,
                 tokens_used=tokens_emitted,

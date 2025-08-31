@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, MagicMock
 import main
 import pytest
 from domain.memory_context import MemoryContext
-from domain.memory_request import MemoryRequest
 from protos.generated.py.stt_pb2 import ChunkMetadata, ChunkType, MemoryChunk
 
 
@@ -97,28 +96,37 @@ async def test_transcribe_saves_memory(
 async def test_transcribe_text_input(
     mocker, mock_services, servicer, grpc_context, collect_responses
 ):
-    # Create mock answer request
-    mock_answer_request = MagicMock(spec=MemoryRequest)
-    mock_answer_request.text = ["test answer"]
-    mock_answer_request.to_chunk.return_value = MemoryChunk(
-        text_data="test answer",
-        metadata=ChunkMetadata(
-            type=ChunkType.ANSWER, session_id="test_text_session", memory_id="answer-id"
-        ),
+    # Mock the LLM model to avoid initialization errors
+    mock_llm = mocker.MagicMock()
+    servicer.llm_model = mock_llm
+
+    # Create a proper memory request object that will be part of the response
+    mock_memory_req = mocker.MagicMock()
+    mock_memory_req.text = [
+        "test answer"
+    ]  # This must be a list as main.py iterates through it
+    mock_memory_req.id = "answer-id"
+
+    # Create a sample memory response that will be yielded by the async generator
+    mock_memory_response = mocker.MagicMock()
+    mock_memory_response.response = (
+        mock_memory_req  # Set our mock memory request as the response
     )
+    mock_memory_response.metadata = {"is_final": True}
+    mock_memory_response.tokens_used = 10
 
     # Create mock memory context and set it as the return value for search
     mock_memory_context = MagicMock(spec=MemoryContext)
     mock_memory_context.memories = {}  # Empty dict for this test
     mock_services["vector_store"].return_value.search.return_value = mock_memory_context
 
-    # Patch RAG service
-    mocker.patch.object(main.LLMRAGService, "__init__", return_value=None)
-    mocker.patch.object(
-        main.LLMRAGService,
-        "answer_question",
-        AsyncMock(return_value=mock_answer_request),
-    )
+    # Create a proper async generator class that implements __aiter__
+    class AsyncGenMock:
+        async def __aiter__(self):
+            yield mock_memory_response
+
+    # Replace the RAG service's answer_question method with our mock
+    servicer.rag_service.answer_question = mocker.MagicMock(return_value=AsyncGenMock())
 
     # Create test question chunk
     text_chunk = MemoryChunk(
@@ -138,13 +146,26 @@ async def test_transcribe_text_input(
         request_iterator(), servicer.Transcribe, grpc_context
     )
 
+    # Print responses for debugging
+    for i, r in enumerate(responses):
+        print(f"Response {i}: type={r.metadata.type}, text={r.text_data}")
+
     # First response should echo back the text input as a transcript
     assert responses[0].text_data == "Hello, this is a test question."
     assert responses[0].metadata.type == ChunkType.TRANSCRIPT
 
     # There should be an additional response with the answer
-    assert any(r.text_data == "test answer" for r in responses)
-    assert any(r.metadata.type == ChunkType.ANSWER for r in responses)
+    answer_responses = [r for r in responses if r.metadata.type == ChunkType.ANSWER]
+    assert len(answer_responses) > 0, "No ANSWER responses found"
+    assert any(r.text_data == "test answer" for r in answer_responses), (
+        "Expected 'test answer' not found"
+    )
+
+    # Verify the RAG service was called correctly
+    servicer.rag_service.answer_question.assert_called_once()
+    # Check that the right parameters were passed
+    call_args = servicer.rag_service.answer_question.call_args
+    assert call_args[1]["chunk_size_tokens"] == 8
 
 
 @pytest.fixture
@@ -177,6 +198,12 @@ async def test_serve_starts_server(mocker, mock_server):
         side_effect=lambda serv, srv: None,
     )
 
+    await main.serve()
+
+    mock_server.add_insecure_port.assert_called()
+    await main.serve()
+
+    mock_server.add_insecure_port.assert_called()
     await main.serve()
 
     mock_server.add_insecure_port.assert_called()

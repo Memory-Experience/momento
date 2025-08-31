@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
+from models.huggingface_helper import HuggingFaceHelper
 from models.llm.llama_cpp_model import LlamaCppConfig, LlamaCppModel
-from packages.api.models.huggingface_helper import HuggingFaceHelper
 
 
 class Qwen3(LlamaCppModel):
