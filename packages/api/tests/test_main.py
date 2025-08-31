@@ -113,9 +113,9 @@ async def test_transcribe_text_input(
     mock_services["vector_store"].return_value.search.return_value = mock_memory_context
 
     # Patch RAG service
-    mocker.patch.object(main.SimpleRAGService, "__init__", return_value=None)
+    mocker.patch.object(main.LLMRAGService, "__init__", return_value=None)
     mocker.patch.object(
-        main.SimpleRAGService,
+        main.LLMRAGService,
         "answer_question",
         AsyncMock(return_value=mock_answer_request),
     )
