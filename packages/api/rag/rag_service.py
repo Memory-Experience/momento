@@ -1,55 +1,61 @@
 import logging
 from datetime import datetime
 
+from domain.memory_context import MemoryContext
+from domain.memory_request import MemoryRequest, MemoryType
+
 
 class SimpleRAGService:
-    """A simple RAG service that uses naive keyword search."""
+    """
+    A simple RAG service that uses a vector store repository
+    to return relevant memories in a fixed response.
+    """
 
-    def __init__(self):
-        self.memories = []
+    async def answer_question(
+        self,
+        query: MemoryRequest,
+        memory_context: MemoryContext,
+    ) -> MemoryRequest:
+        """
+        Search memories and return both an answer wrapped in a MemoryRequest
+        and the memory context used to generate the answer.
 
-    def add_memory(self, text: str, audio_filename: str | None = None):
-        """Add a new memory to the RAG corpus."""
-        memory = {
-            "id": len(self.memories),
-            "text": text,
-            "timestamp": datetime.now().isoformat(),
-            "audio_file": audio_filename,
-        }
-        self.memories.append(memory)
-        logging.info(f"Added memory: {memory['id']}")
+        Args:
+            query: The question as a MemoryRequest
 
-    def search_memories(self, query: str) -> str:
-        """Search memories and return a relevant answer."""
-        # Simple keyword-based search (in a real implementation, you'd use embeddings)
-        query_words = set(query.lower().split())
-        relevant_memories = []
+        Returns:
+            Tuple containing:
+            - MemoryRequest: The answer formatted as a memory request
+            - MemoryContext: The context memories used to generate the answer
+        """
+        logging.info(f"Searching memories for: {query.text}")
 
-        for memory in self.memories:
-            memory_words = set(memory["text"].lower().split())
-            # Simple overlap scoring
-            overlap = len(query_words.intersection(memory_words))
-            if overlap > 0:
-                relevant_memories.append((memory, overlap))
-
-        # Sort by relevance
-        relevant_memories.sort(key=lambda x: x[1], reverse=True)
-
-        if not relevant_memories:
-            return (
+        # Generate answer based on retrieved memories
+        if not memory_context.memories:
+            answer_text = (
                 "I don't have any memories that match your question. "
                 + "Try asking about something you've recorded before."
             )
+        else:
+            answer_parts = ["Based on your memories, here's what I found:"]
 
-        # Generate answer based on top relevant memories
-        top_memories = relevant_memories[:3]  # Top 3 most relevant
-        answer_parts = ["Based on your memories, here's what I found:"]
+            for i, memory in enumerate(memory_context.memories.values(), 1):
+                # Format the timestamp nicely
+                timestamp = (
+                    datetime.fromisoformat(memory.timestamp)
+                    if isinstance(memory.timestamp, str)
+                    else memory.timestamp
+                )
+                formatted_date = timestamp.strftime("%B %d, %Y at %I:%M %p")
 
-        for i, (memory, _) in enumerate(top_memories, 1):
-            # Format the timestamp nicely
-            timestamp = datetime.fromisoformat(memory["timestamp"])
-            formatted_date = timestamp.strftime("%B %d, %Y at %I:%M %p")
+                answer_parts.append(f"{i}. From {formatted_date}: {memory.text}")
 
-            answer_parts.append(f"{i}. From {formatted_date}: {memory['text']}")
+            answer_text = "\n\n".join(answer_parts)
 
-        return "\n\n".join(answer_parts)
+        # Create a new MemoryRequest for the answer
+        answer_request = MemoryRequest.create(
+            text=[answer_text],
+            memory_type=MemoryType.ANSWER,
+        )
+
+        return answer_request

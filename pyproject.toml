@@ -31,3 +31,7 @@ dev = [
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
+
+[tool.pytest.ini_options]
+pythonpath = ["packages/api"]
+testpaths = ["packages/api/tests"]

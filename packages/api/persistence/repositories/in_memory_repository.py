@@ -1,4 +1,5 @@
 import logging
+from uuid import UUID, uuid4
 
 from domain.memory_request import MemoryRequest
 
@@ -18,7 +19,7 @@ class InMemoryRepository(Repository):
     async def save(self, memory: MemoryRequest) -> str:
         """Save a memory to in-memory storage."""
         if memory.id is None:
-            memory.id = memory.timestamp.strftime("%Y%m%d_%H%M%S")
+            memory.id = uuid4()
 
         self.memories[memory.id] = memory
         logging.info(f"Memory saved in memory with key: {memory.id}")
@@ -29,7 +30,7 @@ class InMemoryRepository(Repository):
         if not uri.startswith(IN_MEMORY_URI_SCHEME):
             raise ValueError(f"Invalid in-memory URI: {uri}")
         id = uri[len(IN_MEMORY_URI_SCHEME) :]
-        memory = self.memories.get(id)
+        memory = self.memories.get(UUID(id))
         if memory:
             logging.info(f"Memory found with key: {id}")
         else:

@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Union
+from uuid import UUID
 
 from domain.memory_context import MemoryContext
 from domain.memory_request import MemoryRequest
@@ -78,7 +79,7 @@ class VectorStoreRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_memory(self, memory_id: str) -> MemoryRequest | None:
+    async def get_memory(self, memory_id: UUID) -> MemoryRequest | None:
         """
         Get a memory by its ID.
 
@@ -108,7 +109,7 @@ class VectorStoreRepository(ABC):
         pass
 
     @abstractmethod
-    async def delete_memory(self, memory_id: str) -> None:
+    async def delete_memory(self, memory_id: UUID) -> None:
         """
         Delete all vector embeddings for a memory.
         The repository is responsible for:
@@ -121,24 +122,9 @@ class VectorStoreRepository(ABC):
         pass
 
     @abstractmethod
-    async def delete_by_filter(self, filters: FilterArg) -> None:
-        """
-        Delete all vector embeddings that match the given filter criteria.
-
-        Args:
-            filters: Filter criteria to apply using the abstract filter system
-
-        Example:
-            delete_by_filter(FilterCondition(field="metadata.parent_memory_id",
-                                           operator=FilterOperator.EQUALS,
-                                           value="some-id"))
-        """
-        pass
-
-    @abstractmethod
     async def list_memories(
         self, limit: int = 100, offset: int = 0, filters: FilterArg = None
-    ) -> list[MemoryRequest]:
+    ) -> tuple[list[MemoryRequest], UUID | None]:
         """
         List memories in the vector store.
 
