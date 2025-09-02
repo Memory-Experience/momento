@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Optional, Protocol
 from collections import defaultdict
 
 from .marco_dataset import MSMarcoDataset
-from .metrics import EvaluationMetrics
+from .retrieval_metrics import RetrievalMetrics
 
 
 class RetrievalSystemInterface(Protocol):
@@ -92,15 +92,15 @@ class MarcoTopKEvaluator:
         
         for k in self.k_values:
             if k <= len(retrieved_doc_ids):
-                precision_k = EvaluationMetrics.precision_at_k(retrieved_doc_ids, relevant_doc_ids, k)
-                recall_k = EvaluationMetrics.recall_at_k(retrieved_doc_ids, relevant_doc_ids, k)
-                ndcg_k = EvaluationMetrics.ndcg_at_k(retrieved_doc_ids, query_relevance, k)
+                precision_k = RetrievalMetrics.precision_at_k(retrieved_doc_ids, relevant_doc_ids, k)
+                recall_k = RetrievalMetrics.recall_at_k(retrieved_doc_ids, relevant_doc_ids, k)
+                ndcg_k = RetrievalMetrics.ndcg_at_k(retrieved_doc_ids, query_relevance, k)
                 
                 query_metrics[f'precision@{k}'] = precision_k
                 query_metrics[f'recall@{k}'] = recall_k
                 query_metrics[f'ndcg@{k}'] = ndcg_k
         
-        mrr = EvaluationMetrics.mean_reciprocal_rank(retrieved_doc_ids, relevant_doc_ids)
+        mrr = RetrievalMetrics.mean_reciprocal_rank(retrieved_doc_ids, relevant_doc_ids)
         query_metrics['mrr'] = mrr
         
         return {
