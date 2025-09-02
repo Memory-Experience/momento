@@ -1,16 +1,16 @@
 import asyncio
-import time
 import logging
+import time
 import uuid
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Any
+
 import grpc
 import pandas as pd
-from tqdm import tqdm
-
+from dataset.generation_metrics import GenerationMetrics
 from dataset.marco_dataset import MSMarcoDataset
 from dataset.retrieval_metrics import RetrievalMetrics
-from dataset.generation_metrics import GenerationMetrics
 from protos.generated.py import stt_pb2, stt_pb2_grpc
+from tqdm import tqdm
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
@@ -45,7 +45,7 @@ class RAGEvaluationClient:
             await self.channel.close()
             logger.info("Disconnected from server")
     
-    async def stream_memories(self, dataset, max_docs: int = None) -> int:
+    async def stream_memories(self, dataset, max_docs: int | None = None) -> int:
         """Stream documents as memories to the backend.
         
         Args:
@@ -61,7 +61,9 @@ class RAGEvaluationClient:
         logger.info(f"Streaming {total_docs} documents as memories...")
         success_count = 0
         
-        for i, (_, doc) in enumerate(tqdm(docs_df.iterrows(), total=total_docs)):
+        for i, (_, doc) in enumerate(
+            tqdm(docs_df.iterrows(), total=total_docs)
+        ):
             if max_docs is not None and i >= max_docs:
                 break
                 
@@ -70,7 +72,12 @@ class RAGEvaluationClient:
             content = str(doc['content'])
             
             try:
-                async def memory_stream():
+                # bind into closure defaults to avoid B023
+                async def memory_stream(
+                    session_id: str = session_id,
+                    memory_id: str = memory_id,
+                    content: str = content,
+                ):
                     # First chunk with metadata
                     metadata = stt_pb2.ChunkMetadata(
                         session_id=session_id,
@@ -92,7 +99,9 @@ class RAGEvaluationClient:
                 
                 # Log every 100 documents or if in debug mode
                 if i % 100 == 0 or logger.level == logging.DEBUG:
-                    logger.info(f"Streamed document {i+1}/{total_docs} (id: {memory_id})")
+                    logger.info(
+                        f"Streamed document {i+1}/{total_docs} (id: {memory_id})"
+                    )
                 
             except Exception as e:
                 logger.error(f"Error streaming document {memory_id}: {str(e)}")
@@ -100,9 +109,13 @@ class RAGEvaluationClient:
         logger.info(f"Successfully streamed {success_count}/{total_docs} documents")
         return success_count
     
-    async def process_query(self, query_id: str, query_text: str, 
-                          relevant_doc_ids: List[str], 
-                          relevance_scores: Optional[Dict[str, float]] = None) -> Tuple[Dict, List[str], str, float]:
+    async def process_query(
+        self,
+        query_id: str,
+        query_text: str,
+        relevant_doc_ids: list[str],
+        relevance_scores: dict[str, float] | None = None,
+    ) -> tuple[dict, list[str], str, float]:
         """Process a single query and evaluate results.
         
         Args:
@@ -122,7 +135,12 @@ class RAGEvaluationClient:
         start_time = time.time()
         
         try:
-            async def query_stream():
+            # bind into closure to avoid capturing loop vars
+            async def query_stream(
+                session_id: str = session_id,
+                query_id: str = query_id,
+                query_text: str = query_text,
+            ):
                 # Send query with metadata
                 metadata = stt_pb2.ChunkMetadata(
                     session_id=session_id,
@@ -161,13 +179,17 @@ class RAGEvaluationClient:
         return retrieved_docs, retrieved_doc_ids_ordered, full_answer, response_time
     
     
-    def evaluate_retrieval(self, retrieved_doc_ids: List[str], 
-                          relevant_doc_ids: List[str],
-                          relevance_scores: Optional[Dict[str, float]] = None) -> Dict:
+    def evaluate_retrieval(
+        self,
+        retrieved_doc_ids: list[str],
+        relevant_doc_ids: list[str],
+        relevance_scores: dict[str, float] | None = None,
+    ) -> dict:
         """Evaluate retrieval performance using standard IR metrics.
         
         Args:
-            retrieved_doc_ids: List of document IDs retrieved by the system (in rank order)
+            retrieved_doc_ids: List of document IDs retrieved by the system
+                (in rank order)
             relevant_doc_ids: List of document IDs known to be relevant
             relevance_scores: Optional mapping of doc_id to relevance score
             
@@ -200,21 +222,39 @@ class RAGEvaluationClient:
         true_positives = len(retrieved_set.intersection(relevant_set))
         precision = true_positives / len(retrieved_set) if retrieved_set else 0
         recall = true_positives / len(relevant_set) if relevant_set else 0
-        f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) else 0
+        f1 = (
+            2 * (precision * recall) / (precision + recall)
+            if (precision + recall)
+            else 0
+        )
         
         # Calculate rank-aware metrics using the metrics library
-        precision_at_1 = RetrievalMetrics.precision_at_k(retrieved_doc_ids, relevant_doc_ids, 1)
-        precision_at_3 = RetrievalMetrics.precision_at_k(retrieved_doc_ids, relevant_doc_ids, 3)
-        precision_at_5 = RetrievalMetrics.precision_at_k(retrieved_doc_ids, relevant_doc_ids, 5)
+        precision_at_1 = RetrievalMetrics.precision_at_k(
+            retrieved_doc_ids, relevant_doc_ids, 1
+        )
+        precision_at_3 = RetrievalMetrics.precision_at_k(
+            retrieved_doc_ids, relevant_doc_ids, 3
+        )
+        precision_at_5 = RetrievalMetrics.precision_at_k(
+            retrieved_doc_ids, relevant_doc_ids, 5
+        )
         
-        recall_at_3 = RetrievalMetrics.recall_at_k(retrieved_doc_ids, relevant_doc_ids, 3)
-        recall_at_5 = RetrievalMetrics.recall_at_k(retrieved_doc_ids, relevant_doc_ids, 5)
+        recall_at_3 = RetrievalMetrics.recall_at_k(
+            retrieved_doc_ids, relevant_doc_ids, 3
+        )
+        recall_at_5 = RetrievalMetrics.recall_at_k(
+            retrieved_doc_ids, relevant_doc_ids, 5
+        )
         
         mrr = RetrievalMetrics.mean_reciprocal_rank(retrieved_doc_ids, relevant_doc_ids)
         
         # For NDCG, we need relevance scores
-        ndcg_at_3 = RetrievalMetrics.ndcg_at_k(retrieved_doc_ids, relevance_scores, 3)
-        ndcg_at_5 = RetrievalMetrics.ndcg_at_k(retrieved_doc_ids, relevance_scores, 5)
+        ndcg_at_3 = RetrievalMetrics.ndcg_at_k(
+            retrieved_doc_ids, relevance_scores, 3
+        )
+        ndcg_at_5 = RetrievalMetrics.ndcg_at_k(
+            retrieved_doc_ids, relevance_scores, 5
+        )
         
         return {
             "precision": precision,
@@ -234,36 +274,55 @@ class RAGEvaluationClient:
         }
 
     #evaluate generation    
-    def evaluate_generation(self,
-                            answer: str,
-                            query_text: str,
-                            gold_answers: Optional[List[str]],
-                            retrieved_doc_ids_ordered: List[str],
-                            retrieved_docs: Dict[str, str],
-                            top_k_docs_for_faithfulness: int = 5) -> Dict[str, Any]:
+    def evaluate_generation(
+        self,
+        answer: str,
+        query_text: str,
+        gold_answers: list[str] | None,
+        retrieved_doc_ids_ordered: list[str],
+        retrieved_docs: dict[str, str],
+        top_k_docs_for_faithfulness: int = 5,
+    ) -> dict[str, Any]:
         """Evaluate generation along correctness, relevance and faithfulness.
         
         Args:
             answer: Generated answer to evaluate
             query_text: Original query text
             gold_answers: List of reference answers (if available)
-            retrieved_doc_ids_ordered: List of retrieved document IDs in rank order
+            retrieved_doc_ids_ordered: List of retrieved document IDs in rank
+                order
             retrieved_docs: Dictionary mapping document IDs to their content
-            top_k_docs_for_faithfulness: Number of top docs to use for faithfulness evaluation
+            top_k_docs_for_faithfulness: Number of top docs to use for
+                faithfulness evaluation
             
         Returns:
             Dictionary of generation evaluation metrics
         """
         gold_answers = gold_answers or []
 
-        em = GenerationMetrics.exact_match(answer, gold_answers) if gold_answers else 0.0
-        f1 = GenerationMetrics.f1(answer, gold_answers) if gold_answers else 0.0
-        rouge_l = GenerationMetrics.rouge_l_f1(answer, gold_answers) if gold_answers else 0.0
+        em = (
+            GenerationMetrics.exact_match(answer, gold_answers)
+            if gold_answers
+            else 0.0
+        )
+        f1 = (
+            GenerationMetrics.f1(answer, gold_answers)
+            if gold_answers
+            else 0.0
+        )
+        rouge_l = (
+            GenerationMetrics.rouge_l_f1(answer, gold_answers)
+            if gold_answers
+            else 0.0
+        )
 
         ans_rel = GenerationMetrics.answer_relevance_to_query(answer, query_text)
 
         faith = GenerationMetrics.faithfulness_signals(
-            answer, retrieved_doc_ids_ordered, retrieved_docs, top_k_docs=top_k_docs_for_faithfulness
+            answer,
+            retrieved_doc_ids_ordered,
+            retrieved_docs,
+            top_k_docs=top_k_docs_for_faithfulness,
         )
 
         return {
@@ -277,9 +336,12 @@ class RAGEvaluationClient:
             "answer_len_tokens": len(GenerationMetrics._tokens(answer))
         }
         
-    async def run_evaluation(self, dataset, 
-                            max_docs: int = None, 
-                            max_queries: int = None) -> Dict:
+    async def run_evaluation(
+        self,
+        dataset,
+        max_docs: int | None = None,
+        max_queries: int | None = None,
+    ) -> dict:
         """Run full evaluation workflow.
         
         Args:
@@ -297,7 +359,11 @@ class RAGEvaluationClient:
         queries_df = dataset.queries
         qrels_df = dataset.qrels
         
-        total_queries = len(queries_df) if max_queries is None else min(max_queries, len(queries_df))
+        total_queries = (
+            len(queries_df)
+            if max_queries is None
+            else min(max_queries, len(queries_df))
+        )
         logger.info(f"Evaluating {total_queries} queries...")
         
         # Updated metrics structure to include all the new metrics
@@ -333,7 +399,9 @@ class RAGEvaluationClient:
             "total_docs_streamed": docs_count
         }
         
-        for i, (_, query) in enumerate(tqdm(queries_df.iterrows(), total=total_queries)):
+        for i, (_, query) in enumerate(
+            tqdm(queries_df.iterrows(), total=total_queries)
+        ):
             if max_queries is not None and i >= max_queries:
                 break
                 
@@ -345,13 +413,21 @@ class RAGEvaluationClient:
             relevant_doc_ids = relevant_qrels['doc_id'].astype(str).tolist()
             
             # Create relevance scores dictionary
-            relevance_scores = dict(zip(
-                relevant_qrels['doc_id'].astype(str),
-                relevant_qrels['relevance'].astype(float)
-            ))
+            relevance_scores = dict(
+                zip(
+                    relevant_qrels['doc_id'].astype(str),
+                    relevant_qrels['relevance'].astype(float),
+                    strict=False,
+                )
+            )
             
             # Process query
-            retrieved_docs, retrieved_doc_ids_ordered, answer, response_time = await self.process_query(
+            (
+                retrieved_docs,
+                retrieved_doc_ids_ordered,
+                answer,
+                response_time,
+            ) = await self.process_query(
                 query_id, query_text, relevant_doc_ids, relevance_scores
             )
             
@@ -362,17 +438,21 @@ class RAGEvaluationClient:
             
             # Evaluate generation (using gold answers if available)
             # NOTE: pull actual answer text from queries, NOT doc IDs
-            gold_answers: List[str] = []
+            gold_answers: list[str] = []
             if "answers" in queries_df.columns and pd.notna(query.get("answers")):
                 val = query["answers"]
-                if isinstance(val, (list, tuple)):
+                if isinstance(val, list | tuple):
                     gold_answers = [str(x) for x in val]
                 else:
                     gold_answers = [str(val)]
             elif "answer" in queries_df.columns and pd.notna(query.get("answer")):
                 gold_answers = [str(query["answer"])]
             generation_metrics = self.evaluate_generation(
-                answer, query_text, gold_answers, retrieved_doc_ids_ordered, retrieved_docs
+                answer,
+                query_text,
+                gold_answers,
+                retrieved_doc_ids_ordered,
+                retrieved_docs,
             )
 
             # Store results for this query
@@ -391,29 +471,43 @@ class RAGEvaluationClient:
             results["response_times"].append(response_time)
             
             # Update aggregated retrieval metrics
-            for metric in results["retrieval_metrics"].keys():
+            for metric in results["retrieval_metrics"]:
                 if metric in retrieval_metrics:
                     results["retrieval_metrics"][metric] += retrieval_metrics[metric]
                 
             # Update aggregated generation metrics
-            for metric in results["generation_metrics"].keys():
+            for metric in results["generation_metrics"]:
                 if metric in generation_metrics:
                     results["generation_metrics"][metric] += generation_metrics[metric]
-                
-            logger.info(f"Processed query {i+1}/{total_queries}: {query_text[:50]}...")
-            logger.info(f"  Precision: {retrieval_metrics['precision']:.2f}, Recall: {retrieval_metrics['recall']:.2f}, F1: {retrieval_metrics['f1']:.2f}")
-            logger.info(f"  P@1: {retrieval_metrics['precision@1']:.2f}, P@5: {retrieval_metrics['precision@5']:.2f}, MRR: {retrieval_metrics['mrr']:.2f}")
+            
+            logger.info(
+                f"Processed query {i+1}/{total_queries}: {query_text[:50]}..."
+            )
+            logger.info(
+                "  Precision: %.2f, Recall: %.2f, F1: %.2f",
+                retrieval_metrics['precision'],
+                retrieval_metrics['recall'],
+                retrieval_metrics['f1'],
+            )
+            logger.info(
+                "  P@1: %.2f, P@5: %.2f, MRR: %.2f",
+                retrieval_metrics['precision@1'],
+                retrieval_metrics['precision@5'],
+                retrieval_metrics['mrr'],
+            )
             logger.info(f"  Response time: {response_time:.2f}s")
         
         # Calculate averages for metrics
         if total_queries > 0:
-            for metric in results["retrieval_metrics"].keys():
+            for metric in results["retrieval_metrics"]:
                 results["retrieval_metrics"][metric] /= total_queries
                 
-            for metric in results["generation_metrics"].keys():
+            for metric in results["generation_metrics"]:
                 results["generation_metrics"][metric] /= total_queries
                 
-            results["avg_response_time"] = sum(results["response_times"]) / len(results["response_times"])
+            results["avg_response_time"] = (
+                sum(results["response_times"]) / len(results["response_times"])
+            )
         
         return results
 
@@ -449,9 +543,21 @@ async def main():
 
         logger.info("\nGeneration Performance (averages):")
         gm = results["generation_metrics"]
-        logger.info(f"  EM: {gm['exact_match']:.4f}  F1: {gm['f1']:.4f}  ROUGE-L(F1): {gm['rouge_l_f1']:.4f}")
-        logger.info(f"  Answer↔Query Relevance (F1): {gm['answer_relevance']:.4f}")
-        logger.info(f"  Faithfulness — Support Coverage: {gm['support_coverage']:.4f}  Density: {gm['support_density']:.4f}")
+        logger.info(
+            "  EM: %.4f  F1: %.4f  ROUGE-L(F1): %.4f",
+            gm['exact_match'],
+            gm['f1'],
+            gm['rouge_l_f1'],
+        )
+        logger.info(
+            "  Answer↔Query Relevance (F1): %.4f",
+            gm['answer_relevance'],
+        )
+        logger.info(
+            "  Faithfulness — Support Coverage: %.4f  Density: %.4f",
+            gm['support_coverage'],
+            gm['support_density'],
+        )
         logger.info(f"  Hallucination Rate: {gm['hallucination_rate']:.4f}")
 
         

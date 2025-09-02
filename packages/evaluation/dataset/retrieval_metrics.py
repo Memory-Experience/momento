@@ -5,14 +5,17 @@ Standard information retrieval evaluation metrics implementation.
 """
 
 import math
-from typing import List, Dict
 
 
 class RetrievalMetrics:
     """Metrics for evaluating retrieval performance in RAG systems."""
     
     @staticmethod
-    def precision_at_k(retrieved_docs: List[str], relevant_docs: List[str], k: int) -> float:
+    def precision_at_k(
+        retrieved_docs: list[str],
+        relevant_docs: list[str],
+        k: int,
+    ) -> float:
         """Calculate precision@k.
         
         Args:
@@ -38,7 +41,11 @@ class RetrievalMetrics:
         return relevant_count / min(k, len(retrieved_docs))
     
     @staticmethod
-    def recall_at_k(retrieved_docs: List[str], relevant_docs: List[str], k: int) -> float:
+    def recall_at_k(
+        retrieved_docs: list[str],
+        relevant_docs: list[str],
+        k: int,
+    ) -> float:
         """Calculate recall@k.
         
         Args:
@@ -64,7 +71,10 @@ class RetrievalMetrics:
         return relevant_count / len(relevant_set)
     
     @staticmethod
-    def mean_reciprocal_rank(retrieved_docs: List[str], relevant_docs: List[str]) -> float:
+    def mean_reciprocal_rank(
+        retrieved_docs: list[str],
+        relevant_docs: list[str],
+    ) -> float:
         """Calculate Mean Reciprocal Rank (MRR).
         
         Args:
@@ -88,7 +98,11 @@ class RetrievalMetrics:
         return 0.0  # No relevant document found
     
     @staticmethod
-    def ndcg_at_k(retrieved_docs: List[str], relevance_scores: Dict[str, float], k: int) -> float:
+    def ndcg_at_k(
+        retrieved_docs: list[str],
+        relevance_scores: dict[str, float],
+        k: int,
+    ) -> float:
         """Calculate Normalized Discounted Cumulative Gain (NDCG) at rank k.
         
         Args:
@@ -109,7 +123,9 @@ class RetrievalMetrics:
         dcg = 0.0
         for i, doc_id in enumerate(top_k):
             rel = relevance_scores.get(doc_id, 0.0)
-            # Add 2 to i because: 1 for 0-indexing to 1-indexing, and 1 for log base conversion
+            # Add 2 to i because:
+            #  - 1 for converting 0-index to 1-index
+            #  - 1 for the log base conversion helper
             dcg += rel / math.log2(i + 2)
             
         # Calculate ideal DCG (IDCG)

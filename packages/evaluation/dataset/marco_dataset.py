@@ -5,9 +5,11 @@ Adapter for MS MARCO dataset integration with the evaluation framework.
 """
 
 import logging
-import pandas as pd
 from typing import Optional
+
 import ir_datasets
+import pandas as pd
+
 from .dataset import DataFrameDataset
 
 
@@ -85,8 +87,13 @@ def _convert_ms_marco_to_dataframes(ms_marco_dataset, limit: int = 1000):
         qrels_df['query_id'].isin(found_query_ids)
     ]
     
-    print(f"  Final valid qrels: {len(valid_qrels)} (filtered from {len(qrels_df)})")
-    print(f"  Final dataset: {len(docs_df)} docs, {len(queries_df)} queries, {len(valid_qrels)} qrels")
+    logging.info(
+        f"  Final valid qrels: {len(valid_qrels)} (filtered from {len(qrels_df)})"
+    )
+    logging.info(
+        f"  Final dataset: {len(docs_df)} docs, {len(queries_df)} queries, "
+        f"{len(valid_qrels)} qrels"
+    )
     
     return docs_df, queries_df, valid_qrels
 
@@ -94,7 +101,11 @@ def _convert_ms_marco_to_dataframes(ms_marco_dataset, limit: int = 1000):
 class MSMarcoDataset(DataFrameDataset):
     """MS MARCO dataset adapter for evaluation framework."""
     
-    def __init__(self, dataset_name: str = "msmarco-passage/dev/small", limit: int = 1000):
+    def __init__(
+        self,
+        dataset_name: str = "msmarco-passage/dev/small",
+        limit: int = 1000,
+    ):
         """Initialize MS MARCO dataset adapter.
         
         Args:
@@ -112,7 +123,10 @@ class MSMarcoDataset(DataFrameDataset):
             )
             super().__init__(docs_df, queries_df, qrels_df)
             
-            logging.info(f"MS MARCO loaded: {len(self._docs_df)} docs, {len(self._queries_df)} queries")
+            logging.info(
+                f"MS MARCO loaded: {len(self._docs_df)} docs, "
+                f"{len(self._queries_df)} queries"
+            )
         except Exception as e:
             logging.error(f"Failed to load MS MARCO: {e}")
             raise
@@ -121,7 +135,7 @@ class MSMarcoDataset(DataFrameDataset):
         """Return dataset name for reporting."""
         return f"MS MARCO ({self.dataset_name}, limit={self.limit})"
     
-    def get_sample_query(self) -> Optional[dict]:
+    def get_sample_query(self) -> dict | None:
         """Get a sample query for testing."""
         if self.queries.empty:
             return None
@@ -135,11 +149,20 @@ class MSMarcoDataset(DataFrameDataset):
             'id': query_id,
             'text': sample_row['text'],
             'relevant_docs': relevant_qrels['doc_id'].tolist(),
-            'relevance_scores': dict(zip(relevant_qrels['doc_id'], relevant_qrels['relevance']))
+            'relevance_scores': dict(
+                zip(
+                    relevant_qrels['doc_id'],
+                    relevant_qrels['relevance'],
+                    strict=False,
+                )
+            ),
         }
 
     @staticmethod
-    def create(dataset_name: str = "msmarco-passage/dev/small", limit: int = 1000) -> Optional['MSMarcoDataset']:
+    def create(
+        dataset_name: str = "msmarco-passage/dev/small",
+        limit: int = 1000,
+    ) -> Optional['MSMarcoDataset']:
         """Factory function to create MS MARCO adapter with error handling.
         
         Args:
