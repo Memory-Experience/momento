@@ -1,0 +1,126 @@
+"""
+Evaluation Metrics Calculator
+
+Standard information retrieval evaluation metrics implementation.
+"""
+
+import math
+from typing import List, Dict
+
+
+class RetrievalMetrics:
+    """Metrics for evaluating retrieval performance in RAG systems."""
+    
+    @staticmethod
+    def precision_at_k(retrieved_docs: List[str], relevant_docs: List[str], k: int) -> float:
+        """Calculate precision@k.
+        
+        Args:
+            retrieved_docs: List of retrieved document IDs in rank order
+            relevant_docs: List of relevant document IDs
+            k: Rank position to evaluate precision at
+            
+        Returns:
+            Precision@k score
+        """
+        if not retrieved_docs or k <= 0:
+            return 0.0
+            
+        # Convert relevant_docs to set for faster lookup
+        relevant_set = set(relevant_docs)
+        
+        # Only consider the top k results
+        top_k = retrieved_docs[:k]
+        
+        # Count relevant docs in top k
+        relevant_count = sum(1 for doc_id in top_k if doc_id in relevant_set)
+        
+        return relevant_count / min(k, len(retrieved_docs))
+    
+    @staticmethod
+    def recall_at_k(retrieved_docs: List[str], relevant_docs: List[str], k: int) -> float:
+        """Calculate recall@k.
+        
+        Args:
+            retrieved_docs: List of retrieved document IDs in rank order
+            relevant_docs: List of relevant document IDs
+            k: Rank position to evaluate recall at
+            
+        Returns:
+            Recall@k score
+        """
+        if not retrieved_docs or not relevant_docs or k <= 0:
+            return 0.0
+            
+        # Convert relevant_docs to set for faster lookup
+        relevant_set = set(relevant_docs)
+        
+        # Only consider the top k results
+        top_k = retrieved_docs[:k]
+        
+        # Count relevant docs in top k
+        relevant_count = sum(1 for doc_id in top_k if doc_id in relevant_set)
+        
+        return relevant_count / len(relevant_set)
+    
+    @staticmethod
+    def mean_reciprocal_rank(retrieved_docs: List[str], relevant_docs: List[str]) -> float:
+        """Calculate Mean Reciprocal Rank (MRR).
+        
+        Args:
+            retrieved_docs: List of retrieved document IDs in rank order
+            relevant_docs: List of relevant document IDs
+            
+        Returns:
+            MRR score
+        """
+        if not retrieved_docs or not relevant_docs:
+            return 0.0
+            
+        # Convert relevant_docs to set for faster lookup
+        relevant_set = set(relevant_docs)
+        
+        # Find the rank of the first relevant document
+        for i, doc_id in enumerate(retrieved_docs):
+            if doc_id in relevant_set:
+                return 1.0 / (i + 1)  # +1 because ranks start at 1
+                
+        return 0.0  # No relevant document found
+    
+    @staticmethod
+    def ndcg_at_k(retrieved_docs: List[str], relevance_scores: Dict[str, float], k: int) -> float:
+        """Calculate Normalized Discounted Cumulative Gain (NDCG) at rank k.
+        
+        Args:
+            retrieved_docs: List of retrieved document IDs in rank order
+            relevance_scores: Dictionary mapping doc_ids to relevance scores
+            k: Rank position to evaluate NDCG at
+            
+        Returns:
+            NDCG@k score
+        """
+        if not retrieved_docs or not relevance_scores or k <= 0:
+            return 0.0
+            
+        # Only consider the top k results
+        top_k = retrieved_docs[:min(k, len(retrieved_docs))]
+        
+        # Calculate DCG - sum of (relevance / log2(rank+1))
+        dcg = 0.0
+        for i, doc_id in enumerate(top_k):
+            rel = relevance_scores.get(doc_id, 0.0)
+            # Add 2 to i because: 1 for 0-indexing to 1-indexing, and 1 for log base conversion
+            dcg += rel / math.log2(i + 2)
+            
+        # Calculate ideal DCG (IDCG)
+        # Sort relevance scores in descending order and take top k
+        ideal_relevances = sorted(relevance_scores.values(), reverse=True)[:k]
+        idcg = 0.0
+        for i, rel in enumerate(ideal_relevances):
+            idcg += rel / math.log2(i + 2)
+            
+        # Avoid division by zero
+        if idcg == 0.0:
+            return 0.0
+            
+        return dcg / idcg
