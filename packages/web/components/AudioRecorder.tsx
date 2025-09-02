@@ -12,49 +12,46 @@ export default function AudioRecorder({}) {
     useContext(ChatContext);
   const [recordingTime, setRecordingTime] = useState(0);
   const [waitingForAnswer, setWaitingForAnswer] = useState(false);
+  const waitingForAnswerRef = useRef(false);
+  const hasReceivedAnswerRef = useRef(false);
+  // Track whether the backend has confirmed the SSE/gRPC connection
+  const connectionConfirmedRef = useRef(false);
+  // Store connection timeout id so it can be cleared from any handler
+  const connectionTimeoutRef = useRef<number | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const recorderNodeRef = useRef<AudioWorkletNode | null>(null);
   const chunks = useRef<Blob[]>([]);
   const sessionId = useRef<string | null>(null);
   const eventSource = useRef<EventSource | null>(null);
 
   const sendData = useCallback(async (pcmBytes: Uint8Array) => {
-    if (!sessionId.current) {
-      console.error("No session ID available");
-      return;
-    }
-
-    // Skip sending very small chunks (likely silent)
-    if (pcmBytes.byteLength < 10) {
-      return;
-    }
-
+    if (!sessionId.current || pcmBytes.byteLength < 10) return;
     // Create a proper copy to avoid any potential shared buffer issues
     const audioBuffer = pcmBytes.slice(0);
 
     try {
       await fetch("/api/transcribe", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sessionId: sessionId.current,
           audioData: Array.from(audioBuffer),
         }),
       });
     } catch (err) {
-      console.error("Error in audio chunk callback:", err);
+      console.error("Error sending audio data:", err);
     }
   }, []);
 
   const recordAudio = useCallback(
     async (type: "memory" | "question") => {
-      console.log("Connecting to server...");
-
       try {
         chunks.current = [];
         setTranscriptions([]);
+        waitingForAnswerRef.current = false;
+        hasReceivedAnswerRef.current = false;
+        connectionConfirmedRef.current = false;
 
         // Generate session ID
         sessionId.current = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -64,33 +61,80 @@ export default function AudioRecorder({}) {
           `/api/transcribe?sessionId=${sessionId.current}&type=${type}`,
         );
 
+        let connectionConfirmed = false;
+
+        // Set a timeout to detect if we never get a "connected" message
+        connectionTimeoutRef.current = window.setTimeout(() => {
+          if (!connectionConfirmed) {
+            console.error(
+              "Connection timeout - no confirmation received from backend",
+            );
+            toast.error(
+              "Backend service is not responding. Please check if it's running.",
+            );
+            if (eventSource.current) {
+              eventSource.current.close();
+              eventSource.current = null;
+            }
+            setMode(undefined);
+            setIsRecording(false);
+            sessionId.current = null;
+          }
+        }, 10000); // 10 second timeout
+
         eventSource.current.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
 
             if (data.type === "connected") {
-              console.log("Connected to transcription service");
-              toast.success("Connected to transcription service");
-            } else if (data.type === "transcript" || data.type === "answer") {
-              const transcriptionItem: TranscriptionItem = {
-                type: data.type,
-                text: data.text,
-                timestamp: data.timestamp,
-              };
-              setTranscriptions((prev) => [...prev, transcriptionItem]);
-
-              if (data.type === "answer") {
-                toast.success("Received answer to your question!");
-
-                // For questions, close the connection after receiving the answer
-                setWaitingForAnswer(false);
-                setMode(undefined);
-                if (eventSource.current) {
-                  eventSource.current.close();
-                  eventSource.current = null;
-                }
-                sessionId.current = null;
+              connectionConfirmed = true;
+              if (connectionTimeoutRef.current !== null) {
+                clearTimeout(connectionTimeoutRef.current);
+                connectionTimeoutRef.current = null;
               }
+              console.log("Connected to transcription service");
+              // Show success toast only if this is the first connection confirmation
+              if (!connectionConfirmedRef.current) {
+                connectionConfirmedRef.current = true;
+                toast.success("Connected to transcription service");
+              }
+            } else if (data.type === "error") {
+              if (connectionTimeoutRef.current !== null) {
+                clearTimeout(connectionTimeoutRef.current);
+                connectionTimeoutRef.current = null;
+              }
+              console.error("Backend error:", data.message);
+              toast.error(data.message || "Unknown error from backend");
+              // Clean up on backend error
+              if (eventSource.current) {
+                eventSource.current.close();
+                eventSource.current = null;
+              }
+              setMode(undefined);
+              setIsRecording(false);
+              sessionId.current = null;
+            } else if (["transcript", "answer", "memory"].includes(data.type)) {
+              // Validate required fields exist before creating the transcription item
+              if (data.text !== undefined) {
+                const transcriptionItem: TranscriptionItem = {
+                  type: data.type,
+                  text: data.text,
+                  timestamp: data.timestamp || new Date().toISOString(),
+                };
+                setTranscriptions((prev) => [...prev, transcriptionItem]);
+
+                if (data.type === "answer" && !hasReceivedAnswerRef.current) {
+                  hasReceivedAnswerRef.current = true;
+                  toast.success("Receiving answer to your question!");
+                }
+              } else {
+                console.warn(
+                  `Received ${data.type} message without text content:`,
+                  data,
+                );
+              }
+            } else {
+              console.warn("Received unknown message type:", data.type, data);
             }
           } catch (error) {
             console.error("Error parsing SSE data:", error);
@@ -99,51 +143,59 @@ export default function AudioRecorder({}) {
 
         eventSource.current.onerror = (error) => {
           console.error("SSE connection error:", error);
-          toast.error("Connection error occurred");
+
+          // Clear the connection timeout on error
+          if (connectionTimeoutRef.current !== null) {
+            clearTimeout(connectionTimeoutRef.current);
+            connectionTimeoutRef.current = null;
+          }
+
+          if (eventSource.current?.readyState === EventSource.CLOSED) {
+            // Natural connection close - clean up
+            if (type === "question" && waitingForAnswerRef.current) {
+              setWaitingForAnswer(false);
+              waitingForAnswerRef.current = false;
+              setMode(undefined);
+              sessionId.current = null;
+              if (hasReceivedAnswerRef.current) {
+                toast.success("Answer completed!");
+              }
+            } else if (type === "memory") {
+              sessionId.current = null;
+              eventSource.current = null;
+            }
+          } else if (
+            eventSource.current?.readyState === EventSource.CONNECTING
+          ) {
+            // Connection failed - show error
+            toast.error(
+              "Failed to connect to backend service. Please check if it's running.",
+            );
+            if (eventSource.current) {
+              eventSource.current.close();
+              eventSource.current = null;
+            }
+            setMode(undefined);
+            setIsRecording(false);
+            sessionId.current = null;
+          }
         };
 
-        // Request microphone with explicit constraints
-        const constraints = {
-          audio: {
-            channelCount: 1,
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
-          video: false,
-        };
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-        // Create AudioContext WITHOUT specifying sample rate - let it match the native rate
-        const audioCtx = new AudioContext({
-          latencyHint: "interactive",
+        // Request microphone and setup audio processing
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: { channelCount: 1, echoCancellation: true },
         });
+
+        const audioCtx = new AudioContext({ latencyHint: "interactive" });
         audioCtxRef.current = audioCtx;
 
-        console.debug(
-          `Created AudioContext with sample rate: ${audioCtx.sampleRate}Hz and ${audioCtx}`,
+        if (audioCtx.state === "suspended") await audioCtx.resume();
+
+        const source = audioCtx.createMediaStreamSource(stream);
+        await audioCtx.audioWorklet.addModule(
+          "/worklets/audio-recorder.worklet.js",
         );
 
-        if (audioCtx.state === "suspended") {
-          await audioCtx.resume();
-        }
-
-        // Create MediaStream source
-        const source = audioCtx.createMediaStreamSource(stream);
-
-        try {
-          await audioCtx.audioWorklet.addModule(
-            "/worklets/audio-recorder.worklet.js",
-          );
-        } catch (workletError) {
-          console.error("Error loading audio worklet:", workletError);
-          toast.error(
-            "Failed to load audio processing module. Please try again.",
-          );
-          return;
-        }
-
-        // Create recorder node with detailed parameters - now the worklet will handle resampling
         const recorderNode = new AudioWorkletNode(
           audioCtx,
           "audio-recorder-processor",
@@ -153,46 +205,31 @@ export default function AudioRecorder({}) {
             channelCount: 1,
             processorOptions: {
               nativeContextSampleRate: audioCtx.sampleRate,
-              targetSampleRate: 16000, // We still want 16kHz output for consistency
+              targetSampleRate: 16000,
             },
           },
         );
 
-        // Enhanced message handler
-        recorderNode.port.onmessage = async (event: MessageEvent) => {
-          // Check if it's a debug message
-          if (event.data && event.data.type === "debug") {
-            return;
-          }
+        recorderNodeRef.current = recorderNode;
 
-          // Check if it's an audio level message
-          if (event.data && event.data.type === "level") {
-            // This is where you would handle audio level updates
-            // setAudioLevel(event.data.value);
-            return;
-          }
-
-          // Otherwise it's audio data
+        recorderNode.port.onmessage = (event: MessageEvent) => {
+          if (event.data?.type) return; // Skip debug/level messages
           const pcmBytes = event.data;
           if (pcmBytes instanceof Uint8Array && pcmBytes.byteLength > 0) {
-            const byteCopy = new Uint8Array(pcmBytes);
-            sendData(byteCopy);
+            sendData(new Uint8Array(pcmBytes));
           }
         };
 
-        // Configure worklet
         recorderNode.port.postMessage({
           command: "init",
           config: {
-            bufferDuration: 100, // 100ms chunks
+            bufferDuration: 100,
             nativeSampleRate: audioCtx.sampleRate,
             targetSampleRate: 16000,
           },
         });
 
-        // Connect nodes
         source.connect(recorderNode);
-
         const silentGain = audioCtx.createGain();
         silentGain.gain.value = 0;
         recorderNode.connect(silentGain).connect(audioCtx.destination);
@@ -200,15 +237,37 @@ export default function AudioRecorder({}) {
         setMode(type);
         setIsRecording(true);
         setRecordingTime(0);
-        // Start timer
-        timerRef.current = setInterval(() => {
-          setRecordingTime((prev) => prev + 1);
-        }, 1000);
+        timerRef.current = setInterval(
+          () => setRecordingTime((prev) => prev + 1),
+          1000,
+        );
       } catch (error) {
+        // Clear the connection timeout on error
+        if (connectionTimeoutRef.current !== null) {
+          clearTimeout(connectionTimeoutRef.current);
+          connectionTimeoutRef.current = null;
+        }
+
         setMode(undefined);
         setIsRecording(false);
         setRecordingTime(0);
-        throw error;
+
+        if (error instanceof Error) {
+          if (error.name === "NotAllowedError") {
+            toast.error(
+              "Microphone access denied. Please allow microphone permissions.",
+            );
+          } else if (error.message.includes("Failed to fetch")) {
+            toast.error(
+              "Connection failed. Please check if the backend service is running.",
+            );
+          } else {
+            toast.error("An error occurred. Please try again.");
+          }
+        } else {
+          toast.error("An unexpected error occurred.");
+        }
+        console.error("Recording failed:", error);
       }
     },
     [sendData, setMode, setIsRecording, setTranscriptions],
@@ -218,9 +277,7 @@ export default function AudioRecorder({}) {
     try {
       await recordAudio("memory");
     } catch (error) {
-      toast.error(
-        "Failed to record memory. Ensure microphone permissions are granted or try again later.",
-      );
+      // Error already handled in recordAudio function
       console.error("Unable to start recording memory:", error);
     }
   }, [recordAudio]);
@@ -229,9 +286,7 @@ export default function AudioRecorder({}) {
     try {
       await recordAudio("question");
     } catch (error) {
-      toast.error(
-        "Failed to ask question. Ensure microphone permissions are granted or try again later.",
-      );
+      // Error already handled in recordAudio function
       console.error("Unable to start recording question:", error);
     }
   }, [recordAudio]);
@@ -241,31 +296,27 @@ export default function AudioRecorder({}) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
-    if (audioCtxRef.current) {
-      audioCtxRef.current
-        .close()
-        .catch((err) => console.error("Error closing AudioContext", err));
-      audioCtxRef.current = null;
-    }
 
     setIsRecording(false);
     setRecordingTime(0);
 
-    // For question mode, show waiting state and don't close connection yet
-    if (mode === "question") {
-      setWaitingForAnswer(true);
-      toast.info("Processing your question...");
-    } else {
-      // For memory mode, close immediately
-      if (eventSource.current) {
-        eventSource.current.close();
-        eventSource.current = null;
+    // Clean up audio resources
+    if (recorderNodeRef.current) {
+      try {
+        recorderNodeRef.current.disconnect();
+        recorderNodeRef.current.port.postMessage({ command: "stop" });
+        recorderNodeRef.current = null;
+      } catch (error) {
+        console.error("Error stopping recorder node:", error);
       }
-      setMode(undefined);
-      sessionId.current = null;
     }
 
-    // Notify server to end the audio session
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close().catch(console.error);
+      audioCtxRef.current = null;
+    }
+
+    // Notify server to end session
     if (sessionId.current) {
       try {
         await fetch(`/api/transcribe?sessionId=${sessionId.current}`, {
@@ -276,9 +327,14 @@ export default function AudioRecorder({}) {
       }
     }
 
-    // Only clear session for memory mode
-    if (mode === "memory") {
-      sessionId.current = null;
+    // Handle different modes
+    if (mode === "question") {
+      setWaitingForAnswer(true);
+      waitingForAnswerRef.current = true;
+      hasReceivedAnswerRef.current = false;
+      toast.info("Processing your question...");
+    } else {
+      setMode(undefined);
     }
   }, [mode, setMode, setIsRecording, setRecordingTime]);
 
@@ -288,11 +344,24 @@ export default function AudioRecorder({}) {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
+      if (recorderNodeRef.current) {
+        try {
+          recorderNodeRef.current.disconnect();
+          recorderNodeRef.current.port.postMessage({ command: "stop" });
+        } catch (error) {
+          console.error("Error cleaning up recorder node:", error);
+        }
+      }
       if (audioCtxRef.current) {
         audioCtxRef.current.close().catch(console.error);
       }
       if (eventSource.current) {
         eventSource.current.close();
+      }
+      // Clear any existing timeouts
+      if (connectionTimeoutRef.current !== null) {
+        clearTimeout(connectionTimeoutRef.current);
+        connectionTimeoutRef.current = null;
       }
     };
   }, []);

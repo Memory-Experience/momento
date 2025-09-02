@@ -48,6 +48,29 @@ export async function GET(request: NextRequest) {
         // Create bidirectional gRPC stream
         const grpcStream = grpcClient.transcribe();
 
+        // Set a flag to track if we've confirmed the connection works
+        let connectionConfirmed = false;
+
+        // Set a timeout to detect if backend never responds
+        const connectionTimeout = setTimeout(() => {
+          if (!connectionConfirmed) {
+            console.log("Backend connection timeout - no response received");
+            const timeoutMessage = JSON.stringify({
+              type: "error",
+              message: "Backend service timeout. Please check if it's running.",
+              timestamp: Date.now(),
+            });
+            try {
+              controller.enqueue(`data: ${timeoutMessage}\n\n`);
+            } catch (error) {
+              console.log("Failed to enqueue timeout message:", error);
+            }
+            // Clean up
+            grpcStream.destroy();
+            sessions.delete(sessionId);
+          }
+        }, 10000); // 10 second timeout to match frontend
+
         // Handle responses from gRPC server
         grpcStream.on("data", (response: MemoryChunk) => {
           console.log("Received gRPC response:", response);
@@ -56,6 +79,23 @@ export async function GET(request: NextRequest) {
           if (controller.desiredSize === null) {
             console.log("Controller already closed, ignoring response");
             return;
+          }
+
+          // Send connection confirmation on first successful response
+          if (!connectionConfirmed) {
+            connectionConfirmed = true;
+            clearTimeout(connectionTimeout); // Clear the timeout since we got a response
+            const connectMessage = JSON.stringify({
+              type: "connected",
+              sessionId,
+              memoryId,
+              timestamp: Date.now(),
+            });
+            try {
+              controller.enqueue(`data: ${connectMessage}\n\n`);
+            } catch (error) {
+              console.log("Failed to enqueue connection message:", error);
+            }
           }
 
           const responseType = response.metadata?.type;
@@ -72,6 +112,19 @@ export async function GET(request: NextRequest) {
             } catch (error) {
               console.log("Failed to enqueue transcript message:", error);
             }
+          } else if (responseType === ChunkType.MEMORY && response.textData) {
+            const message = JSON.stringify({
+              type: "memory",
+              text: response.textData,
+              timestamp: Date.now(),
+            });
+
+            try {
+              controller.enqueue(`data: ${message}\n\n`);
+              console.log("Memory context chunk sent");
+            } catch (error) {
+              console.log("Failed to enqueue memory message:", error);
+            }
           } else if (responseType === ChunkType.ANSWER && response.textData) {
             const message = JSON.stringify({
               type: "answer",
@@ -81,9 +134,8 @@ export async function GET(request: NextRequest) {
 
             try {
               controller.enqueue(`data: ${message}\n\n`);
-              console.log("Answer sent, closing connection");
-              // Close the controller after sending the answer
-              controller.close();
+              console.log("Answer chunk sent");
+              // Don't close the controller here - let the gRPC stream end event handle cleanup
             } catch (error) {
               console.log("Failed to enqueue answer message:", error);
             }
@@ -92,16 +144,26 @@ export async function GET(request: NextRequest) {
 
         grpcStream.on("error", (error: Error) => {
           console.error("gRPC stream error:", error);
+          clearTimeout(connectionTimeout); // Clear timeout since we got an error response
+
+          // If connection was never confirmed, this means backend is down
           const message = JSON.stringify({
             type: "error",
-            message: error.message,
+            message: connectionConfirmed
+              ? "Backend connection lost during operation."
+              : "Backend service unavailable. Please check if it's running.",
             timestamp: Date.now(),
           });
-          controller.enqueue(`data: ${message}\n\n`);
+          try {
+            controller.enqueue(`data: ${message}\n\n`);
+          } catch (enqueueError) {
+            console.log("Failed to enqueue error message:", enqueueError);
+          }
         });
 
         grpcStream.on("end", () => {
           console.log("gRPC stream ended");
+          clearTimeout(connectionTimeout); // Clear timeout since stream ended
           // Clean up the session
           sessions.delete(sessionId);
           try {
@@ -130,14 +192,7 @@ export async function GET(request: NextRequest) {
           isFirstChunk: true,
         });
 
-        // Send initial connection message
-        const connectMessage = JSON.stringify({
-          type: "connected",
-          sessionId,
-          memoryId,
-          timestamp: Date.now(),
-        });
-        controller.enqueue(`data: ${connectMessage}\n\n`);
+        // Don't send connection message here - wait for first gRPC response
       } catch (error) {
         console.error("Error setting up gRPC stream:", error);
         const errorMessage = JSON.stringify({
@@ -216,7 +271,21 @@ export async function POST(request: NextRequest) {
           session.isFirstChunk = false;
         }
 
-        session.grpcStream.write(textChunk);
+        try {
+          session.grpcStream.write(textChunk);
+        } catch (writeError) {
+          console.error("Error writing text to gRPC stream:", writeError);
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "Stream already closed",
+            }),
+            {
+              status: 500,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+        }
 
         return new Response(
           JSON.stringify({
@@ -258,7 +327,21 @@ export async function POST(request: NextRequest) {
           session.isFirstChunk = false;
         }
 
-        session.grpcStream.write(audioChunk);
+        try {
+          session.grpcStream.write(audioChunk);
+        } catch (writeError) {
+          console.error("Error writing to gRPC stream:", writeError);
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "Stream already closed",
+            }),
+            {
+              status: 500,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
+        }
 
         return new Response(
           JSON.stringify({
@@ -275,8 +358,22 @@ export async function POST(request: NextRequest) {
       return new Response("Missing audioData or textData", { status: 400 });
     }
 
-    console.error("gRPC stream not available for session:", sessionId);
-    return new Response("gRPC stream not available", { status: 500 });
+    if (!session.grpcStream || session.grpcStream.destroyed) {
+      console.error("gRPC stream not available for session:", sessionId);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Session ended or gRPC stream not available",
+        }),
+        {
+          status: 410, // Gone - indicates the resource is no longer available
+          headers: { "Content-Type": "application/json" },
+        },
+      );
+    }
+
+    console.error("Unexpected error - should not reach here");
+    return new Response("Internal server error", { status: 500 });
   } catch (error) {
     console.error("Error processing input data:", error);
     return new Response(
@@ -302,29 +399,16 @@ export async function DELETE(request: NextRequest) {
 
   const session = sessions.get(sessionId);
   if (session) {
-    // For question sessions, we need to wait for the answer before fully closing
-    if (session.sessionType === ChunkType.QUESTION) {
-      console.log(
-        `Question session ${sessionId} - ending audio stream, waiting for answer`,
-      );
-      // End the gRPC stream to signal no more audio is coming
-      if (session.grpcStream && !session.grpcStream.destroyed) {
-        session.grpcStream.end();
-      }
-      // Don't delete the session yet - let the answer handler close the controller
-    } else {
-      // For memory sessions, close immediately
-      console.log(`Memory session ${sessionId} ended`);
-      if (session.grpcStream && !session.grpcStream.destroyed) {
-        session.grpcStream.end();
-      }
-      try {
-        session.controller.close();
-      } catch (error) {
-        console.log("Controller already closed:", error);
-      }
-      sessions.delete(sessionId);
+    console.log(
+      `Ending session ${sessionId} (${session.sessionType === ChunkType.QUESTION ? "question" : "memory"})`,
+    );
+
+    // For both session types, just end the gRPC stream to signal no more audio is coming
+    // The cleanup will be handled by the gRPC stream 'end' event
+    if (session.grpcStream && !session.grpcStream.destroyed) {
+      session.grpcStream.end();
     }
+    // Don't delete the session or close controller here - let the gRPC end event handle it
   }
 
   return new Response(JSON.stringify({ success: true }), {

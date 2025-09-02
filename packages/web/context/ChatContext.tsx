@@ -1,7 +1,7 @@
 import { createContext, Dispatch, SetStateAction } from "react";
 
 export interface TranscriptionItem {
-  type: "transcript" | "answer";
+  type: "transcript" | "answer" | "memory";
   text: string;
   timestamp: number;
 }

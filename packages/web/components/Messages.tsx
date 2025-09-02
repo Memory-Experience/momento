@@ -53,12 +53,20 @@ const Messages = forwardRef<ComponentRef<typeof motion.div>, MessagesProps>(
                     "w-full p-4 rounded-xl border",
                     item.type === "transcript"
                       ? "ml-auto bg-card border-border"
-                      : "mr-auto bg-primary/10 border-primary/20",
+                      : item.type === "memory"
+                        ? "mr-auto bg-muted/50 border-muted-foreground/20"
+                        : "mr-auto bg-primary/10 border-primary/20",
                   )}
                 >
                   {item.type === "answer" && (
                     <div className="text-sm font-medium text-primary mb-2">
                       Answer:
+                    </div>
+                  )}
+                  {item.type === "memory" && (
+                    <div className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                      <div className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full"></div>
+                      Related Memory:
                     </div>
                   )}
                   <div className="whitespace-pre-wrap">{item.text}</div>
