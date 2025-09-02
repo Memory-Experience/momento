@@ -1,4 +1,4 @@
-from typing import Optional
+
 import pandas as pd
 
 
@@ -6,9 +6,9 @@ class DataFrameDataset:
     """Dataset implementation using pandas DataFrames for evaluation tasks."""
 
     def __init__(self, 
-                 docs_df: Optional[pd.DataFrame] = None, 
-                 queries_df: Optional[pd.DataFrame] = None, 
-                 qrels_df: Optional[pd.DataFrame] = None):
+                 docs_df: pd.DataFrame | None = None, 
+                 queries_df: pd.DataFrame | None = None, 
+                 qrels_df: pd.DataFrame | None = None):
         """Initialize dataset with pandas DataFrames.
         
         Args:
@@ -18,34 +18,55 @@ class DataFrameDataset:
         """
         self._validate_dataframes(docs_df, queries_df, qrels_df)
         
-        self._docs_df = docs_df if docs_df is not None else pd.DataFrame(columns=['id', 'content'])
-        self._queries_df = queries_df if queries_df is not None else pd.DataFrame(columns=['id', 'text'])
-        self._qrels_df = qrels_df if qrels_df is not None else pd.DataFrame(columns=['query_id', 'doc_id', 'relevance'])
+        self._docs_df = (
+            docs_df
+            if docs_df is not None
+            else pd.DataFrame(columns=['id', 'content'])
+        )
+        self._queries_df = (
+            queries_df
+            if queries_df is not None
+            else pd.DataFrame(columns=['id', 'text'])
+        )
+        self._qrels_df = (
+            qrels_df
+            if qrels_df is not None
+            else pd.DataFrame(columns=['query_id', 'doc_id', 'relevance'])
+        )
 
-    def _validate_dataframes(self, docs_df: Optional[pd.DataFrame], 
-                           queries_df: Optional[pd.DataFrame], 
-                           qrels_df: Optional[pd.DataFrame]) -> None:
+    def _validate_dataframes(self, docs_df: pd.DataFrame | None, 
+                           queries_df: pd.DataFrame | None, 
+                           qrels_df: pd.DataFrame | None) -> None:
         """Validate DataFrame schemas."""
         if docs_df is not None and len(docs_df) > 0:
             required_cols = ['id', 'content']
             if not all(col in docs_df.columns for col in required_cols):
-                raise ValueError(f"docs_df must contain {required_cols} columns, got {list(docs_df.columns)}")
+                raise ValueError(
+                    f"docs_df must contain {required_cols} columns, got "
+                    f"{list(docs_df.columns)}"
+                )
             
         if queries_df is not None and len(queries_df) > 0:
             required_cols = ['id', 'text']
             if not all(col in queries_df.columns for col in required_cols):
-                raise ValueError(f"queries_df must contain {required_cols} columns, got {list(queries_df.columns)}")
+                raise ValueError(
+                    f"queries_df must contain {required_cols} columns, got "
+                    f"{list(queries_df.columns)}"
+                )
             
         if qrels_df is not None and len(qrels_df) > 0:
             required_cols = ['query_id', 'doc_id', 'relevance']
             if not all(col in qrels_df.columns for col in required_cols):
-                raise ValueError(f"qrels_df must contain {required_cols} columns, got {list(qrels_df.columns)}")
+                raise ValueError(
+                    f"qrels_df must contain {required_cols} columns, got "
+                    f"{list(qrels_df.columns)}"
+                )
 
     def get_name(self) -> str:
         """Return dataset name."""
         return getattr(self, 'name', 'DataFrameDataset')
     
-    def get_sample_query(self) -> Optional[dict]:
+    def get_sample_query(self) -> dict | None:
         """Get a sample query with its relevant documents.
         
         Returns:
@@ -64,7 +85,7 @@ class DataFrameDataset:
                 relevant_docs = relevant_qrels['doc_id'].astype(str).tolist()
                 relevance_scores = dict(zip(
                     relevant_qrels['doc_id'].astype(str), 
-                    relevant_qrels['relevance']
+                    relevant_qrels['relevance'], strict=False
                 ))
                 
                 return {
@@ -83,7 +104,10 @@ class DataFrameDataset:
     def __str__(self) -> str:
         """String representation of the dataset."""
         name = self.get_name()
-        return f"{name}: {len(self.docs)} docs, {len(self.queries)} queries, {len(self.qrels)} qrels"
+        return (
+            f"{name}: {len(self.docs)} docs, {len(self.queries)} queries, "
+            f"{len(self.qrels)} qrels"
+        )
 
     @property
     def docs(self) -> pd.DataFrame:

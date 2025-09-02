@@ -22,16 +22,8 @@ Why these tests matter
 - These tests act as a contract for any future changes to DataFrameDataset.
 """
 
-
-
-import os
-import sys
-makros = os.path.dirname(os.path.dirname(__file__))
-sys.path.append(makros)
-
 import pandas as pd
 import pytest
-
 from dataset.dataset import DataFrameDataset
 
 
