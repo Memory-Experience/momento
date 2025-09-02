@@ -9,7 +9,7 @@ import pandas as pd
 from typing import List, Dict
 from collections import Counter
 from .marco_dataset import MSMarcoDataset
-from .metrics import EvaluationMetrics
+from .retrieval_metrics import RetrievalMetrics
 from .evaluator import MarcoTopKEvaluator
 
 
@@ -189,19 +189,19 @@ def evaluate_multiple_queries():
             retrieved_docs = system.retrieve(query['text'], top_k=10)
             
             # Calculate metrics
-            p1 = EvaluationMetrics.precision_at_k(retrieved_docs, query['relevant_docs'], 1)
-            p3 = EvaluationMetrics.precision_at_k(retrieved_docs, query['relevant_docs'], 3)
-            p5 = EvaluationMetrics.precision_at_k(retrieved_docs, query['relevant_docs'], 5)
+            p1 = RetrievalMetrics.precision_at_k(retrieved_docs, query['relevant_docs'], 1)
+            p3 = RetrievalMetrics.precision_at_k(retrieved_docs, query['relevant_docs'], 3)
+            p5 = RetrievalMetrics.precision_at_k(retrieved_docs, query['relevant_docs'], 5)
             
-            r1 = EvaluationMetrics.recall_at_k(retrieved_docs, query['relevant_docs'], 1)
-            r3 = EvaluationMetrics.recall_at_k(retrieved_docs, query['relevant_docs'], 3)
-            r5 = EvaluationMetrics.recall_at_k(retrieved_docs, query['relevant_docs'], 5)
+            r1 = RetrievalMetrics.recall_at_k(retrieved_docs, query['relevant_docs'], 1)
+            r3 = RetrievalMetrics.recall_at_k(retrieved_docs, query['relevant_docs'], 3)
+            r5 = RetrievalMetrics.recall_at_k(retrieved_docs, query['relevant_docs'], 5)
             
-            n1 = EvaluationMetrics.ndcg_at_k(retrieved_docs, query['relevance_scores'], 1)
-            n3 = EvaluationMetrics.ndcg_at_k(retrieved_docs, query['relevance_scores'], 3)
-            n5 = EvaluationMetrics.ndcg_at_k(retrieved_docs, query['relevance_scores'], 5)
+            n1 = RetrievalMetrics.ndcg_at_k(retrieved_docs, query['relevance_scores'], 1)
+            n3 = RetrievalMetrics.ndcg_at_k(retrieved_docs, query['relevance_scores'], 3)
+            n5 = RetrievalMetrics.ndcg_at_k(retrieved_docs, query['relevance_scores'], 5)
             
-            mrr = EvaluationMetrics.mean_reciprocal_rank(retrieved_docs, query['relevant_docs'])
+            mrr = RetrievalMetrics.mean_reciprocal_rank(retrieved_docs, query['relevant_docs'])
             
             # Store metrics
             all_metrics['precision@1'].append(p1)
@@ -327,9 +327,9 @@ def test_specific_query():
         retrieved_docs = system.retrieve(sample_query['text'], top_k=10)
         
         # Calculate metrics
-        p1 = EvaluationMetrics.precision_at_k(retrieved_docs, sample_query['relevant_docs'], 1)
-        p3 = EvaluationMetrics.precision_at_k(retrieved_docs, sample_query['relevant_docs'], 3)
-        mrr = EvaluationMetrics.mean_reciprocal_rank(retrieved_docs, sample_query['relevant_docs'])
+        p1 = RetrievalMetrics.precision_at_k(retrieved_docs, sample_query['relevant_docs'], 1)
+        p3 = RetrievalMetrics.precision_at_k(retrieved_docs, sample_query['relevant_docs'], 3)
+        mrr = RetrievalMetrics.mean_reciprocal_rank(retrieved_docs, sample_query['relevant_docs'])
         
         # Find relevant documents in results
         relevant_found = []
@@ -425,9 +425,9 @@ def test_specific_query():
         retrieved_docs = system.retrieve(sample_query['text'], top_k=10)
         
         # Calculate metrics
-        p1 = EvaluationMetrics.precision_at_k(retrieved_docs, sample_query['relevant_docs'], 1)
-        p3 = EvaluationMetrics.precision_at_k(retrieved_docs, sample_query['relevant_docs'], 3)
-        mrr = EvaluationMetrics.mean_reciprocal_rank(retrieved_docs, sample_query['relevant_docs'])
+        p1 = RetrievalMetrics.precision_at_k(retrieved_docs, sample_query['relevant_docs'], 1)
+        p3 = RetrievalMetrics.precision_at_k(retrieved_docs, sample_query['relevant_docs'], 3)
+        mrr = RetrievalMetrics.mean_reciprocal_rank(retrieved_docs, sample_query['relevant_docs'])
         
         # Find relevant documents in results
         relevant_found = [doc for doc in retrieved_docs[:5] if doc in sample_query['relevant_docs']]
