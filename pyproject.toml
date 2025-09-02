@@ -8,10 +8,15 @@ dependencies = [
     "grpcio==1.71.2",
     "numpy>=2.3.2",
     "protobuf==5.29.5",
+    "api",
+    "evaluation",
+    "protos",
 ]
 
 [tool.uv.sources]
 protos = { workspace = true }
+api = { workspace = true }
+evaluation = { workspace = true }
 torch = [
   { index = "pytorch-cpu" },
 ]

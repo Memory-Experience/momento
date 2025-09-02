@@ -97,28 +97,3 @@ class EvaluationMetrics:
             if doc_id in relevant_ids:
                 return 1.0 / (i + 1)
         return 0.0
-    
-    @classmethod
-    def calculate_all_metrics(cls, retrieved_ids: List[str], relevant_ids: List[str], 
-                            relevance_scores: Dict[str, float], k_values: List[int]) -> Dict[str, float]:
-        """Calculate all metrics for given retrieval results.
-        
-        Args:
-            retrieved_ids: Retrieved document IDs in ranking order
-            relevant_ids: Ground truth relevant document IDs
-            relevance_scores: Document ID to relevance score mapping
-            k_values: K values to calculate metrics for
-            
-        Returns:
-            Dictionary with all calculated metrics
-        """
-        metrics = {}
-        
-        for k in k_values:
-            metrics[f'precision@{k}'] = cls.precision_at_k(retrieved_ids, relevant_ids, k)
-            metrics[f'recall@{k}'] = cls.recall_at_k(retrieved_ids, relevant_ids, k)
-            metrics[f'ndcg@{k}'] = cls.ndcg_at_k(retrieved_ids, relevance_scores, k)
-        
-        metrics['mrr'] = cls.mean_reciprocal_rank(retrieved_ids, relevant_ids)
-        
-        return metrics
