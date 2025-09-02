@@ -177,31 +177,25 @@ def test_get_sample_query_returns_expected_structure_with_type_mixing():
 
     Scenario:
     - queries contain int IDs [1, 2], qrels use string IDs "1" and "999".
-    - Ensures internal logic casts/aligns types to produce matches. 
+    - Ensures internal logic casts/aligns types to produce matches.
     """
     # Documents (string IDs)
-    docs = pd.DataFrame(
-        [
-            {"id": "d1", "content": "alpha"},
-            {"id": "d2", "content": "beta"},
-            {"id": "d3", "content": "gamma"},
-        ]
-    )
+    docs = pd.DataFrame([
+        {"id": "d1", "content": "alpha"},
+        {"id": "d2", "content": "beta"},
+        {"id": "d3", "content": "gamma"},
+    ])
     # Queries include int IDs to test normalization
-    queries = pd.DataFrame(
-        [
-            {"id": 1, "text": "alpha query"},
-            {"id": 2, "text": "beta query"},
-        ]
-    )
+    queries = pd.DataFrame([
+        {"id": 1, "text": "alpha query"},
+        {"id": 2, "text": "beta query"},
+    ])
     # Qrels use string IDs; only query "1" has matching relevances
-    qrels = pd.DataFrame(
-        [
-            {"query_id": "1", "doc_id": "d1", "relevance": 2},
-            {"query_id": "1", "doc_id": "d3", "relevance": 1},
-            {"query_id": "999", "doc_id": "d2", "relevance": 1},
-        ]
-    )
+    qrels = pd.DataFrame([
+        {"query_id": "1", "doc_id": "d1", "relevance": 2},
+        {"query_id": "1", "doc_id": "d3", "relevance": 1},
+        {"query_id": "999", "doc_id": "d2", "relevance": 1},
+    ])
     ds = DataFrameDataset(docs_df=docs, queries_df=queries, qrels_df=qrels)
 
     sample = ds.get_sample_query()

@@ -3,7 +3,7 @@ import string
 from collections import Counter
 
 
-# Generation metrics 
+# Generation metrics
 class GenerationMetrics:
     _ARTICLES = {"a", "an", "the"}
     _PUNCT_TABLE = str.maketrans("", "", string.punctuation)
@@ -29,10 +29,7 @@ class GenerationMetrics:
         pred_norm = GenerationMetrics._normalize(pred)
         return (
             1.0
-            if any(
-                pred_norm == GenerationMetrics._normalize(g)
-                for g in gold_answers
-            )
+            if any(pred_norm == GenerationMetrics._normalize(g) for g in gold_answers)
             else 0.0
         )
 
@@ -40,18 +37,20 @@ class GenerationMetrics:
     def f1(pred: str, gold_answers: list[str]) -> float:
         if not gold_answers:
             return 0.0
+
         def f1_pair(p: str, g: str) -> float:
             pt, gt = GenerationMetrics._tokens(p), GenerationMetrics._tokens(g)
-            if not pt and not gt: 
+            if not pt and not gt:
                 return 1.0
-            if not pt or not gt: 
+            if not pt or not gt:
                 return 0.0
             common = sum((Counter(pt) & Counter(gt)).values())
-            if common == 0: 
+            if common == 0:
                 return 0.0
             precision = common / len(pt)
             recall = common / len(gt)
             return 2 * precision * recall / (precision + recall)
+
         return max(f1_pair(pred, g) for g in gold_answers)
 
     @staticmethod
@@ -59,15 +58,16 @@ class GenerationMetrics:
         # LCS-based ROUGE-L F1 (single-ref max)
         def lcs(a: list[str], b: list[str]) -> int:
             m, n = len(a), len(b)
-            dp = [[0]*(n+1) for _ in range(m+1)]
-            for i in range(1, m+1):
-                ai = a[i-1]
-                for j in range(1, n+1):
-                    if ai == b[j-1]:
-                        dp[i][j] = dp[i-1][j-1] + 1
+            dp = [[0] * (n + 1) for _ in range(m + 1)]
+            for i in range(1, m + 1):
+                ai = a[i - 1]
+                for j in range(1, n + 1):
+                    if ai == b[j - 1]:
+                        dp[i][j] = dp[i - 1][j - 1] + 1
                     else:
-                        dp[i][j] = max(dp[i-1][j], dp[i][j-1])
+                        dp[i][j] = max(dp[i - 1][j], dp[i][j - 1])
             return dp[m][n]
+
         pt = GenerationMetrics._tokens(pred)
         best = 0.0
         for g in gold_answers:
@@ -94,9 +94,44 @@ class GenerationMetrics:
     def _content_words(tokens: list[str]) -> list[str]:
         # keep non-stopword-ish tokens (very light filter)
         stopish = GenerationMetrics._ARTICLES | {
-            "of","in","on","for","to","and","or","is","are","was","were","be","been","being",
-            "with","by","as","that","this","it","its","at","from","into","about","over","after",
-            "before","between","than","then","so","if","but","because","while","during","per"
+            "of",
+            "in",
+            "on",
+            "for",
+            "to",
+            "and",
+            "or",
+            "is",
+            "are",
+            "was",
+            "were",
+            "be",
+            "been",
+            "being",
+            "with",
+            "by",
+            "as",
+            "that",
+            "this",
+            "it",
+            "its",
+            "at",
+            "from",
+            "into",
+            "about",
+            "over",
+            "after",
+            "before",
+            "between",
+            "than",
+            "then",
+            "so",
+            "if",
+            "but",
+            "because",
+            "while",
+            "during",
+            "per",
         }
         return [t for t in tokens if t not in stopish and not t.isdigit()]
 
@@ -118,9 +153,11 @@ class GenerationMetrics:
         ans_content = GenerationMetrics._content_words(ans_toks)
 
         if not ans_toks:
-            return {"support_coverage": 1.0, 
-                    "support_density": 1.0, 
-                    "hallucination_rate": 0.0}
+            return {
+                "support_coverage": 1.0,
+                "support_density": 1.0,
+                "hallucination_rate": 0.0,
+            }
 
         # Build evidence bag from top-K docs
         top_ids = retrieved_docs_ordered[:top_k_docs]
@@ -130,9 +167,11 @@ class GenerationMetrics:
         ev_toks = set(GenerationMetrics._tokens(evidence_text))
 
         if not ev_toks:
-            return {"support_coverage": 0.0, 
-                    "support_density": 0.0, 
-                    "hallucination_rate": 1.0}
+            return {
+                "support_coverage": 0.0,
+                "support_density": 0.0,
+                "hallucination_rate": 1.0,
+            }
 
         # Coverage over unique content words
         unique_content = set(ans_content) if ans_content else set()
@@ -149,5 +188,5 @@ class GenerationMetrics:
         return {
             "support_coverage": support_coverage,
             "support_density": support_density,
-            "hallucination_rate": hallucination_rate
+            "hallucination_rate": hallucination_rate,
         }
