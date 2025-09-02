@@ -1,7 +1,6 @@
 import re
 import string
 from collections import Counter
-from typing import Any, List, Dict
 
 
 # Generation metrics 
@@ -21,17 +20,24 @@ class GenerationMetrics:
         return " ".join(tokens)
 
     @staticmethod
-    def _tokens(text: str) -> List[str]:
+    def _tokens(text: str) -> list[str]:
         return GenerationMetrics._normalize(text).split()
 
     # Correctness vs gold answers
     @staticmethod
-    def exact_match(pred: str, gold_answers: List[str]) -> float:
+    def exact_match(pred: str, gold_answers: list[str]) -> float:
         pred_norm = GenerationMetrics._normalize(pred)
-        return 1.0 if any(pred_norm == GenerationMetrics._normalize(g) for g in gold_answers) else 0.0
+        return (
+            1.0
+            if any(
+                pred_norm == GenerationMetrics._normalize(g)
+                for g in gold_answers
+            )
+            else 0.0
+        )
 
     @staticmethod
-    def f1(pred: str, gold_answers: List[str]) -> float:
+    def f1(pred: str, gold_answers: list[str]) -> float:
         if not gold_answers:
             return 0.0
         def f1_pair(p: str, g: str) -> float:
@@ -49,9 +55,9 @@ class GenerationMetrics:
         return max(f1_pair(pred, g) for g in gold_answers)
 
     @staticmethod
-    def rouge_l_f1(pred: str, gold_answers: List[str]) -> float:
+    def rouge_l_f1(pred: str, gold_answers: list[str]) -> float:
         # LCS-based ROUGE-L F1 (single-ref max)
-        def lcs(a: List[str], b: List[str]) -> int:
+        def lcs(a: list[str], b: list[str]) -> int:
             m, n = len(a), len(b)
             dp = [[0]*(n+1) for _ in range(m+1)]
             for i in range(1, m+1):
@@ -68,11 +74,11 @@ class GenerationMetrics:
             gt = GenerationMetrics._tokens(g)
             if not pt or not gt:
                 continue
-            l = lcs(pt, gt)
-            if l == 0:
+            lcs_len = lcs(pt, gt)
+            if lcs_len == 0:
                 continue
-            prec = l / len(pt)
-            rec = l / len(gt)
+            prec = lcs_len / len(pt)
+            rec = lcs_len / len(gt)
             f1 = 2 * prec * rec / (prec + rec)
             best = max(best, f1)
         return best
@@ -85,7 +91,7 @@ class GenerationMetrics:
 
     # Faithfulness to retrieved docs
     @staticmethod
-    def _content_words(tokens: List[str]) -> List[str]:
+    def _content_words(tokens: list[str]) -> list[str]:
         # keep non-stopword-ish tokens (very light filter)
         stopish = GenerationMetrics._ARTICLES | {
             "of","in","on","for","to","and","or","is","are","was","were","be","been","being",
@@ -95,31 +101,45 @@ class GenerationMetrics:
         return [t for t in tokens if t not in stopish and not t.isdigit()]
 
     @staticmethod
-    def faithfulness_signals(answer: str, retrieved_docs_ordered: List[str], retrieved_docs_map: Dict[str, str],
-                             top_k_docs: int = 5) -> Dict[str, float]:
+    def faithfulness_signals(
+        answer: str,
+        retrieved_docs_ordered: list[str],
+        retrieved_docs_map: dict[str, str],
+        top_k_docs: int = 5,
+    ) -> dict[str, float]:
         """
-        support_coverage: % of unique content words in answer that appear in retrieved docs (top-K)
-        support_density:  % of all answer tokens that appear in retrieved docs (precision-like)
+        support_coverage: percent of unique content words in the answer
+            that appear in retrieved docs (top-K)
+        support_density: percent of all answer tokens that appear in
+            retrieved docs (precision-like)
         hallucination_rate: 1 - support_density
         """
         ans_toks = GenerationMetrics._tokens(answer)
         ans_content = GenerationMetrics._content_words(ans_toks)
 
         if not ans_toks:
-            return {"support_coverage": 1.0, "support_density": 1.0, "hallucination_rate": 0.0}
+            return {"support_coverage": 1.0, 
+                    "support_density": 1.0, 
+                    "hallucination_rate": 0.0}
 
         # Build evidence bag from top-K docs
         top_ids = retrieved_docs_ordered[:top_k_docs]
-        evidence_text = " ".join(retrieved_docs_map.get(doc_id, "") for doc_id in top_ids)
+        evidence_text = " ".join(
+            retrieved_docs_map.get(doc_id, "") for doc_id in top_ids
+        )
         ev_toks = set(GenerationMetrics._tokens(evidence_text))
 
         if not ev_toks:
-            return {"support_coverage": 0.0, "support_density": 0.0, "hallucination_rate": 1.0}
+            return {"support_coverage": 0.0, 
+                    "support_density": 0.0, 
+                    "hallucination_rate": 1.0}
 
         # Coverage over unique content words
         unique_content = set(ans_content) if ans_content else set()
         covered_content = sum(1 for t in unique_content if t in ev_toks)
-        support_coverage = covered_content / max(1, len(unique_content)) if unique_content else 0.0
+        support_coverage = (
+            covered_content / max(1, len(unique_content)) if unique_content else 0.0
+        )
 
         # Density over all answer tokens (precision-like)
         covered_tokens = sum(1 for t in ans_toks if t in ev_toks)
