@@ -21,6 +21,7 @@ message ChunkMetadata {
   string session_id = 1;
   string memory_id = 2;
   ChunkType type = 3;
+  bool is_final = 4;  // Flag to indicate if this is the final chunk of a particular type
 }
 
 enum ChunkType {
