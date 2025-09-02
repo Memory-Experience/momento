@@ -38,14 +38,18 @@ class FileRepository(Repository):
 
         try:
             # PCM signed 16-bit little-endian format
-            audio_segment = AudioSegment(
-                data=memory.audio_data,
-                sample_width=2,  # 2 bytes for s16le
-                frame_rate=self.sample_rate,
-                channels=1,  # Mono audio
-            )
-            audio_segment.export(audio_filepath, format="wav")
-            logging.info(f"Audio saved to {audio_filepath}")
+            duration_seconds = 0
+            if memory.audio_data:
+                audio_segment = AudioSegment(
+                    data=memory.audio_data,
+                    sample_width=2,  # 2 bytes for s16le
+                    frame_rate=self.sample_rate,
+                    channels=1,  # Mono audio
+                )
+                audio_segment.export(audio_filepath, format="wav")
+                logging.info(f"Audio saved to {audio_filepath}")
+
+                duration_seconds = len(audio_segment) / 1000
 
             # Save metadata (could be used for searching later)
             metadata_filename = f"{memory.id}.json"
@@ -55,7 +59,7 @@ class FileRepository(Repository):
                     {
                         "id": str(memory.id),
                         "timestamp": memory.timestamp.isoformat(),
-                        "duration_seconds": len(audio_segment) / 1000,
+                        "duration_seconds": duration_seconds,
                         "text": memory.text,
                         "memory_type": memory.memory_type.value,
                     },
