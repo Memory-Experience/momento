@@ -1,16 +1,27 @@
 "use client";
 import { AnimatePresence, motion } from "motion/react";
-import { ComponentRef, forwardRef, ReactNode } from "react";
+import { ComponentRef, forwardRef, ReactNode, useEffect, useRef } from "react";
 import { Mic } from "lucide-react";
 
 interface MessagesProps {
   messages: ReactNode[];
   mode?: "memory" | "question";
-  isProcessing?: boolean;
 }
 
 const Messages = forwardRef<ComponentRef<typeof motion.div>, MessagesProps>(
-  function Messages({ messages, mode, isProcessing }, ref) {
+  function Messages({ messages, mode }, ref) {
+    // Debug: Log when messages change
+    const prevMessagesLength = useRef(messages.length);
+
+    useEffect(() => {
+      if (messages.length !== prevMessagesLength.current) {
+        console.log(
+          `Messages changed: ${prevMessagesLength.current} -> ${messages.length}`,
+        );
+        prevMessagesLength.current = messages.length;
+      }
+    }, [messages]);
+
     return (
       <motion.div
         layoutScroll
@@ -42,22 +53,9 @@ const Messages = forwardRef<ComponentRef<typeof motion.div>, MessagesProps>(
             </div>
           ) : (
             <AnimatePresence mode={"popLayout"}>
-              {messages}
-
-              {isProcessing && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex items-center justify-center py-2"
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm text-muted-foreground">
-                      Processing...
-                    </span>
-                  </div>
-                </motion.div>
-              )}
+              {messages.map((message, index) => (
+                <div key={`message-wrapper-${index}`}>{message}</div>
+              ))}
             </AnimatePresence>
           )}
         </motion.div>

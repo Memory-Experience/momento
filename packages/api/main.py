@@ -34,9 +34,11 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
     """Provides methods that implement functionality of transcription service."""
 
     def __init__(self):
+        # Initialize transcription model
         self.transcriber = FasterWhisperTranscriber()
         self.transcriber.initialize()
 
+        # Initialize vector store
         embedding_model = MockEmbeddingModel()
         text_chunker = CharacterTextChunker()
         vector_store_repo: VectorStoreRepository = InMemoryQdrantVectorStoreRepository(
@@ -44,30 +46,33 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
         )
         self.vector_store_service = VectorStoreService(vector_store_repo)
 
-        # Initialize LLM model using defaults from the Qwen3 class
+        # Initialize LLM model and RAG service
         self.llm_model = Qwen3()
-
-        # Inject the LLM model into the RAG service
         self.rag_service = LLMRAGService(llm_model=self.llm_model)
 
-        # Initialize the persistence service with a file repository
+        # Initialize the persistence service
         repository = FileRepository(storage_dir=RECORDINGS_DIR, sample_rate=SAMPLE_RATE)
         self.persistence_service = PersistenceService(repository)
 
     async def Transcribe(self, request_iterator, context):
         """Bidirectional streaming RPC for audio transcription."""
         logging.info("Client connected.")
+
+        # State tracking
         audio_data = bytearray()
-        transcription: list[str] = []
-        session_type = stt_pb2.ChunkType.MEMORY  # Default to memory
+        transcription = []
+        buffer = b""
+        session_type = stt_pb2.ChunkType.MEMORY  # Default type
         session_id = None
         memory_id = None
+        first_chunk = True
+        question_completed = False
+        transcription_complete = False
 
         try:
             logging.info("Received a new transcription request.")
-            buffer = b""
-            first_chunk = True
 
+            # Process incoming chunks
             async for chunk in request_iterator:
                 # Handle session metadata from first chunk
                 if first_chunk and chunk.metadata:
@@ -80,143 +85,210 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                     )
                     first_chunk = False
 
-                # Handle different input types (audio or text)
+                # Handle final marker - this is our new main control flow
+                if chunk.metadata and chunk.metadata.is_final:
+                    logging.info("Received explicit final marker from client")
+
+                    # Mark transcription as complete if not already done
+                    if not transcription_complete:
+                        transcription_complete = True
+
+                        # Send a final transcript marker back to client
+                        yield stt_pb2.MemoryChunk(
+                            text_data="",
+                            metadata=stt_pb2.ChunkMetadata(
+                                session_id=session_id,
+                                memory_id=memory_id,
+                                type=stt_pb2.ChunkType.TRANSCRIPT,
+                                is_final=True,
+                            ),
+                        )
+
+                        # Process based on session type
+                        if session_type == stt_pb2.ChunkType.MEMORY:
+                            # Save memory and return ID to client
+                            async for res in self._process_memory_saving(
+                                audio_data, transcription, session_id, memory_id
+                            ):
+                                yield res
+                        elif (
+                            session_type == stt_pb2.ChunkType.QUESTION
+                            and not question_completed
+                        ):
+                            # Process question and stream answer
+                            async for res in self._process_question(
+                                audio_data, transcription, session_id, memory_id
+                            ):
+                                yield res
+                            question_completed = True
+
+                    continue
+
+                # Handle audio input
                 if chunk.HasField("audio_data"):
                     buffer += chunk.audio_data
                     audio_data += chunk.audio_data
-                    logging.debug(
-                        f"Received audio chunk of size: {len(chunk.audio_data)} bytes, "
-                        + f"buffer size: {len(buffer)} bytes"
-                    )
+
+                    # Process audio when buffer is large enough
+                    if len(buffer) >= SAMPLE_RATE * 4:
+                        # Convert and transcribe audio
+                        audio_array = (
+                            np.frombuffer(buffer, dtype=np.int16).astype(np.float32)
+                            / 32768.0
+                        )
+                        segments, _ = self.transcriber.transcribe(audio_array)
+                        transcription.extend(segment.text for segment in segments)
+
+                        # Send transcript chunks to client
+                        for segment in segments:
+                            yield stt_pb2.MemoryChunk(
+                                text_data=segment.text,
+                                metadata=stt_pb2.ChunkMetadata(
+                                    session_id=session_id,
+                                    memory_id=memory_id,
+                                    type=stt_pb2.ChunkType.TRANSCRIPT,
+                                    is_final=False,
+                                ),
+                            )
+
+                        # Keep a small overlap for continuity
+                        buffer = buffer[-1600:]  # Keep last 0.1 seconds
+
+                # Handle direct text input
                 elif chunk.HasField("text_data"):
-                    # Direct text input - process immediately
                     logging.info(f"Received text input: {chunk.text_data}")
                     transcription.append(chunk.text_data)
-                    # Return the text directly as a transcript
-                    response = stt_pb2.MemoryChunk(
+
+                    # Echo text back as transcript
+                    yield stt_pb2.MemoryChunk(
                         text_data=chunk.text_data,
                         metadata=stt_pb2.ChunkMetadata(
                             session_id=session_id,
                             memory_id=memory_id,
                             type=stt_pb2.ChunkType.TRANSCRIPT,
+                            is_final=False,
                         ),
                     )
-                    yield response
-                    continue
-
-                # Process audio when buffer exceeds 1 second and we have audio data
-                # (16000 samples for 16kHz)
-                if (
-                    chunk.HasField("audio_data") and len(buffer) >= SAMPLE_RATE * 4
-                ):  # 2 bytes per sample
-                    logging.debug("Processing audio buffer for transcription.")
-                    audio_array = (
-                        np.frombuffer(buffer, dtype=np.int16).astype(np.float32)
-                        / 32768.0
-                    )
-                    segments, _ = self.transcriber.transcribe(audio_array)
-                    transcription.extend(segment.text for segment in segments)
-
-                    for segment in segments:
-                        logging.debug(f"Transcribed segment: {segment.text}")
-                        response = stt_pb2.MemoryChunk(
-                            text_data=segment.text,
-                            metadata=stt_pb2.ChunkMetadata(
-                                session_id=session_id,
-                                memory_id=memory_id,
-                                type=stt_pb2.ChunkType.TRANSCRIPT,
-                            ),
-                        )
-                        yield response
-
-                    # Keep a small overlap to avoid cutting words
-                    buffer = buffer[-1600:]  # Keep last 0.1 seconds
 
         except grpc.aio.AioRpcError as e:
             logging.error(f"Error during transcription: {e}")
         finally:
             logging.info("Client disconnected.")
-            full_transcription = " ".join(transcription)
+            # We no longer save memory in the finally block
+            # All saving is now done when a final marker is received
 
-            if session_type == stt_pb2.ChunkType.MEMORY:
-                # For memory sessions, save the data (audio if available)
-                if audio_data or transcription:
-                    # Create a domain object using the factory method
-                    memory = MemoryRequest.create(
-                        audio_data=bytes(audio_data) if audio_data else None,
-                        text=transcription,
-                        memory_type=MemoryType.MEMORY,
-                    )
-                    uri = await self.persistence_service.save_memory(memory)
-                    logging.info(f"Memory saved with URI: {uri}")
-                    await self.vector_store_service.index_memory(memory)
+    async def _process_memory_saving(
+        self, audio_data, transcription, session_id, memory_id
+    ):
+        """Save a memory and send confirmation to client."""
+        if not audio_data and not transcription:
+            return
 
-            elif session_type == stt_pb2.ChunkType.QUESTION:
-                # Generate answer for question sessions
-                logging.info(f"Processing question: {full_transcription}")
+        # Create memory object
+        memory = MemoryRequest.create(
+            audio_data=bytes(audio_data) if audio_data else None,
+            text=transcription,
+            memory_type=MemoryType.MEMORY,
+        )
 
-                # Create a domain object for the question as well
-                question_memory = MemoryRequest.create(
-                    audio_data=bytes(audio_data) if audio_data else None,
-                    text=transcription,
-                    memory_type=MemoryType.QUESTION,
+        # Save and index the memory
+        uri = await self.persistence_service.save_memory(memory)
+
+        logging.info(f"Memory saved with URI: {uri}")
+        await self.vector_store_service.index_memory(memory)
+        new_memory_id = str(memory.id)
+
+        # Send confirmation with memory ID back to client
+        yield stt_pb2.MemoryChunk(
+            text_data=f"Memory saved with ID: {new_memory_id}",
+            metadata=stt_pb2.ChunkMetadata(
+                session_id=session_id,
+                memory_id=new_memory_id,
+                type=stt_pb2.ChunkType.MEMORY,
+                is_final=True,
+            ),
+        )
+        logging.info(f"Sent memory confirmation with ID: {new_memory_id}")
+
+    async def _process_question(self, audio_data, transcription, session_id, memory_id):
+        """Process a question, fetch context, and stream answer."""
+        full_transcription = " ".join(transcription)
+        logging.info(f"Processing question: {full_transcription}")
+
+        # Create question memory object
+        question_memory = MemoryRequest.create(
+            audio_data=bytes(audio_data) if audio_data else None,
+            text=transcription,
+            memory_type=MemoryType.QUESTION,
+        )
+
+        # Get memory context
+        memory_context = await self.vector_store_service.search(
+            question_memory, limit=5
+        )
+
+        # Generate answer
+        response_generator = self.rag_service.answer_question(
+            query=question_memory,
+            memory_context=memory_context,
+            chunk_size_tokens=8,
+        )
+
+        # Stream memory context first if available
+        if memory_context and memory_context.memories:
+            logging.info(
+                f"Sending {len(memory_context.memories)} memories from context"
+            )
+            for memory in memory_context.memories.values():
+                memory_chunk = memory.to_chunk(
+                    session_id=session_id, chunk_type=stt_pb2.ChunkType.MEMORY
                 )
+                yield memory_chunk
 
-                # Use the vector store repository to search for relevant memories
-                memory_context = await self.vector_store_service.search(
-                    question_memory, limit=5
+        # Stream answer chunks
+        try:
+            last_chunk = None
+            async for response_chunk in response_generator:
+                if response_chunk.response and response_chunk.response.text:
+                    chunks_count = len(response_chunk.response.text)
+                    for i, text_segment in enumerate(response_chunk.response.text):
+                        if text_segment.strip():
+                            is_final = (
+                                i == chunks_count - 1
+                                and response_chunk.metadata.get("is_final", False)
+                            )
+
+                            answer_chunk = stt_pb2.MemoryChunk(
+                                text_data=text_segment,
+                                metadata=stt_pb2.ChunkMetadata(
+                                    session_id=session_id,
+                                    memory_id=str(response_chunk.response.id),
+                                    type=stt_pb2.ChunkType.ANSWER,
+                                    is_final=is_final,
+                                ),
+                            )
+                            last_chunk = answer_chunk
+                            yield answer_chunk
+
+            # If no final chunk was sent, add one now
+            if last_chunk and not last_chunk.metadata.is_final:
+                yield stt_pb2.MemoryChunk(
+                    text_data="",
+                    metadata=stt_pb2.ChunkMetadata(
+                        session_id=session_id,
+                        memory_id=last_chunk.metadata.memory_id
+                        if last_chunk
+                        else memory_id,
+                        type=stt_pb2.ChunkType.ANSWER,
+                        is_final=True,
+                    ),
                 )
+                logging.info("Sent final answer marker")
 
-                # Get a streaming generator from the RAG service - this starts
-                # generation in the background but doesn't consume it yet
-                response_generator = self.rag_service.answer_question(
-                    query=question_memory,
-                    memory_context=memory_context,
-                    chunk_size_tokens=8,  # Use larger chunks for smoother output
-                )
-
-                # Stream memory context results to client while the LLM is generating
-                if memory_context and memory_context.memories:
-                    logging.info(
-                        f"Sending {len(memory_context.memories)} memories from context"
-                    )
-                    for memory in memory_context.memories.values():
-                        memory_chunk = memory.to_chunk(
-                            session_id=session_id, chunk_type=stt_pb2.ChunkType.MEMORY
-                        )
-                        yield memory_chunk
-                        logging.debug(f"Sent memory preview: {memory.text[:50]}...")
-
-                # Now stream the response chunks directly from the generator
-                try:
-                    # Stream all chunks as they become available
-                    async for response_chunk in response_generator:
-                        if response_chunk.response and response_chunk.response.text:
-                            for text_segment in response_chunk.response.text:
-                                if text_segment.strip():  # Only send non-empty segments
-                                    # Create metadata without the is_final field
-                                    answer_chunk = stt_pb2.MemoryChunk(
-                                        text_data=text_segment,
-                                        metadata=stt_pb2.ChunkMetadata(
-                                            session_id=session_id,
-                                            memory_id=str(response_chunk.response.id),
-                                            type=stt_pb2.ChunkType.ANSWER,
-                                        ),
-                                    )
-                                    yield answer_chunk
-
-                                    # Log whether this is the final chunk
-                                    if response_chunk.metadata.get("is_final", False):
-                                        logging.info("Final answer chunk sent")
-
-                                    logging.debug(
-                                        f"Sent answer chunk: {text_segment[:50]}"
-                                    )
-
-                    logging.info("Answer streaming completed")
-                except Exception as e:
-                    logging.error(f"Error streaming answer: {e}")
-                    raise e
+            logging.info("Answer streaming completed")
+        except Exception as e:
+            logging.error(f"Error streaming answer: {e}")
+            raise e
 
 
 async def serve() -> None:
@@ -232,9 +304,6 @@ async def serve() -> None:
 
     async def server_graceful_shutdown():
         logging.info("Starting graceful shutdown...")
-        # Shuts down the server with 5 seconds of grace period. During the
-        # grace period, the server won't accept new connections and allow
-        # existing RPCs to continue within the grace period.
         await server.stop(5)
 
     _cleanup_coroutines.append(server_graceful_shutdown())

@@ -2,7 +2,6 @@ import { NextRequest } from "next/server";
 import * as grpc from "@grpc/grpc-js";
 import {
   MemoryChunk,
-  ChunkMetadata,
   ChunkType,
   TranscriptionServiceClient,
 } from "protos/generated/ts/clients/stt";
@@ -153,59 +152,63 @@ export async function GET(request: NextRequest) {
   });
 }
 
-export async function POST(request: NextRequest) {
+// POST handler for sending audio data or final marker
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
-    const { sessionId, audioData, textData } = body;
+    const body = await req.json();
+    const { sessionId, audioData, finalMarker } = body;
 
-    if (!sessionId) {
-      return new Response("Missing sessionId", { status: 400 });
+    // Validate session ID
+    if (!sessionId || typeof sessionId !== "string") {
+      return new Response(JSON.stringify({ error: "Invalid session ID" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
+    // Get session
     const session = sessions.get(sessionId);
     if (!session) {
-      return new Response("Session not found", { status: 404 });
+      return new Response(JSON.stringify({ error: "Session not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    if (!session.grpcStream || session.grpcStream.destroyed) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Session closed",
-        }),
-        {
-          status: 410,
+    // Check if this is a final marker request
+    if (finalMarker === true) {
+      if (session.grpcStream) {
+        // Instead of using a magic string, use proper metadata with isFinal flag
+        session.grpcStream.write({
+          textData: "", // Empty text data is sufficient, no need for magic strings
+          metadata: {
+            sessionId,
+            memoryId: session.memoryId,
+            type: session.sessionType,
+            isFinal: true, // This is the key change - explicitly mark as final
+          },
+        });
+        console.log(`Sent final marker for session ${sessionId}`);
+        return new Response(JSON.stringify({ success: true }), {
           headers: { "Content-Type": "application/json" },
-        },
-      );
-    }
-
-    const metadata: ChunkMetadata = {
-      sessionId,
-      memoryId: session.memoryId,
-      type: session.sessionType,
-    };
-
-    try {
-      if (textData !== undefined) {
-        // Text input
-        const textChunk = {
-          textData,
-          metadata: session.isFirstChunk ? metadata : undefined,
-        };
-
-        session.grpcStream.write(textChunk);
-      } else if (audioData !== undefined) {
-        // Audio input
-        const audioChunk = {
-          audioData: new Uint8Array(audioData),
-          metadata: session.isFirstChunk ? metadata : undefined,
-        };
-
-        session.grpcStream.write(audioChunk);
-      } else {
-        return new Response("Missing audioData or textData", { status: 400 });
+        });
       }
+    }
+    // Handle regular audio data
+    else if (Array.isArray(audioData)) {
+      const audioChunk = {
+        audioData: new Uint8Array(audioData),
+        metadata: session.isFirstChunk
+          ? {
+              sessionId,
+              memoryId: session.memoryId,
+              type: session.sessionType,
+              isFinal: false, // Explicitly set to false for normal chunks
+            }
+          : undefined,
+      };
+
+      session.grpcStream.write(audioChunk);
 
       // Mark that first chunk was sent
       if (session.isFirstChunk) {
@@ -215,26 +218,16 @@ export async function POST(request: NextRequest) {
       return new Response(JSON.stringify({ success: true }), {
         headers: { "Content-Type": "application/json" },
       });
-    } catch (writeError) {
-      console.warn(writeError);
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "Error writing to stream",
-        }),
-        {
-          status: 500,
-          headers: { "Content-Type": "application/json" },
-        },
-      );
+    } else {
+      return new Response(JSON.stringify({ error: "Invalid request body" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
     }
   } catch (error) {
-    console.warn(error);
+    console.error("Error processing request:", error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: "Server error",
-      }),
+      JSON.stringify({ error: "Failed to process request" }),
       {
         status: 500,
         headers: { "Content-Type": "application/json" },

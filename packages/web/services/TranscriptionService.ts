@@ -50,6 +50,9 @@ export class TranscriptionService {
       // End any existing session first
       if (this.currentSession) {
         await this.endSession();
+
+        // Add a small delay to ensure session is properly closed
+        await new Promise((resolve) => setTimeout(resolve, 300));
       }
 
       // Create a promise that resolves when the connection succeeds or fails
@@ -130,11 +133,13 @@ export class TranscriptionService {
    * Create or switch to a recording session
    * If we already have a connected session, we'll update its message handler
    */
-  public startRecordingSession(
+  public async startRecordingSession(
     type: "memory" | "question",
     onMessage: (chunk: MemoryChunk) => void,
     onSessionStatus: (connected: boolean, error?: string) => void,
-  ): boolean {
+  ): Promise<boolean> {
+    console.log(`TranscriptionService: Starting ${type} recording session`);
+
     // Store the message handler for future messages
     this.messageHandler = onMessage;
 
@@ -147,7 +152,7 @@ export class TranscriptionService {
       return false;
     }
 
-    // If we already have a connected session, use it
+    // If we already have a connected session
     if (this.currentSession?.isConnected) {
       // If type matches, we can reuse the session
       if (this.currentSession.type === type) {
@@ -159,7 +164,9 @@ export class TranscriptionService {
         console.log(
           `TranscriptionService: Switching from ${this.currentSession.type} to ${type} session`,
         );
-        this.endSession();
+
+        // Await the end of the current session to prevent race conditions
+        await this.endSession();
       }
     }
 
@@ -180,6 +187,12 @@ export class TranscriptionService {
     console.log(
       `TranscriptionService: Creating new ${type} session with ID ${sessionId}`,
     );
+
+    // Ensure any previous session is properly cleaned up
+    if (this.currentSession?.eventSource) {
+      this.currentSession.eventSource.close();
+      this.currentSession = null;
+    }
 
     // Start Server-Sent Events connection
     const eventSource = new EventSource(
@@ -310,6 +323,54 @@ export class TranscriptionService {
     }
   }
 
+  /**
+   * Send a final marker to indicate end of audio stream
+   */
+  public async sendFinalMarker(): Promise<boolean> {
+    if (!this.currentSession) return false;
+
+    try {
+      if (!this.currentSession.isConnected) {
+        console.warn(
+          "TranscriptionService: Attempted to send final marker before session is connected",
+        );
+        return false;
+      }
+
+      // Skip if the session is ending or has ended
+      if (this.currentSession.isEnding || !this.hasActiveSession()) {
+        console.log(
+          "TranscriptionService: Ignoring final marker - session is ending or has ended",
+        );
+        return false;
+      }
+
+      // Use the existing transcribe endpoint, but with a special finalMarker flag
+      const response = await fetch("/api/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId: this.currentSession.sessionId,
+          finalMarker: true,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error(
+          "TranscriptionService: Error sending final marker:",
+          response.status,
+        );
+        return false;
+      }
+
+      console.log("TranscriptionService: Final marker sent successfully");
+      return true;
+    } catch (err) {
+      console.error("TranscriptionService: Error sending final marker:", err);
+      return false;
+    }
+  }
+
   public closeEventSourceConnection(): void {
     if (this.currentSession?.eventSource) {
       console.log(
@@ -325,19 +386,33 @@ export class TranscriptionService {
   public async endSession(): Promise<void> {
     if (!this.currentSession) return;
 
+    const sessionId = this.currentSession.sessionId;
+    const sessionType = this.currentSession.type;
+
+    console.log(
+      `TranscriptionService: Ending ${sessionType} session ${sessionId}`,
+    );
+
     try {
       // Mark the session as ending first
       this.currentSession.isEnding = true;
 
-      await fetch(
-        `/api/transcribe?sessionId=${this.currentSession.sessionId}`,
-        {
-          method: "DELETE",
-        },
+      // Close the EventSource first to prevent any new events
+      if (this.currentSession.eventSource) {
+        this.currentSession.eventSource.close();
+      }
+
+      // Now send the DELETE request
+      await fetch(`/api/transcribe?sessionId=${sessionId}`, {
+        method: "DELETE",
+      });
+
+      console.log(
+        `TranscriptionService: Successfully ended session ${sessionId}`,
       );
     } catch (error) {
       console.info(
-        "TranscriptionService: Error ending session, maybe because of site reload:",
+        `TranscriptionService: Error ending session ${sessionId}:`,
         error,
       );
     } finally {
@@ -381,9 +456,18 @@ export class TranscriptionService {
 
   private closeSession(): void {
     if (this.currentSession?.eventSource) {
+      console.log(
+        `TranscriptionService: Closing EventSource for session ${this.currentSession.sessionId}`,
+      );
       this.currentSession.eventSource.close();
     }
-    this.currentSession = null;
+
+    if (this.currentSession) {
+      console.log(
+        `TranscriptionService: Session ${this.currentSession.sessionId} closed`,
+      );
+      this.currentSession = null;
+    }
   }
 }
 

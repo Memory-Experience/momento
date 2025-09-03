@@ -1,11 +1,14 @@
 "use client";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import TranscriptionService from "@/services/TranscriptionService";
-import { MemoryChunk } from "protos/generated/ts/stt";
+import { MemoryChunk, ChunkType } from "protos/generated/ts/stt";
 import { Mic } from "lucide-react";
 import AudioRecorder from "./AudioRecorder";
-import TranscriptionMessage from "../messages/TranscriptionMessage";
-import { Key, ReactNode } from "react";
+import StreamingMessage, {
+  StreamingMessageHandle,
+} from "../messages/StreamingMessage";
+import { ReactNode } from "react";
+import { toast } from "sonner";
 
 interface MemoryRecorderProps {
   onMemoryStart: () => void;
@@ -26,31 +29,76 @@ export default function MemoryRecorder({
   isRecording,
   isDisabled = false,
 }: MemoryRecorderProps) {
-  const messageIdCounterRef = useRef(0);
   const audioChunkCountRef = useRef(0);
+  const [isSessionActive, setIsSessionActive] = useState(false);
+  const [transcriptionComplete, setTranscriptionComplete] =
+    useState<boolean>(false);
+  const [memorySaved, setMemorySaved] = useState<boolean>(false);
+  const [memoryId, setMemoryId] = useState<string | null>(null);
 
-  // Create a message component from a chunk
-  const createMessageFromChunk = useCallback(
-    (chunk: MemoryChunk): ReactNode => {
-      const id = `memory_${messageIdCounterRef.current++}`;
-      return <TranscriptionMessage key={id as Key} chunk={chunk} />;
+  // Store reference to the transcription message component
+  const streamingMessageRef = useRef<StreamingMessageHandle | null>(null);
+
+  // Handle transcription completion
+  const handleTranscriptionComplete = useCallback(() => {
+    console.log("MemoryRecorder: Transcription marked as complete");
+    setTranscriptionComplete(true);
+  }, []);
+
+  // Handle memory saved event
+  const handleMemorySaved = useCallback(
+    (id: string) => {
+      console.log(`MemoryRecorder: Memory saved with ID: ${id}`);
+      setMemoryId(id);
+      console.log(memoryId);
+      setMemorySaved(true);
+
+      // Now we can end the session
+      if (isSessionActive) {
+        console.log("MemoryRecorder: Memory saved, ending session");
+        transcriptionService.endSession();
+      }
+
+      setIsSessionActive(false);
+      onMemoryEnd();
+
+      toast.success("Memory successfully recorded and saved", {
+        description:
+          "Your memory has been transcribed and stored in the system.",
+      });
     },
-    [],
+    [isSessionActive, transcriptionService, onMemoryEnd, memoryId],
   );
 
   // Process incoming chunks
   const handleChunk = useCallback(
     (chunk: MemoryChunk) => {
-      // Skip chunks with no text data
-      console.log("Received MemoryChunk", chunk.textData);
+      // Skip chunks with no text data unless it's a final marker
+      if (
+        !chunk.textData &&
+        !chunk.metadata?.isFinal &&
+        chunk.metadata?.type !== ChunkType.MEMORY
+      )
+        return;
 
-      if (!chunk.textData) return;
+      // Check if this is a Memory chunk containing saved memory ID
+      if (chunk.metadata?.type === ChunkType.MEMORY) {
+        console.log(
+          "Received MEMORY chunk with saved memory confirmation:",
+          chunk.metadata.memoryId,
+        );
+        handleMemorySaved(chunk.metadata.memoryId);
+        return;
+      }
 
-      // Create and add the message component
-      const messageComponent = createMessageFromChunk(chunk);
-      onAddMessage(messageComponent);
+      // Update the existing streaming message
+      if (streamingMessageRef.current) {
+        streamingMessageRef.current.processChunk(chunk);
+      } else {
+        console.warn("StreamingMessage ref is null, can't process chunk");
+      }
     },
-    [createMessageFromChunk, onAddMessage],
+    [handleMemorySaved],
   );
 
   // Handle session status
@@ -58,9 +106,11 @@ export default function MemoryRecorder({
     (connected: boolean, errorMessage?: string) => {
       if (connected) {
         console.log("MemoryRecorder: Session connected successfully");
+        setIsSessionActive(true);
       } else if (errorMessage) {
         console.error(`MemoryRecorder: Session error: ${errorMessage}`);
         onSessionError(errorMessage);
+        setIsSessionActive(false);
         onMemoryEnd();
       }
     },
@@ -78,7 +128,7 @@ export default function MemoryRecorder({
         );
       }
 
-      if (isRecording) {
+      if (isRecording && isSessionActive) {
         const success = await transcriptionService.sendAudioData(audioData);
 
         if (!success && audioChunkCountRef.current % 10 === 0) {
@@ -86,30 +136,70 @@ export default function MemoryRecorder({
         }
       }
     },
-    [transcriptionService, isRecording],
+    [transcriptionService, isRecording, isSessionActive],
   );
 
+  // Handle recording stop - send final flag but don't close session yet
+  useEffect(() => {
+    if (!isRecording && isSessionActive && !transcriptionComplete) {
+      console.log(
+        "Memory recording stopped, sending final transcription marker",
+      );
+
+      // Send a message to mark the end of the audio stream
+      // This is done via a custom function in the transcription service
+      transcriptionService.sendFinalMarker().then((success) => {
+        if (!success) {
+          console.error("Failed to send final marker");
+        }
+      });
+    }
+  }, [
+    isRecording,
+    isSessionActive,
+    transcriptionComplete,
+    transcriptionService,
+  ]);
+
   // Start recording handler
-  const handleStartRecording = useCallback(() => {
+  const handleStartRecording = useCallback(async () => {
     console.log("MemoryRecorder: Start recording triggered");
 
-    // Signal start of recording immediately to update UI state
-    onMemoryStart();
-
-    // Reset counter for this session
-    messageIdCounterRef.current = 0;
+    // Reset state and refs
     audioChunkCountRef.current = 0;
+    setTranscriptionComplete(false);
+    setMemorySaved(false);
+    setMemoryId(null);
+    streamingMessageRef.current = null;
 
     // Start the memory session
-    const success = transcriptionService.startRecordingSession(
+    const success = await transcriptionService.startRecordingSession(
       "memory",
       handleChunk,
       handleSessionStatus,
     );
 
-    if (!success) {
+    if (success) {
+      // Signal start of recording to update UI state
+      onMemoryStart();
+
+      // Create and add the streaming message component with a stable key
+      const key = `memory_${Date.now()}`;
+      const streamingComponent = (
+        <StreamingMessage
+          key={key}
+          ref={(instance) => {
+            streamingMessageRef.current = instance;
+          }}
+          initialContent=""
+          className="border-muted"
+          onComplete={handleTranscriptionComplete}
+        />
+      );
+
+      onAddMessage(streamingComponent);
+    } else {
       console.error("MemoryRecorder: Failed to start session");
-      // If session failed to start, end the memory recording
       onMemoryEnd();
     }
   }, [
@@ -118,21 +208,18 @@ export default function MemoryRecorder({
     handleSessionStatus,
     onMemoryStart,
     onMemoryEnd,
+    onAddMessage,
+    handleTranscriptionComplete,
   ]);
 
-  // Cleanup on unmount if still recording
+  // Cleanup on unmount if still active
   useEffect(() => {
     return () => {
-      if (isRecording) {
+      if (isSessionActive) {
         transcriptionService.endSession();
       }
     };
-  }, [isRecording, transcriptionService]);
-
-  // Debug logging for prop changes
-  useEffect(() => {
-    console.log(`MemoryRecorder: isRecording changed to ${isRecording}`);
-  }, [isRecording]);
+  }, [isSessionActive, transcriptionService]);
 
   return (
     <AudioRecorder
@@ -141,7 +228,7 @@ export default function MemoryRecorder({
       onAudioData={handleAudioData}
       onStartRecording={handleStartRecording}
       isRecordingActive={isRecording}
-      disabled={isDisabled}
+      disabled={isDisabled || (!isRecording && isSessionActive && !memorySaved)}
     />
   );
 }

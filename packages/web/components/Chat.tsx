@@ -83,6 +83,7 @@ export default function Chat() {
   const handleQuestionEnd = useCallback(() => {
     console.log("Chat: Question end triggered");
     setIsRecording(false);
+    setIsProcessing(false);
   }, []);
 
   const handleProcessingStart = () => {
@@ -147,12 +148,7 @@ export default function Chat() {
           />
         </div>
 
-        <Messages
-          ref={messagesContainerRef}
-          messages={messages}
-          mode={mode}
-          isProcessing={isProcessing}
-        />
+        <Messages ref={messagesContainerRef} messages={messages} mode={mode} />
 
         {/* Fixed position control area */}
         <div className="fixed bottom-32 left-0 right-0 w-full p-4 pb-8 flex flex-col items-center justify-center gap-4 bg-gradient-to-t from-card via-card/90 to-transparent z-20">
@@ -218,7 +214,7 @@ export default function Chat() {
                 onSessionError={handleSessionError}
                 transcriptionService={transcriptionService}
                 isRecording={isRecording && mode === "memory"}
-                isDisabled={isRecording}
+                isDisabled={isRecording || isProcessing}
               />
             </div>
 
@@ -232,7 +228,7 @@ export default function Chat() {
                 onSessionError={handleSessionError}
                 transcriptionService={transcriptionService}
                 isRecording={isRecording && mode === "question"}
-                isDisabled={isRecording}
+                isDisabled={isRecording || isProcessing}
               />
             </div>
           </div>
