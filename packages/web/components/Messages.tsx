@@ -1,26 +1,16 @@
 "use client";
-import { cn } from "@/utils";
 import { AnimatePresence, motion } from "motion/react";
-import { ComponentRef, forwardRef } from "react";
+import { ComponentRef, forwardRef, ReactNode } from "react";
 import { Mic } from "lucide-react";
-import { TranscriptionItem } from "@/context/ChatContext";
 
 interface MessagesProps {
-  transcriptions: TranscriptionItem[];
+  messages: ReactNode[];
+  mode?: "memory" | "question";
+  isProcessing?: boolean;
 }
 
 const Messages = forwardRef<ComponentRef<typeof motion.div>, MessagesProps>(
-  function Messages({ transcriptions }, ref) {
-    const messages = transcriptions.reduce((acc, curr) => {
-      const lastMessage = acc[acc.length - 1];
-      if (lastMessage && lastMessage.type === curr.type) {
-        lastMessage.text += curr.text;
-      } else {
-        acc.push({ ...curr });
-      }
-      return acc;
-    }, [] as TranscriptionItem[]);
-    console.debug("Rendering Messages component", transcriptions, messages);
+  function Messages({ messages, mode, isProcessing }, ref) {
     return (
       <motion.div
         layoutScroll
@@ -28,7 +18,7 @@ const Messages = forwardRef<ComponentRef<typeof motion.div>, MessagesProps>(
         ref={ref}
       >
         <motion.div className={"max-w-2xl mx-auto w-full flex flex-col gap-4"}>
-          {transcriptions.length === 0 ? (
+          {messages.length === 0 ? (
             <div className="text-center py-12">
               <div className="flex justify-center mb-4">
                 <div className="p-4 bg-muted rounded-full">
@@ -36,42 +26,38 @@ const Messages = forwardRef<ComponentRef<typeof motion.div>, MessagesProps>(
                 </div>
               </div>
               <h3 className="text-lg font-medium text-muted-foreground mb-2">
-                Connect to start transcribing
+                {mode
+                  ? mode === "memory"
+                    ? "Recording a new memory..."
+                    : "Ask your question..."
+                  : "Ready to record"}
               </h3>
               <p className="text-sm text-muted-foreground">
-                Connect to start recording with real-time transcription
+                {mode
+                  ? mode === "memory"
+                    ? "Your voice will be transcribed and saved"
+                    : "Your question will be answered based on your memories"
+                  : "Use the buttons below to record a memory or ask a question"}
               </p>
             </div>
           ) : (
             <AnimatePresence mode={"popLayout"}>
-              {messages.map((item, index) => (
+              {messages}
+
+              {isProcessing && (
                 <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={cn(
-                    "w-full p-4 rounded-xl border",
-                    item.type === "transcript"
-                      ? "ml-auto bg-card border-border"
-                      : item.type === "memory"
-                        ? "mr-auto bg-muted/50 border-muted-foreground/20"
-                        : "mr-auto bg-primary/10 border-primary/20",
-                  )}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="flex items-center justify-center py-2"
                 >
-                  {item.type === "answer" && (
-                    <div className="text-sm font-medium text-primary mb-2">
-                      Answer:
-                    </div>
-                  )}
-                  {item.type === "memory" && (
-                    <div className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
-                      <div className="w-1.5 h-1.5 bg-muted-foreground/50 rounded-full"></div>
-                      Related Memory:
-                    </div>
-                  )}
-                  <div className="whitespace-pre-wrap">{item.text}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <span className="text-sm text-muted-foreground">
+                      Processing...
+                    </span>
+                  </div>
                 </motion.div>
-              ))}
+              )}
             </AnimatePresence>
           )}
         </motion.div>
