@@ -1,7 +1,7 @@
 exclude = ["**/generated/py/*"]
 
 # Set line length for both linting and formatting
-line-length = 88  # You can change this to your preferred line length
+line-length = 88
 
 [lint]
 select = [
@@ -15,14 +15,14 @@ select = [
     "B",
     # flake8-simplify
     "SIM",
-    # isort
-    "I",
+    # Remove isort rules to eliminate conflicts
+    # "I", 
 ]
 
 [format]
 # Configure formatter to handle line wrapping
-quote-style = "double"  # Optional: enforces consistent quotes
-indent-style = "space"  # Optional: ensures consistent indentation
-line-ending = "auto"    # Handles line endings appropriately
-# Enable preview features that include more aggressive line-splitting
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+# Keep preview mode for better formatting
 preview = true
