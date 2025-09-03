@@ -190,13 +190,12 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                 # Now stream the response chunks directly from the generator
                 try:
                     # Stream all chunks as they become available
-                    full_answer = ""
                     async for response_chunk in response_generator:
                         if response_chunk.response and response_chunk.response.text:
                             for text_segment in response_chunk.response.text:
                                 if text_segment.strip():  # Only send non-empty segments
                                     # Create metadata without the is_final field
-                                    """answer_chunk = stt_pb2.MemoryChunk(
+                                    answer_chunk = stt_pb2.MemoryChunk(
                                         text_data=text_segment,
                                         metadata=stt_pb2.ChunkMetadata(
                                             session_id=session_id,
@@ -204,22 +203,10 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                                             type=stt_pb2.ChunkType.ANSWER,
                                         ),
                                     )
-                                    yield answer_chunk"""
-                                    full_answer += text_segment
+                                    yield answer_chunk
 
                                     # Log whether this is the final chunk
                                     if response_chunk.metadata.get("is_final", False):
-                                        answer_chunk = stt_pb2.MemoryChunk(
-                                            text_data=full_answer,
-                                            metadata=stt_pb2.ChunkMetadata(
-                                                session_id=session_id,
-                                                memory_id=str(
-                                                    response_chunk.response.id
-                                                ),
-                                                type=stt_pb2.ChunkType.ANSWER,
-                                            ),
-                                        )
-                                        yield answer_chunk
                                         logging.info("Final answer chunk sent")
 
                                     logging.debug(
