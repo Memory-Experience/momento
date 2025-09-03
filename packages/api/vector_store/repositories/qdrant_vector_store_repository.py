@@ -3,8 +3,6 @@ from uuid import UUID, uuid4
 
 from domain.memory_context import MemoryContext
 from domain.memory_request import MemoryRequest, MemoryType
-from models.embedding_model_interface import EmbeddingModel
-from models.text_chunker_interface import TextChunker
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from qdrant_client.http.models import (
@@ -14,6 +12,9 @@ from qdrant_client.http.models import (
     PointStruct,
     Range,
 )
+
+from models.embedding_model_interface import EmbeddingModel
+from models.text_chunker_interface import TextChunker
 
 from .vector_store_repository_interface import (
     FilterArg,

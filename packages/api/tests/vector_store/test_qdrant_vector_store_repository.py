@@ -5,8 +5,6 @@ import pytest
 import pytest_asyncio
 from domain.memory_context import MemoryContext
 from domain.memory_request import MemoryRequest, MemoryType
-from models.embedding_model_interface import EmbeddingModel
-from models.text_chunker_interface import TextChunker
 from vector_store.repositories.qdrant_vector_store_repository import (
     InMemoryQdrantVectorStoreRepository,
 )
@@ -15,6 +13,9 @@ from vector_store.repositories.vector_store_repository_interface import (
     FilterOperator,
     VectorStoreRepository,
 )
+
+from models.embedding_model_interface import EmbeddingModel
+from models.text_chunker_interface import TextChunker
 
 
 class MockEmbeddingModel(EmbeddingModel):
