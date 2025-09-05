@@ -1,9 +1,3 @@
-"""
-MS MARCO Dataset Adapter
-
-Adapter for MS MARCO dataset integration with the evaluation framework.
-"""
-
 import logging
 from typing import Optional
 
@@ -91,6 +85,12 @@ def _convert_ms_marco_to_dataframes(ms_marco_dataset, limit: int = 1000):
 
     return docs_df, queries_df, valid_qrels
 
+
+"""
+MS MARCO Dataset Adapter
+
+Adapter for MS MARCO dataset integration with the evaluation framework.
+"""
 
 class MSMarcoDataset(DataFrameDataset):
     """MS MARCO dataset adapter for evaluation framework."""

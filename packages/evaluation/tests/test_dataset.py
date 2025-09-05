@@ -1,26 +1,3 @@
-"""
-Extensive tests for marco_dataset_mock.dataset.DataFrameDataset
-
-Purpose
-- Verify that DataFrameDataset constructs and validates the three core tables:
-  - docs:      columns ["id", "content"]
-  - queries:   columns ["id", "text"]
-  - qrels:     columns ["query_id", "doc_id", "relevance"]
-- Confirm behavior when initialized empty vs. with data.
-- Confirm schema validation rules: required columns must be present when a
-  non-empty DataFrame is provided; empty frames are allowed as “no data yet”.
-- Verify helper methods such as:
-  - get_name(): returns a default, but can be overridden by setting .name
-  - get_sample_query(): returns a representative query with its relevant docs
-  - __len__(): returns number of documents
-  - __str__(): includes dataset name and basic counts
-- Ensure properties docs, queries, qrels return pandas DataFrames.
-
-Why these tests matter
-- The evaluation pipeline depends on consistent dataset schemas.
-- Early schema and helper-method failures should be surfaced clearly via tests.
-- These tests act as a contract for any future changes to DataFrameDataset.
-"""
 
 import pandas as pd
 import pytest
