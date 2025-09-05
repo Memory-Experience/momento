@@ -1,6 +1,4 @@
 import logging
-from typing import Optional
-
 import ir_datasets
 import pandas as pd
 
@@ -151,23 +149,3 @@ class MSMarcoDataset(DataFrameDataset):
                 )
             ),
         }
-
-    @staticmethod
-    def create(
-        dataset_name: str = "msmarco-passage/dev/small",
-        limit: int = 1000,
-    ) -> Optional["MSMarcoDataset"]:
-        """Factory function to create MS MARCO adapter with error handling.
-
-        Args:
-            dataset_name: MS MARCO dataset variant
-            limit: Maximum items to load
-
-        Returns:
-            MSMarcoDataset instance or None if failed
-        """
-        try:
-            return MSMarcoDataset(dataset_name, limit)
-        except Exception as e:
-            logging.error(f"Failed to create MS MARCO adapter: {e}")
-        return None
