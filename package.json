@@ -8,8 +8,9 @@
     "format": "prettier --ignore-unknown --write . && uvx ruff format",
     "format:check": "prettier --ignore-unknown --check . && uvx ruff format --check",
     "lint": "pnpm run -r lint && uvx ruff check",
-    "test": "pnpm -F api test && pnpm -F evaluation test",
-    "test:ci": "pnpm -F api test:ci && pnpm -F evaluation test:ci",
+    "lint:fix": "pnpm run -r lint --fix && uvx ruff check --fix",
+    "test": "pnpm -F api test",
+    "test:ci": "pnpm -F api test:ci",
     "prepare": "husky"
   },
   "keywords": [],

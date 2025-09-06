@@ -5,12 +5,10 @@ import sys
 import grpc
 import numpy as np
 from domain.memory_request import MemoryRequest, MemoryType
-from models.character_text_chunker import CharacterTextChunker
-from models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
 from persistence.persistence_service import PersistenceService
 from persistence.repositories.file_repository import FileRepository
 from protos.generated.py import stt_pb2, stt_pb2_grpc
-from rag.rag_service import SimpleRAGService
+from rag.llm_rag_service import LLMRAGService
 from tests.vector_store.test_qdrant_vector_store_repository import MockEmbeddingModel
 from vector_store.repositories.qdrant_vector_store_repository import (
     InMemoryQdrantVectorStoreRepository,
@@ -19,6 +17,10 @@ from vector_store.repositories.vector_store_repository_interface import (
     VectorStoreRepository,
 )
 from vector_store.vector_store_service import VectorStoreService
+
+from models.character_text_chunker import CharacterTextChunker
+from models.llm.qwen3 import Qwen3
+from models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
 
 _cleanup_coroutines = []
 
@@ -42,7 +44,11 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
         )
         self.vector_store_service = VectorStoreService(vector_store_repo)
 
-        self.rag_service = SimpleRAGService()
+        # Initialize LLM model using defaults from the Qwen3 class
+        self.llm_model = Qwen3()
+
+        # Inject the LLM model into the RAG service
+        self.rag_service = LLMRAGService(llm_model=self.llm_model)
 
         # Initialize the persistence service with a file repository
         repository = FileRepository(storage_dir=RECORDINGS_DIR, sample_rate=SAMPLE_RATE)
@@ -161,32 +167,69 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                     question_memory, limit=5
                 )
 
-                answer_task = asyncio.create_task(
-                    self.rag_service.answer_question(question_memory, memory_context)
+                # Get a streaming generator from the RAG service - this starts
+                # generation in the background but doesn't consume it yet
+                response_generator = self.rag_service.answer_question(
+                    query=question_memory,
+                    memory_context=memory_context,
+                    chunk_size_tokens=8,  # Use larger chunks for smoother output
                 )
 
-                # Stream memory context results to client
+                # Stream memory context results to client while the LLM is generating
                 if memory_context and memory_context.memories:
                     logging.info(
                         f"Sending {len(memory_context.memories)} memories from context"
                     )
                     for memory in memory_context.memories.values():
-                        # Convert to chunk and stream to client with MEMORY_PREVIEW type
                         memory_chunk = memory.to_chunk(
                             session_id=session_id, chunk_type=stt_pb2.ChunkType.MEMORY
                         )
-
                         yield memory_chunk
                         logging.debug(f"Sent memory preview: {memory.text[:50]}...")
 
-                # Send answer back to client
-                answer_request = await answer_task
-                answer_chunk = answer_request.to_chunk(
-                    session_id=session_id, chunk_type=stt_pb2.ChunkType.ANSWER
-                )
+                # Now stream the response chunks directly from the generator
+                try:
+                    # Stream all chunks as they become available
+                    full_answer = ""
+                    async for response_chunk in response_generator:
+                        if response_chunk.response and response_chunk.response.text:
+                            for text_segment in response_chunk.response.text:
+                                if text_segment.strip():  # Only send non-empty segments
+                                    # Create metadata without the is_final field
+                                    """answer_chunk = stt_pb2.MemoryChunk(
+                                        text_data=text_segment,
+                                        metadata=stt_pb2.ChunkMetadata(
+                                            session_id=session_id,
+                                            memory_id=str(response_chunk.response.id),
+                                            type=stt_pb2.ChunkType.ANSWER,
+                                        ),
+                                    )
+                                    yield answer_chunk"""
+                                    full_answer += text_segment
 
-                yield answer_chunk
-                logging.info(f"Sent answer: {answer_chunk.text_data[:50]}...")
+                                    # Log whether this is the final chunk
+                                    if response_chunk.metadata.get("is_final", False):
+                                        answer_chunk = stt_pb2.MemoryChunk(
+                                            text_data=full_answer,
+                                            metadata=stt_pb2.ChunkMetadata(
+                                                session_id=session_id,
+                                                memory_id=str(
+                                                    response_chunk.response.id
+                                                ),
+                                                type=stt_pb2.ChunkType.ANSWER,
+                                            ),
+                                        )
+                                        yield answer_chunk
+                                        logging.info("Final answer chunk sent")
+
+                                    logging.debug(
+                                        f"Sent answer chunk: {text_segment[:50]}"
+                                    )
+
+                    logging.info("Answer streaming completed")
+                except Exception as e:
+                    logging.error(f"Error streaming answer: {e}")
+                    raise e
 
 
 async def serve() -> None:
