@@ -9,10 +9,10 @@ from persistence.persistence_service import PersistenceService
 from persistence.repositories.file_repository import FileRepository
 from protos.generated.py import stt_pb2, stt_pb2_grpc
 from rag.llm_rag_service import LLMRAGService
-from tests.vector_store.test_qdrant_vector_store_repository import MockEmbeddingModel
 from vector_store.repositories.qdrant_vector_store_repository import (
     InMemoryQdrantVectorStoreRepository,
 )
+from models.embeddings.transformer_embedding import HFTransformerEmbeddingModel
 from vector_store.repositories.vector_store_repository_interface import (
     VectorStoreRepository,
 )
@@ -37,7 +37,11 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
         self.transcriber = FasterWhisperTranscriber()
         self.transcriber.initialize()
 
-        embedding_model = MockEmbeddingModel()
+        ##embedding_model from transformer_embedding.py
+        embedding_model = HFTransformerEmbeddingModel(
+            model_name="intfloat/e5-small-v2",  # adjust if you prefer another model
+            device=None,  # auto-select
+        )
         text_chunker = CharacterTextChunker()
         vector_store_repo: VectorStoreRepository = InMemoryQdrantVectorStoreRepository(
             embedding_model, text_chunker
@@ -240,7 +244,7 @@ async def serve() -> None:
     )
     listen_addr = f"[::]:{PORT}"
     server.add_insecure_port(listen_addr)
-    logging.info("🚀 SST Microservice is running on %s", listen_addr)
+    logging.info("SST Microservice is running on %s", listen_addr)
     await server.start()
 
     async def server_graceful_shutdown():
