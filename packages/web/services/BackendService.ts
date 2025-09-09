@@ -1,4 +1,5 @@
 import { MemoryChunk } from "protos/generated/ts/stt";
+import { ApiService } from "./ApiService";
 
 export interface TranscriptionSession {
   sessionId: string;
@@ -8,7 +9,7 @@ export interface TranscriptionSession {
   type: "memory" | "question";
 }
 
-export class TranscriptionService {
+export class BackendService {
   private currentSession: TranscriptionSession | null = null;
   private backendAvailable: boolean = false;
   private isConnecting: boolean = false;
@@ -38,7 +39,7 @@ export class TranscriptionService {
    * This session can then be used later for recording
    */
   public async initialize(): Promise<boolean> {
-    console.log("TranscriptionService: Establishing initial session");
+    console.log("BackendService: Establishing initial session");
 
     if (this.isConnecting) {
       return this.backendAvailable;
@@ -63,7 +64,7 @@ export class TranscriptionService {
           // Dummy message handler - we'll replace this when recording starts
           (chunk) => {
             console.log(
-              "TranscriptionService: Received message on initial session:",
+              "BackendService: Received message on initial session:",
               chunk,
             );
             // If we get any messages on the initial session, store them temporarily
@@ -75,13 +76,13 @@ export class TranscriptionService {
           (connected, error) => {
             if (connected) {
               console.log(
-                "TranscriptionService: Initial session connected successfully",
+                "BackendService: Initial session connected successfully",
               );
               this.updateBackendStatus(true);
               resolve(true);
             } else {
               console.error(
-                `TranscriptionService: Initial session connection failed: ${error}`,
+                `BackendService: Initial session connection failed: ${error}`,
               );
               this.updateBackendStatus(false);
               resolve(false);
@@ -101,7 +102,7 @@ export class TranscriptionService {
       return connected;
     } catch (error) {
       console.error(
-        "TranscriptionService: Error establishing initial session:",
+        "BackendService: Error establishing initial session:",
         error,
       );
       this.updateBackendStatus(false);
@@ -138,9 +139,7 @@ export class TranscriptionService {
     chunkHandler: (chunk: MemoryChunk) => void,
     statusHandler: (connected: boolean, errorMessage?: string) => void,
   ): Promise<boolean> {
-    console.log(
-      `TranscriptionService: Starting ${sessionType} recording session`,
-    );
+    console.log(`BackendService: Starting ${sessionType} recording session`);
 
     // Always end any existing session first
     this.endSession();
@@ -164,15 +163,13 @@ export class TranscriptionService {
     if (this.currentSession?.isConnected) {
       // If type matches, we can reuse the session
       if (this.currentSession.type === sessionType) {
-        console.log(
-          `TranscriptionService: Reusing existing ${sessionType} session`,
-        );
+        console.log(`BackendService: Reusing existing ${sessionType} session`);
         statusHandler(true);
         return true;
       } else {
         // If type doesn't match, end current session and create a new one
         console.log(
-          `TranscriptionService: Switching from ${this.currentSession.type} to ${sessionType} session`,
+          `BackendService: Switching from ${this.currentSession.type} to ${sessionType} session`,
         );
 
         // Await the end of the current session to prevent race conditions
@@ -195,7 +192,7 @@ export class TranscriptionService {
     // Generate session ID
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     console.log(
-      `TranscriptionService: Creating new ${type} session with ID ${sessionId}`,
+      `BackendService: Creating new ${type} session with ID ${sessionId}`,
     );
 
     // Ensure any previous session is properly cleaned up
@@ -204,9 +201,9 @@ export class TranscriptionService {
       this.currentSession = null;
     }
 
-    // Start Server-Sent Events connection
+    // Start Server-Sent Events connection using BackendApi
     const eventSource = new EventSource(
-      `/api/transcribe?sessionId=${sessionId}&type=${type}`,
+      ApiService.getStreamUrl(sessionId, type),
     );
 
     const session: TranscriptionSession = {
@@ -222,7 +219,7 @@ export class TranscriptionService {
     const sessionTimeout = setTimeout(() => {
       if (!session.isConnected) {
         console.error(
-          `TranscriptionService: Session timeout - no confirmation for session ${sessionId}`,
+          `BackendService: Session timeout - no confirmation for session ${sessionId}`,
         );
         onSessionStatus(
           false,
@@ -244,7 +241,7 @@ export class TranscriptionService {
           session.isConnected = true;
           clearTimeout(sessionTimeout);
           console.log(
-            `TranscriptionService: Session ${sessionId} connected successfully`,
+            `BackendService: Session ${sessionId} connected successfully`,
           );
           // Update global status since connection is working
           this.updateBackendStatus(true);
@@ -252,7 +249,7 @@ export class TranscriptionService {
         } else if (data.type === "error") {
           clearTimeout(sessionTimeout);
           console.error(
-            `TranscriptionService: Error in session ${sessionId}:`,
+            `BackendService: Error in session ${sessionId}:`,
             data.message,
           );
           onSessionStatus(false, data.message || "Unknown error from backend");
@@ -263,19 +260,19 @@ export class TranscriptionService {
           onMessage(chunk);
         }
       } catch (error) {
-        console.error("TranscriptionService: Error parsing message:", error);
+        console.error("BackendService: Error parsing message:", error);
       }
     };
 
     eventSource.onerror = (error) => {
       clearTimeout(sessionTimeout);
       console.error(
-        `TranscriptionService: SSE error in session ${sessionId}:`,
+        `BackendService: SSE error in session ${sessionId}:`,
         error,
       );
 
       if (eventSource.readyState === EventSource.CLOSED) {
-        console.log(`TranscriptionService: Session ${sessionId} closed`);
+        console.log(`BackendService: Session ${sessionId} closed`);
       } else {
         onSessionStatus(false, "Connection to backend lost. Please try again.");
         this.closeSession();
@@ -296,7 +293,7 @@ export class TranscriptionService {
     try {
       if (!this.currentSession.isConnected) {
         console.warn(
-          "TranscriptionService: Attempted to send audio data before session is connected",
+          "BackendService: Attempted to send audio data before session is connected",
         );
         return false;
       }
@@ -304,23 +301,19 @@ export class TranscriptionService {
       // Skip sending audio data if the session is ending
       if (this.currentSession.isEnding || !this.hasActiveSession()) {
         console.log(
-          "TranscriptionService: Ignoring audio data - session is ending or has ended",
+          "BackendService: Ignoring audio data - session is ending or has ended",
         );
         return false;
       }
 
-      const response = await fetch("/api/transcribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: this.currentSession.sessionId,
-          audioData: Array.from(audioData),
-        }),
-      });
+      const response = await ApiService.sendAudioData(
+        this.currentSession.sessionId,
+        audioData,
+      );
 
       if (!response.ok) {
         console.error(
-          "TranscriptionService: Error sending audio data:",
+          "BackendService: Error sending audio data:",
           response.status,
         );
         return false;
@@ -328,7 +321,7 @@ export class TranscriptionService {
 
       return true;
     } catch (err) {
-      console.error("TranscriptionService: Error sending audio data:", err);
+      console.error("BackendService: Error sending audio data:", err);
       return false;
     }
   }
@@ -342,7 +335,7 @@ export class TranscriptionService {
     try {
       if (!this.currentSession.isConnected) {
         console.warn(
-          "TranscriptionService: Attempted to send final marker before session is connected",
+          "BackendService: Attempted to send final marker before session is connected",
         );
         return false;
       }
@@ -350,33 +343,27 @@ export class TranscriptionService {
       // Skip if the session is ending or has ended
       if (this.currentSession.isEnding || !this.hasActiveSession()) {
         console.log(
-          "TranscriptionService: Ignoring final marker - session is ending or has ended",
+          "BackendService: Ignoring final marker - session is ending or has ended",
         );
         return false;
       }
 
-      // Use the existing transcribe endpoint, but with a special finalMarker flag
-      const response = await fetch("/api/transcribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: this.currentSession.sessionId,
-          finalMarker: true,
-        }),
-      });
+      const response = await ApiService.sendFinalMarker(
+        this.currentSession.sessionId,
+      );
 
       if (!response.ok) {
         console.error(
-          "TranscriptionService: Error sending final marker:",
+          "BackendService: Error sending final marker:",
           response.status,
         );
         return false;
       }
 
-      console.log("TranscriptionService: Final marker sent successfully");
+      console.log("BackendService: Final marker sent successfully");
       return true;
     } catch (err) {
-      console.error("TranscriptionService: Error sending final marker:", err);
+      console.error("BackendService: Error sending final marker:", err);
       return false;
     }
   }
@@ -384,7 +371,7 @@ export class TranscriptionService {
   public closeEventSourceConnection(): void {
     if (this.currentSession?.eventSource) {
       console.log(
-        `TranscriptionService: Directly closing EventSource for session ${this.currentSession.sessionId}`,
+        `BackendService: Directly closing EventSource for session ${this.currentSession.sessionId}`,
       );
       this.currentSession.eventSource.close();
     }
@@ -399,9 +386,7 @@ export class TranscriptionService {
     const sessionId = this.currentSession.sessionId;
     const sessionType = this.currentSession.type;
 
-    console.log(
-      `TranscriptionService: Ending ${sessionType} session ${sessionId}`,
-    );
+    console.log(`BackendService: Ending ${sessionType} session ${sessionId}`);
 
     try {
       // Mark the session as ending first
@@ -412,19 +397,12 @@ export class TranscriptionService {
         this.currentSession.eventSource.close();
       }
 
-      // Now send the DELETE request
-      await fetch(`/api/transcribe?sessionId=${sessionId}`, {
-        method: "DELETE",
-      });
+      // Now send the DELETE request using BackendApi
+      await ApiService.endSession(sessionId);
 
-      console.log(
-        `TranscriptionService: Successfully ended session ${sessionId}`,
-      );
+      console.log(`BackendService: Successfully ended session ${sessionId}`);
     } catch (error) {
-      console.info(
-        `TranscriptionService: Error ending session ${sessionId}:`,
-        error,
-      );
+      console.info(`BackendService: Error ending session ${sessionId}:`, error);
     } finally {
       this.closeSession();
     }
@@ -467,18 +445,18 @@ export class TranscriptionService {
   private closeSession(): void {
     if (this.currentSession?.eventSource) {
       console.log(
-        `TranscriptionService: Closing EventSource for session ${this.currentSession.sessionId}`,
+        `BackendService: Closing EventSource for session ${this.currentSession.sessionId}`,
       );
       this.currentSession.eventSource.close();
     }
 
     if (this.currentSession) {
       console.log(
-        `TranscriptionService: Session ${this.currentSession.sessionId} closed`,
+        `BackendService: Session ${this.currentSession.sessionId} closed`,
       );
       this.currentSession = null;
     }
   }
 }
 
-export default TranscriptionService;
+export default BackendService;

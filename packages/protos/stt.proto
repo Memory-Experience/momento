@@ -22,7 +22,7 @@ message ChunkMetadata {
   string memory_id = 2;
   ChunkType type = 3;
   bool is_final = 4;  // Flag to indicate if this is the final chunk of a particular type
-  double score = 5;   // Optional: Relevance score for memories (0.0 to 1.0) - only used for MEMORY chunks
+  double score = 5;   // Relevance score for memories (0.0 to 1.0)
 }
 
 enum ChunkType {
