@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from typing import Any
 
 from models.huggingface_helper import HuggingFaceHelper
 from models.llm.llama_cpp_model import LlamaCppConfig, LlamaCppModel
+from domain.memory_context import MemoryContext
 
 
 class Qwen3(LlamaCppModel):
@@ -115,3 +116,51 @@ Only use memory JSONs that appear after this point and outside of <examples>
             top_k_memories=top_k_memories,
             chunk_size_tokens=chunk_size_tokens,
         )
+
+    # -------- Custom prompt building for Qwen3 --------
+    def _format_memories(self, top: Iterable[tuple], max_chars: int = 1200) -> str:
+        """Format memories as a JSON-like structure for better LLM comprehension."""
+        memories = []
+        for mem, matched_text, score in top:
+            snippet = (matched_text or "").strip()
+            if max_chars and len(snippet) > max_chars:
+                snippet = snippet[: max_chars - 3] + "..."
+
+            memories.append(
+                f'{{ "id": "{mem.id}", "score": {score:.4f}, "content": "{snippet}" }}'
+            )
+
+        if not memories:
+            return "No relevant memories found."
+
+        return "\n".join(memories)
+
+    def build_messages(
+        self, prompt: str, memory_context: MemoryContext | None
+    ) -> list[dict[str, str]]:
+        """
+        Build messages for the chat completion API using the provided prompt
+        and memory context. Format the context in a way that's easier for
+        small models to understand.
+        """
+        messages: list[dict[str, str]] = [
+            {"role": "system", "content": self.system_prompt}
+        ]
+
+        if memory_context:
+            top = memory_context.get_top_memories(limit=self.top_k_memories)
+
+            # Format context with JSON-like memory structures
+            context_parts = [
+                "Here are relevant memories in JSON format:<memories>",
+                self._format_memories(top, max_chars=1200),
+                "</memories>\nAnswer the question using ONLY the <memories> content!",
+            ]
+
+            messages.append({
+                "role": "system",
+                "content": "\n\n".join(context_parts),
+            })
+
+        messages.append({"role": "user", "content": prompt})
+        return messages
