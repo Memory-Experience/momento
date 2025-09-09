@@ -192,7 +192,6 @@ export default function MemoryRecorder({
             streamingMessageRef.current = instance;
           }}
           initialContent=""
-          className="border-muted"
           onComplete={handleTranscriptionComplete}
         />
       );
