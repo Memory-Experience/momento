@@ -264,7 +264,6 @@ export default function QuestionRecorder({
             transcriptionRef.current = instance;
           }}
           initialContent=""
-          className="border-primary"
           onComplete={handleTranscriptionComplete}
         />
       );
