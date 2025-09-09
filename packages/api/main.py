@@ -239,12 +239,18 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
             logging.info(
                 f"Sending {len(memory_context.memories)} memories from context"
             )
-            # Using a placeholder for score for now
             for memory in memory_context.memories.values():
+                # Create the memory chunk using the factory method
                 memory_chunk = memory.to_chunk(
-                    session_id=session_id,
-                    chunk_type=stt_pb2.ChunkType.MEMORY,
+                    session_id=session_id, chunk_type=stt_pb2.ChunkType.MEMORY
                 )
+
+                # Then add the score from memory_context
+                if memory.id in memory_context.scores:
+                    memory_chunk.metadata.score = float(
+                        memory_context.scores[memory.id]
+                    )
+
                 yield memory_chunk
 
         # Stream answer chunks
@@ -323,7 +329,5 @@ if __name__ == "__main__":
         loop.run_until_complete(serve())
     finally:
         logging.info("Cleaning up...")
-        loop.run_until_complete(*_cleanup_coroutines)
-        loop.close()
         loop.run_until_complete(*_cleanup_coroutines)
         loop.close()
