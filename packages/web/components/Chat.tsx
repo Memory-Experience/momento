@@ -7,7 +7,7 @@ import MemoryRecorder from "./controls/MemoryRecorder";
 import QuestionRecorder from "./controls/QuestionRecorder";
 import { cn } from "@/utils";
 import { toast } from "sonner";
-import TranscriptionService from "@/services/TranscriptionService";
+import BackendService from "@/services/BackendService";
 import RecordingIndicator from "./RecordingIndicator";
 import ConnectionIndicator from "./ConnectionIndicator";
 
@@ -18,7 +18,7 @@ export default function Chat() {
   const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [messages, setMessages] = useState<ReactNode[]>([]);
-  const [transcriptionService] = useState(() => new TranscriptionService());
+  const [transcriptionService] = useState(() => new BackendService());
   const [isConnected, setIsConnected] = useState(false);
   const [isCheckingConnection, setIsCheckingConnection] = useState(true);
 

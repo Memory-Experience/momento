@@ -1,6 +1,6 @@
 "use client";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import TranscriptionService from "@/services/TranscriptionService";
+import BackendService from "@/services/BackendService";
 import { ChunkType, MemoryChunk } from "protos/generated/ts/stt";
 import { MessageCircleQuestionMark } from "lucide-react";
 import AudioRecorder from "./AudioRecorder";
@@ -17,7 +17,7 @@ interface QuestionRecorderProps {
   onAddMessage: (message: ReactNode) => void;
   onAnswerReceived: () => void;
   onSessionError: (errorMessage?: string) => void;
-  transcriptionService: TranscriptionService;
+  transcriptionService: BackendService;
   isRecording: boolean;
   isDisabled?: boolean;
 }
