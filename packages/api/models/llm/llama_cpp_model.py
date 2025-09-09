@@ -97,13 +97,21 @@ class LlamaCppModel(LLMModel):
 
     # -------- prompt building from MemoryContext --------
     def _format_memories(self, top: Iterable[tuple], max_chars: int = 1200) -> str:
-        lines: list[str] = []
+        """Format memories as a JSON-like structure for better LLM comprehension."""
+        memories = []
         for mem, matched_text, score in top:
             snippet = (matched_text or "").strip()
             if max_chars and len(snippet) > max_chars:
                 snippet = snippet[: max_chars - 3] + "..."
-            lines.append(f"- score={score:.4f} | id={mem.id} | {snippet}")
-        return "\n".join(lines)
+
+            memories.append(
+                f'{{ "id": "{mem.id}", "score": {score:.4f}, "content": "{snippet}" }}'
+            )
+
+        if not memories:
+            return "No relevant memories found."
+
+        return "\n".join(memories)
 
     def _build_messages(
         self, prompt: str, memory_context: MemoryContext | None
@@ -117,21 +125,15 @@ class LlamaCppModel(LLMModel):
             {"role": "system", "content": self.system_prompt}
         ]
 
-        if memory_context and not memory_context.is_empty():
+        if memory_context:
             top = memory_context.get_top_memories(limit=self.top_k_memories)
 
-            # Format context in a clearer, more explicit way for the model
-            context_parts = ["Here are relevant memories:"]
-
-            for i, (mem, matched_text, _score) in enumerate(top, 1):
-                snippet = (matched_text or "").strip()
-                if len(snippet) > 1200:
-                    snippet = snippet[:1197] + "..."
-                context_parts.append(f"Memory #{i} (ID: {mem.id}): {snippet}")
-
-            context_parts.append(
-                "\nAnswer the question using ONLY the information above."
-            )
+            # Format context with JSON-like memory structures
+            context_parts = [
+                "Here are relevant memories in JSON format:<memories>",
+                self._format_memories(top, max_chars=1200),
+                "</memories>\nAnswer the question using ONLY the <memories> content!",
+            ]
 
             messages.append({
                 "role": "system",
