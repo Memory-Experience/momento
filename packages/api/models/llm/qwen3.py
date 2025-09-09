@@ -4,7 +4,8 @@ from collections.abc import Iterable, Sequence
 from typing import Any
 
 from models.huggingface_helper import HuggingFaceHelper
-from models.llm.llama_cpp_model import LlamaCppConfig, LlamaCppModel
+from models.llama_cpp_base import LlamaCppConfig
+from models.llm.llama_cpp_model import LlamaCppModel
 from domain.memory_context import MemoryContext
 
 
@@ -22,7 +23,7 @@ to the user's memories. When answering questions, ONLY use information
 provided in the context. If the answer cannot be found in the context, 
 say "I don't have any memories about that." Be concise and focus only on 
 information found in the relevant memories. Always cite the source of the 
-information using the format [source: <memory.id>] at the end of a sentence.
+information using the format <source>memory.id</source> at the end of a sentence.
 Make sure to always answer in second person. NEVER say: "I had ..." in first 
 person. Always answer in second person!
 
