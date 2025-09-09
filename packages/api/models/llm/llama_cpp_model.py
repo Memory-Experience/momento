@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 import multiprocessing
 import threading
-from collections.abc import AsyncIterator, Iterable, Sequence
+from collections.abc import AsyncIterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -96,52 +96,17 @@ class LlamaCppModel(LLMModel):
             raise
 
     # -------- prompt building from MemoryContext --------
-    def _format_memories(self, top: Iterable[tuple], max_chars: int = 1200) -> str:
-        """Format memories as a JSON-like structure for better LLM comprehension."""
-        memories = []
-        for mem, matched_text, score in top:
-            snippet = (matched_text or "").strip()
-            if max_chars and len(snippet) > max_chars:
-                snippet = snippet[: max_chars - 3] + "..."
-
-            memories.append(
-                f'{{ "id": "{mem.id}", "score": {score:.4f}, "content": "{snippet}" }}'
-            )
-
-        if not memories:
-            return "No relevant memories found."
-
-        return "\n".join(memories)
-
-    def _build_messages(
+    def build_messages(
         self, prompt: str, memory_context: MemoryContext | None
     ) -> list[dict[str, str]]:
         """
         Build messages for the chat completion API using the provided prompt
-        and memory context. Format the context in a way that's easier for
-        small models to understand.
+        and memory context. Subclasses must override this method to define
+        their own formatting.
         """
-        messages: list[dict[str, str]] = [
-            {"role": "system", "content": self.system_prompt}
-        ]
-
-        if memory_context:
-            top = memory_context.get_top_memories(limit=self.top_k_memories)
-
-            # Format context with JSON-like memory structures
-            context_parts = [
-                "Here are relevant memories in JSON format:<memories>",
-                self._format_memories(top, max_chars=1200),
-                "</memories>\nAnswer the question using ONLY the <memories> content!",
-            ]
-
-            messages.append({
-                "role": "system",
-                "content": "\n\n".join(context_parts),
-            })
-
-        messages.append({"role": "user", "content": prompt})
-        return messages
+        raise NotImplementedError(
+            "Subclasses must implement their own build_messages method"
+        )
 
     def _suggest_max_tokens(self) -> int:
         """
@@ -176,7 +141,7 @@ class LlamaCppModel(LLMModel):
         if isinstance(prompt, list):
             prompt = " ".join(prompt)
 
-        messages = self._build_messages(prompt, memory_context)
+        messages = self.build_messages(prompt, memory_context)
 
         # Override instance chunk_size if provided in method call
         # For small models, increase chunk size to avoid character-by-character output
