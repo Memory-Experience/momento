@@ -6,7 +6,7 @@ import {
   useReducer,
 } from "react";
 import { MemoryChunk, ChunkType } from "protos/generated/ts/stt";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   Collapsible,
   CollapsibleContent,
@@ -221,73 +221,71 @@ const AnswerMessage = forwardRef<AnswerMessageHandle, AnswerMessageProps>(
 
     return (
       <Card className="w-full">
-        <CardContent className="p-4">
-          {/* Main content container with relative positioning */}
-          <div className="relative">
-            {/* Memories shown on the right side regardless of thinking state */}
-            {state.memories.length > 0 && (
-              <div className="absolute right-0 top-0 z-10 flex flex-row-reverse flex-wrap gap-2 max-w-[60%] justify-end">
-                <TooltipProvider>
-                  {state.memories.map((mem) => (
-                    <Tooltip key={mem.id}>
-                      <TooltipTrigger asChild>
-                        <div className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary/80 transition-colors hover:bg-primary/20">
-                          <p className="truncate max-w-[150px]">{mem.text}</p>
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>
-                          Retrieved memory deemed relevant with a matching score
-                          of: {mem.score.toFixed(2)}
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  ))}
-                </TooltipProvider>
-              </div>
-            )}
+        {/* Main content container with relative positioning */}
+        <div className="relative">
+          {/* Memories shown on the right side regardless of thinking state */}
+          {state.memories.length > 0 && (
+            <div className="absolute right-0 top-0 z-10 flex flex-row-reverse flex-wrap gap-2 max-w-[60%] justify-end">
+              <TooltipProvider>
+                {state.memories.map((mem) => (
+                  <Tooltip key={mem.id}>
+                    <TooltipTrigger asChild>
+                      <div className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary/80 transition-colors hover:bg-primary/20">
+                        <p className="truncate max-w-[150px]">{mem.text}</p>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        Retrieved memory deemed relevant with a matching score
+                        of: {mem.score.toFixed(2)}
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </TooltipProvider>
+            </div>
+          )}
 
-            {/* Thinking section - use full width with dynamic spacing for memories */}
-            {(state.isThinking || state.thinkingText) && (
-              <div
-                className={`mb-4 ${state.memories.length > 0 ? "pr-4" : "w-full"}`}
+          {/* Thinking section - use full width with dynamic spacing for memories */}
+          {(state.isThinking || state.thinkingText) && (
+            <div
+              className={`mb-4 ${state.memories.length > 0 ? "pr-4" : "w-full"}`}
+            >
+              <Collapsible
+                open={state.thinkingOpen}
+                onOpenChange={() =>
+                  dispatch({ type: ActionType.TOGGLE_THINKING })
+                }
+                className="w-full"
               >
-                <Collapsible
-                  open={state.thinkingOpen}
-                  onOpenChange={() =>
-                    dispatch({ type: ActionType.TOGGLE_THINKING })
-                  }
-                  className="w-full"
-                >
-                  <CollapsibleTrigger className="flex w-full items-center justify-between text-sm">
-                    <div className="flex items-center">
-                      {state.thinkingOpen ? (
-                        <ChevronDown className="mr-2 h-4 w-4" />
-                      ) : (
-                        <ChevronRight className="mr-2 h-4 w-4" />
-                      )}
-                      {state.thinkingComplete ? (
-                        <ThoughtHeader />
-                      ) : (
-                        <PulsatingThinking />
-                      )}
-                    </div>
-                  </CollapsibleTrigger>
+                <CollapsibleTrigger className="flex w-full items-center justify-between text-sm">
+                  <div className="flex items-center">
+                    {state.thinkingOpen ? (
+                      <ChevronDown className="mr-2 h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="mr-2 h-4 w-4" />
+                    )}
+                    {state.thinkingComplete ? (
+                      <ThoughtHeader />
+                    ) : (
+                      <PulsatingThinking />
+                    )}
+                  </div>
+                </CollapsibleTrigger>
 
-                  <CollapsibleContent className="prose prose-sm mt-2 max-w-none w-full rounded-md border border-transparent bg-transparent p-2 text-gray-500">
-                    {state.thinkingText}
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
-            )}
+                <CollapsibleContent className="prose prose-sm mt-2 max-w-none w-full rounded-md border border-transparent bg-transparent p-2 text-gray-500">
+                  {state.thinkingText}
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+          )}
 
-            {state.answerText && (
-              <div className="prose prose-invert max-w-none mt-4">
-                {state.answerText}
-              </div>
-            )}
-          </div>
-        </CardContent>
+          {state.answerText && (
+            <div className="prose prose-invert max-w-none mt-4">
+              {state.answerText}
+            </div>
+          )}
+        </div>
       </Card>
     );
   },
