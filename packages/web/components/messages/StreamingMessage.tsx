@@ -2,6 +2,7 @@ import { useState, forwardRef, useImperativeHandle, useEffect } from "react";
 import { MemoryChunk } from "protos/generated/ts/stt";
 import { cn } from "@/utils";
 import { motion } from "motion/react";
+import { Card } from "@/components/ui/card";
 
 export interface StreamingMessageHandle {
   updateContent: (newText: string) => void;
@@ -78,15 +79,12 @@ const StreamingMessage = forwardRef<
       layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn(
-        "rounded-lg border p-4 text-sm bg-white text-black",
-        isComplete ? "border-green-500" : "border-gray-200",
-        className,
-      )}
     >
-      <div className="whitespace-pre-wrap">
-        {content || "Waiting for content..."}
-      </div>
+      <Card className={cn("text-sm", className)}>
+        <div className="whitespace-pre-wrap">
+          {content || "Waiting for content..."}
+        </div>
+      </Card>
     </motion.div>
   ) : (
     <div />
