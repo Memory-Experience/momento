@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import TranscriptionService from "@/services/TranscriptionService";
+import BackendService from "@/services/BackendService";
 import { MemoryChunk, ChunkType } from "protos/generated/ts/stt";
 import { Mic } from "lucide-react";
 import AudioRecorder from "./AudioRecorder";
@@ -15,7 +15,7 @@ interface MemoryRecorderProps {
   onMemoryEnd: () => void;
   onAddMessage: (message: ReactNode) => void;
   onSessionError: (errorMessage?: string) => void;
-  transcriptionService: TranscriptionService;
+  transcriptionService: BackendService;
   isRecording: boolean;
   isDisabled?: boolean;
 }
