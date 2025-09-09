@@ -134,18 +134,26 @@ export class TranscriptionService {
    * If we already have a connected session, we'll update its message handler
    */
   public async startRecordingSession(
-    type: "memory" | "question",
-    onMessage: (chunk: MemoryChunk) => void,
-    onSessionStatus: (connected: boolean, error?: string) => void,
+    sessionType: "memory" | "question",
+    chunkHandler: (chunk: MemoryChunk) => void,
+    statusHandler: (connected: boolean, errorMessage?: string) => void,
   ): Promise<boolean> {
-    console.log(`TranscriptionService: Starting ${type} recording session`);
+    console.log(
+      `TranscriptionService: Starting ${sessionType} recording session`,
+    );
+
+    // Always end any existing session first
+    this.endSession();
+
+    // Add a small delay to ensure clean session transition
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     // Store the message handler for future messages
-    this.messageHandler = onMessage;
+    this.messageHandler = chunkHandler;
 
     // Check if backend is available
     if (!this.backendAvailable) {
-      onSessionStatus(
+      statusHandler(
         false,
         "Backend service is unavailable. Please try again later.",
       );
@@ -155,14 +163,16 @@ export class TranscriptionService {
     // If we already have a connected session
     if (this.currentSession?.isConnected) {
       // If type matches, we can reuse the session
-      if (this.currentSession.type === type) {
-        console.log(`TranscriptionService: Reusing existing ${type} session`);
-        onSessionStatus(true);
+      if (this.currentSession.type === sessionType) {
+        console.log(
+          `TranscriptionService: Reusing existing ${sessionType} session`,
+        );
+        statusHandler(true);
         return true;
       } else {
         // If type doesn't match, end current session and create a new one
         console.log(
-          `TranscriptionService: Switching from ${this.currentSession.type} to ${type} session`,
+          `TranscriptionService: Switching from ${this.currentSession.type} to ${sessionType} session`,
         );
 
         // Await the end of the current session to prevent race conditions
@@ -171,7 +181,7 @@ export class TranscriptionService {
     }
 
     // Create a new session
-    return this.createSession(type, onMessage, onSessionStatus);
+    return this.createSession(sessionType, chunkHandler, statusHandler);
   }
 
   /**
