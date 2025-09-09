@@ -90,6 +90,7 @@ MS MARCO Dataset Adapter
 Adapter for MS MARCO dataset integration with the evaluation framework.
 """
 
+
 class MSMarcoDataset(DataFrameDataset):
     """MS MARCO dataset adapter for evaluation framework."""
 
