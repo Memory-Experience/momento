@@ -186,6 +186,7 @@ export async function POST(req: NextRequest) {
             memoryId: session.memoryId,
             type: session.sessionType,
             isFinal: true, // This is the key change - explicitly mark as final
+            score: 0,
           },
         });
         console.log(`Sent final marker for session ${sessionId}`);
@@ -204,6 +205,7 @@ export async function POST(req: NextRequest) {
               memoryId: session.memoryId,
               type: session.sessionType,
               isFinal: false, // Explicitly set to false for normal chunks
+              score: 0,
             }
           : undefined,
       };

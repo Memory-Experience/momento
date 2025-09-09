@@ -74,7 +74,7 @@ function reducer(state: AnswerState, action: Action): AnswerState {
           {
             id: chunk.metadata?.memoryId || "",
             text: chunk.textData!,
-            score: /*chunk.metadata?.score || */ 0.99, // Using placeholder score
+            score: chunk.metadata?.score || 0.99, // Use actual score from metadata
           },
         ];
       }
