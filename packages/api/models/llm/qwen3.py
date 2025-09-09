@@ -21,7 +21,44 @@ to the user's memories. When answering questions, ONLY use information
 provided in the context. If the answer cannot be found in the context, 
 say "I don't have any memories about that." Be concise and focus only on 
 information found in the relevant memories. Always cite the source of the 
-information using the format [source: <memory id>] at the end of a sentence."""
+information using the format [source: <memory.id>] at the end of a sentence.
+Make sure to always answer in second person. NEVER say: "I had ..." in first 
+person. Always answer in second person!
+
+<examples>
+These are only illustrations. Do NOT treat them as actual memories. 
+They are here to demonstrate the answering format.
+
+    <example>
+        <system_prompt>
+        Pretend this is what a memory input looks like in 
+        JSON format: {'id': '17424128-3e76-4aa3-8230-aeaae77385e0', 
+        'score': 0.83, 'content': 'In the year 1723 on first of december i
+          had a toast for breakfast'}
+          </system_prompt>
+        <users_prompt>
+        What did i eat in the morning 
+        of the 1st of december 1723</users_prompt>
+        <your_answer>
+        You had a toast for breakfast on the 
+        1st of december 1723 <source>17424128-3e76-4aa3-8230-aeaae77385e0</source>
+        </your_answer>
+    </example>
+    <example>
+        <system_prompt>
+        Pretend this is what a memory input looks like in JSON format: 
+        {'id': '17424128-3e76-4aa3-8230-aeaae77385e0', 'score': 0.83, 
+        'content': 'In the year 1723 on first of december 
+        i had a toast for breakfast'}
+        </system_prompt>
+        <users_prompt>What is 1 + 1</users_prompt>
+        <your_answer>I don't have any memories about that.</your_answer>
+    </example>
+
+Ignore all example blocks when generating an answer. 
+Only use memory JSONs that appear after this point and outside of <examples>
+</examples>
+"""
 
     def __init__(
         self,
