@@ -220,37 +220,12 @@ const AnswerMessage = forwardRef<AnswerMessageHandle, AnswerMessageProps>(
     );
 
     return (
-      <Card className="w-full">
+      <Card className="w-full min-h-[100px]">
         {/* Main content container with relative positioning */}
         <div className="relative">
-          {/* Memories shown on the right side regardless of thinking state */}
-          {state.memories.length > 0 && (
-            <div className="absolute right-0 top-0 z-10 flex flex-row-reverse flex-wrap gap-2 max-w-[60%] justify-end">
-              <TooltipProvider>
-                {state.memories.map((mem) => (
-                  <Tooltip key={mem.id}>
-                    <TooltipTrigger asChild>
-                      <div className="rounded-full bg-primary/10 px-3 py-1 text-xs text-primary/80 transition-colors hover:bg-primary/20">
-                        <p className="truncate max-w-[150px]">{mem.text}</p>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>
-                        Retrieved memory deemed relevant with a matching score
-                        of: {mem.score.toFixed(2)}
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                ))}
-              </TooltipProvider>
-            </div>
-          )}
-
-          {/* Thinking section - use full width with dynamic spacing for memories */}
+          {/* Thinking section starting from the top of the card */}
           {(state.isThinking || state.thinkingText) && (
-            <div
-              className={`mb-4 ${state.memories.length > 0 ? "pr-4" : "w-full"}`}
-            >
+            <div className="w-full">
               <Collapsible
                 open={state.thinkingOpen}
                 onOpenChange={() =>
@@ -280,6 +255,33 @@ const AnswerMessage = forwardRef<AnswerMessageHandle, AnswerMessageProps>(
             </div>
           )}
 
+          {/* Memories shown as floating element with higher z-index */}
+          {state.memories.length > 0 && (
+            <div className="absolute right-0 -top-2 z-20 max-w-[60%]">
+              <div className="flex flex-nowrap overflow-x-auto justify-end gap-1.5 pb-2 mt-1">
+                <TooltipProvider>
+                  {state.memories.map((mem) => (
+                    <Tooltip key={mem.id}>
+                      <TooltipTrigger asChild>
+                        <div className="rounded-full bg-primary/10 px-2.5 py-1 text-xs text-primary/80 transition-colors hover:bg-primary/20 flex-none whitespace-nowrap">
+                          <p className="truncate max-w-[120px] inline-block">
+                            {mem.text}
+                          </p>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="left">
+                        <p className="max-w-[300px]">
+                          {mem.text} (Score: {mem.score.toFixed(2)})
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </TooltipProvider>
+              </div>
+            </div>
+          )}
+
+          {/* Answer text */}
           {state.answerText && (
             <div className="prose prose-invert max-w-none mt-4">
               {state.answerText}
