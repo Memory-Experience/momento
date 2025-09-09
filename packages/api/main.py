@@ -239,9 +239,11 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
             logging.info(
                 f"Sending {len(memory_context.memories)} memories from context"
             )
+            # Using a placeholder for score for now
             for memory in memory_context.memories.values():
                 memory_chunk = memory.to_chunk(
-                    session_id=session_id, chunk_type=stt_pb2.ChunkType.MEMORY
+                    session_id=session_id,
+                    chunk_type=stt_pb2.ChunkType.MEMORY,
                 )
                 yield memory_chunk
 
@@ -270,20 +272,19 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                             last_chunk = answer_chunk
                             yield answer_chunk
 
-            # If no final chunk was sent, add one now
+            # If the generator finishes and the last chunk sent was not final,
+            # -> send a final marker.
             if last_chunk and not last_chunk.metadata.is_final:
-                yield stt_pb2.MemoryChunk(
-                    text_data="",
+                final_marker = stt_pb2.MemoryChunk(
                     metadata=stt_pb2.ChunkMetadata(
                         session_id=session_id,
-                        memory_id=last_chunk.metadata.memory_id
-                        if last_chunk
-                        else memory_id,
+                        memory_id=last_chunk.metadata.memory_id,
                         type=stt_pb2.ChunkType.ANSWER,
                         is_final=True,
-                    ),
+                    )
                 )
-                logging.info("Sent final answer marker")
+                yield final_marker
+                logging.info("Sent final answer marker because stream ended.")
 
             logging.info("Answer streaming completed")
         except Exception as e:
@@ -322,5 +323,7 @@ if __name__ == "__main__":
         loop.run_until_complete(serve())
     finally:
         logging.info("Cleaning up...")
+        loop.run_until_complete(*_cleanup_coroutines)
+        loop.close()
         loop.run_until_complete(*_cleanup_coroutines)
         loop.close()

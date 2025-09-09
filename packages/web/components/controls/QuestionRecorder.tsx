@@ -33,19 +33,18 @@ export default function QuestionRecorder({
   isRecording,
   isDisabled = false,
 }: QuestionRecorderProps) {
-  const messageIdCounterRef = useRef(0);
   const audioChunkCountRef = useRef(0);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [isWaitingForAnswer, setIsWaitingForAnswer] = useState(false);
-  const [isAnswerComplete, setIsAnswerComplete] = useState(false);
   const [transcriptionComplete, setTranscriptionComplete] =
     useState<boolean>(false);
-  const [answerComplete, setAnswerComplete] = useState<boolean>(false);
 
   // Store references to message components
   const transcriptionRef = useRef<StreamingMessageHandle | null>(null);
   const answerRef = useRef<AnswerMessageHandle | null>(null);
   const answerTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isAnswerComponentCreatedRef = useRef(false);
+  const earlyMemoryChunksRef = useRef<MemoryChunk[]>([]); // Buffer for early memory chunks
 
   // Handle transcription completion
   const handleTranscriptionComplete = useCallback(() => {
@@ -69,7 +68,6 @@ export default function QuestionRecorder({
       answerTimeoutRef.current = null;
     }
 
-    setIsAnswerComplete(true);
     setIsWaitingForAnswer(false);
 
     // End the session and clean up
@@ -79,59 +77,69 @@ export default function QuestionRecorder({
       onQuestionEnd();
     }
 
-    // Reset for next question
+    // Reset ALL state for next question
     answerRef.current = null;
+    earlyMemoryChunksRef.current = []; // Clear any buffered memory chunks
+    isAnswerComponentCreatedRef.current = false; // Reset component creation flag
   }, [transcriptionService, onQuestionEnd, isSessionActive]);
 
   // Handle answer completion
   const handleAnswerComplete = useCallback(() => {
     console.log("QuestionRecorder: Answer marked as complete");
-    setAnswerComplete(true);
     finalizeAnswer();
-  }, [finalizeAnswer]); // Remove the circular dependency with finalizeAnswer
-
-  // Update handleAnswerComplete to use finalizeAnswer properly
-  useEffect(() => {
-    if (answerComplete) {
-      finalizeAnswer();
-    }
-  }, [answerComplete, finalizeAnswer]);
+  }, [finalizeAnswer]);
 
   // Process incoming chunks
   const handleChunk = useCallback(
     (chunk: MemoryChunk) => {
-      if (!chunk.textData && !chunk.metadata?.isFinal) return;
-
       if (chunk.metadata?.type === ChunkType.TRANSCRIPT) {
         // Update the transcription message with new transcript chunks
         if (transcriptionRef.current) {
           transcriptionRef.current.processChunk(chunk);
         }
-      } else if (
+        return;
+      }
+
+      if (
         chunk.metadata?.type === ChunkType.ANSWER ||
         chunk.metadata?.type === ChunkType.MEMORY
       ) {
-        // If this is the first Answer/Memory chunk, create the Answer component
-        if (!answerRef.current) {
-          // Create and add the answer component
+        // Create answer component on first content chunk if it doesn't exist yet
+        if (!isAnswerComponentCreatedRef.current) {
+          isAnswerComponentCreatedRef.current = true;
           const answerComponent = (
             <AnswerMessage
               key={`answer_${Date.now()}` as Key}
               ref={(instance) => {
                 answerRef.current = instance;
+                // Process any buffered memory chunks when the ref is available
+                if (instance && earlyMemoryChunksRef.current.length > 0) {
+                  console.log(
+                    `Processing ${earlyMemoryChunksRef.current.length} buffered memory chunks`,
+                  );
+                  earlyMemoryChunksRef.current.forEach((bufferedChunk) => {
+                    instance.processChunk(bufferedChunk);
+                  });
+                  earlyMemoryChunksRef.current = [];
+                }
               }}
-              initialContent=""
               onComplete={handleAnswerComplete}
             />
           );
 
           onAddMessage(answerComponent);
-          onAnswerReceived(); // Notify that we started receiving an answer
+          onAnswerReceived();
         }
 
-        // Process the chunk in the answer component
+        // Process the chunk in the answer component if it exists
         if (answerRef.current) {
           answerRef.current.processChunk(chunk);
+        } else {
+          // Buffer the chunk for later processing
+          earlyMemoryChunksRef.current.push(chunk);
+          console.log(
+            `Buffering early ${chunk.metadata?.type} chunk for later processing`,
+          );
         }
 
         // Clear any inactivity timer since we got data
@@ -168,7 +176,7 @@ export default function QuestionRecorder({
             console.log(
               "QuestionRecorder: No answer component found, finalizing directly",
             );
-            setAnswerComplete(true);
+            finalizeAnswer();
           }
         }
         // Handle actual errors
@@ -179,9 +187,16 @@ export default function QuestionRecorder({
           setIsWaitingForAnswer(false);
           onQuestionEnd();
         }
+        // Always reset session state when disconnected, even if it wasn't an answer session
+        else {
+          console.log("QuestionRecorder: Session ended, resetting state");
+          setIsSessionActive(false);
+          setTranscriptionComplete(false);
+          setIsWaitingForAnswer(false);
+        }
       }
     },
-    [onQuestionEnd, onSessionError, isWaitingForAnswer],
+    [onQuestionEnd, onSessionError, isWaitingForAnswer, finalizeAnswer],
   );
 
   // Handle audio data
@@ -208,13 +223,25 @@ export default function QuestionRecorder({
 
   // Start recording handler
   const handleStartRecording = useCallback(async () => {
-    // Reset state for this session
-    messageIdCounterRef.current = 0;
-    audioChunkCountRef.current = 0;
+    // First, ensure any previous session is completely terminated
+    if (isSessionActive) {
+      console.log(
+        "QuestionRecorder: Terminating previous session before starting new one",
+      );
+      transcriptionService.endSession();
+      setIsSessionActive(false);
 
+      // Wait a brief moment for session termination to complete
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    // Reset ALL state for this session
+    console.log("QuestionRecorder: Resetting all state for new session");
+    audioChunkCountRef.current = 0;
     setTranscriptionComplete(false);
-    setAnswerComplete(false);
-    setIsAnswerComplete(false);
+    setIsWaitingForAnswer(false);
+    isAnswerComponentCreatedRef.current = false;
+    earlyMemoryChunksRef.current = [];
     transcriptionRef.current = null;
     answerRef.current = null;
 
@@ -251,6 +278,7 @@ export default function QuestionRecorder({
     onQuestionStart,
     onAddMessage,
     handleTranscriptionComplete,
+    isSessionActive, // Add this dependency
   ]);
 
   // Effect to handle when recording stops
@@ -273,35 +301,6 @@ export default function QuestionRecorder({
     transcriptionComplete,
     transcriptionService,
     onSessionError,
-  ]);
-
-  // Effect to handle when recording stops but session should remain active
-  useEffect(() => {
-    if (
-      !isRecording &&
-      isSessionActive &&
-      !isWaitingForAnswer &&
-      !isAnswerComplete
-    ) {
-      if (transcriptionComplete) {
-        console.log(
-          "Recording stopped and transcription complete, waiting for answer...",
-        );
-        setIsWaitingForAnswer(true);
-        onProcessingStart();
-      } else {
-        console.log(
-          "Recording stopped but transcription not complete yet - waiting for final marker",
-        );
-      }
-    }
-  }, [
-    isRecording,
-    isSessionActive,
-    isWaitingForAnswer,
-    isAnswerComplete,
-    transcriptionComplete,
-    onProcessingStart,
   ]);
 
   // Add a safety timeout for waiting for answers (optional)
@@ -343,6 +342,20 @@ export default function QuestionRecorder({
       }
     };
   }, [isSessionActive, transcriptionService]);
+
+  // Add a specific handler to fully reset state when question ends
+  useEffect(() => {
+    if (!isSessionActive && transcriptionComplete) {
+      // Reset state after session ends and transcription was completed
+      console.log(
+        "QuestionRecorder: Full state reset after session completion",
+      );
+      setTranscriptionComplete(false);
+      setIsWaitingForAnswer(false);
+      earlyMemoryChunksRef.current = [];
+      isAnswerComponentCreatedRef.current = false;
+    }
+  }, [isSessionActive, transcriptionComplete]);
 
   return (
     <AudioRecorder
