@@ -28,7 +28,9 @@ const Messages = forwardRef<ComponentRef<typeof motion.div>, MessagesProps>(
         className={"grow overflow-auto p-4 pt-18"}
         ref={ref}
       >
-        <motion.div className={"max-w-2xl mx-auto w-full flex flex-col gap-4"}>
+        <motion.div
+          className={"max-w-2xl mx-auto w-full flex flex-col gap-4 pb-52"}
+        >
           {messages.length === 0 ? (
             <div className="text-center py-12">
               <div className="flex justify-center mb-4">

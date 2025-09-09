@@ -150,8 +150,11 @@ export default function Chat() {
 
         <Messages ref={messagesContainerRef} messages={messages} mode={mode} />
 
+        {/* Background gradient that extends to the bottom */}
+        <div className="fixed bottom-0 left-0 right-0 w-full h-64 bg-gradient-to-t from-card via-card/90 to-transparent z-10"></div>
+
         {/* Fixed position control area */}
-        <div className="fixed bottom-32 left-0 right-0 w-full p-4 pb-8 flex flex-col items-center justify-center gap-4 bg-gradient-to-t from-card via-card/90 to-transparent z-20">
+        <div className="fixed bottom-32 left-0 right-0 w-full p-4 pb-8 flex flex-col items-center justify-center gap-4 z-20">
           {/* Recording indicator */}
           {isRecording && (
             <RecordingIndicator
