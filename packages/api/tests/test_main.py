@@ -70,16 +70,27 @@ def collect_responses():
 async def test_transcribe_saves_memory(
     mock_services, servicer, grpc_context, collect_responses
 ):
-    # Create chunk for memory session
-    chunk = MemoryChunk(
+    # Create chunks for memory session
+    session_id = "test_session"
+    memory_id = "test-memory-id"
+    audio_chunk = MemoryChunk(
         audio_data=b"\x00" * (main.SAMPLE_RATE * 4),
         metadata=ChunkMetadata(
-            type=ChunkType.MEMORY, session_id="test_session", memory_id="test-memory-id"
+            type=ChunkType.MEMORY, session_id=session_id, memory_id=memory_id
         ),
+    )
+    final_chunk = MemoryChunk(
+        metadata=ChunkMetadata(
+            type=ChunkType.MEMORY,
+            session_id=session_id,
+            memory_id=memory_id,
+            is_final=True,
+        )
     )
 
     async def request_iterator():
-        yield chunk
+        yield audio_chunk
+        yield final_chunk
 
     # Collect responses from the service
     responses = await collect_responses(
@@ -89,7 +100,9 @@ async def test_transcribe_saves_memory(
     # Check that at least one response has the expected text in text_data
     assert any(r.text_data == "test" for r in responses)
     # Verify save_memory was called
-    mock_services["persistence"].return_value.save_memory.assert_called()
+    mock_services["persistence"].return_value.save_memory.assert_awaited()
+    # Verify that a memory confirmation chunk was sent
+    assert any(r.metadata.type == ChunkType.MEMORY for r in responses)
 
 
 @pytest.mark.asyncio
@@ -128,18 +141,29 @@ async def test_transcribe_text_input(
     # Replace the RAG service's answer_question method with our mock
     servicer.rag_service.answer_question = mocker.MagicMock(return_value=AsyncGenMock())
 
-    # Create test question chunk
+    # Create test question chunk and a final marker
+    session_id = "test_text_session"
+    memory_id = "test-memory-id"
     text_chunk = MemoryChunk(
         text_data="Hello, this is a test question.",
         metadata=ChunkMetadata(
             type=ChunkType.QUESTION,
-            session_id="test_text_session",
-            memory_id="test-memory-id",
+            session_id=session_id,
+            memory_id=memory_id,
         ),
+    )
+    final_chunk = MemoryChunk(
+        metadata=ChunkMetadata(
+            type=ChunkType.QUESTION,
+            session_id=session_id,
+            memory_id=memory_id,
+            is_final=True,
+        )
     )
 
     async def request_iterator():
         yield text_chunk
+        yield final_chunk
 
     # Collect responses from the service
     responses = await collect_responses(
@@ -153,6 +177,10 @@ async def test_transcribe_text_input(
     # First response should echo back the text input as a transcript
     assert responses[0].text_data == "Hello, this is a test question."
     assert responses[0].metadata.type == ChunkType.TRANSCRIPT
+
+    # Second response should be the final transcript marker
+    assert responses[1].metadata.type == ChunkType.TRANSCRIPT
+    assert responses[1].metadata.is_final is True
 
     # There should be an additional response with the answer
     answer_responses = [r for r in responses if r.metadata.type == ChunkType.ANSWER]
@@ -172,21 +200,10 @@ async def test_transcribe_text_input(
 def mock_server():
     """Create a mock gRPC server with awaitable methods."""
     server = MagicMock()
-
-    async def _start():
-        return None
-
-    async def _wait():
-        return None
-
-    async def _stop(_):
-        return None
-
-    server.start = _start
-    server.wait_for_termination = _wait
+    server.start = AsyncMock()
+    server.wait_for_termination = AsyncMock()
     server.add_insecure_port = MagicMock()
-    server.stop = _stop
-
+    server.stop = AsyncMock()
     return server
 
 
@@ -200,10 +217,6 @@ async def test_serve_starts_server(mocker, mock_server):
 
     await main.serve()
 
-    mock_server.add_insecure_port.assert_called()
-    await main.serve()
-
-    mock_server.add_insecure_port.assert_called()
-    await main.serve()
-
-    mock_server.add_insecure_port.assert_called()
+    mock_server.add_insecure_port.assert_called_once()
+    mock_server.start.assert_awaited_once()
+    mock_server.wait_for_termination.assert_awaited_once()
