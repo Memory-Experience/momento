@@ -4,11 +4,11 @@ from enum import Enum
 from typing import Any, Union
 from uuid import UUID
 
-from domain.memory_context import MemoryContext
-from domain.memory_request import MemoryRequest
+from ...domain.memory_context import MemoryContext
+from ...domain.memory_request import MemoryRequest
 
-from models.embedding.embedding_model_interface import EmbeddingModel
-from models.text_chunker_interface import TextChunker
+from ...models.embedding.embedding_model_interface import EmbeddingModel
+from ...models.text_chunker_interface import TextChunker
 
 
 class FilterOperator(Enum):

@@ -5,6 +5,7 @@ description = "Evaluation suite for RAG: datasets, metrics, and pipelines"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "api",
     "grpcio>=1.71.2",
     "ir-datasets>=0.5.11",
     "numpy>=2.3.2",

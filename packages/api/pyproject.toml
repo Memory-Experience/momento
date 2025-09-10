@@ -26,9 +26,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 # Install top-level module "main.py" as an importable module
 py-modules = ["main"]
+packages = ["api", "api.domain", "api.models", "api.vector_store"]
 
-[tool.setuptools.packages.find]
-# Flat layout: discover packages from the current directory
-where = ["."]
-include = ["domain/*", "persistence/*", "transcriber/*", "vector_store/*", "tests/*", "models/*"]
-exclude = ["recordings*", "recordings/*", "**/__pycache__"]
+[tool.setuptools.package-dir]
+api = "."

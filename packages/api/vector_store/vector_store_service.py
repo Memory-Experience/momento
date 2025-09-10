@@ -1,10 +1,10 @@
 import logging
 from uuid import UUID
 
-from domain.memory_context import MemoryContext
-from domain.memory_request import MemoryRequest
+from ..domain.memory_context import MemoryContext
+from ..domain.memory_request import MemoryRequest
 
-from vector_store.repositories.vector_store_repository_interface import (
+from .repositories.vector_store_repository_interface import (
     VectorStoreRepository,
 )
 
