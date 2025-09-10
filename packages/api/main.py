@@ -5,6 +5,7 @@ import sys
 import grpc
 from protos.generated.py import stt_pb2_grpc
 from transcription_servicer import TranscriptionServiceServicer
+from dependency_container import Container
 
 _cleanup_coroutines = []
 
@@ -12,11 +13,11 @@ _cleanup_coroutines = []
 PORT = 50051
 
 
-async def serve() -> None:
+async def serve(container: Container) -> None:
     """Starts the gRPC server."""
     server = grpc.aio.server()
     stt_pb2_grpc.add_TranscriptionServiceServicer_to_server(
-        TranscriptionServiceServicer(), server
+        TranscriptionServiceServicer(container), server
     )
     listen_addr = f"[::]:{PORT}"
     server.add_insecure_port(listen_addr)
@@ -38,9 +39,12 @@ if __name__ == "__main__":
         log_level = logging.DEBUG
 
     logging.basicConfig(level=log_level)
+
+    container = Container.create()
+
     loop = asyncio.new_event_loop()
     try:
-        loop.run_until_complete(serve())
+        loop.run_until_complete(serve(container))
     finally:
         logging.info("Cleaning up...")
         loop.run_until_complete(*_cleanup_coroutines)

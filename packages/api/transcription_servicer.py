@@ -1,54 +1,21 @@
 import logging
 import grpc
 
-from protos.generated.py import stt_pb2_grpc
+from protos.generated.py import stt_pb2_grpc, stt_pb2
 import numpy as np
 from domain.memory_request import MemoryRequest, MemoryType
-from persistence.persistence_service import PersistenceService
-from persistence.repositories.file_repository import FileRepository
-from protos.generated.py import stt_pb2
-from rag.llm_rag_service import LLMRAGService
-from vector_store.repositories.qdrant_vector_store_repository import (
-    InMemoryQdrantVectorStoreRepository,
-)
-from vector_store.repositories.vector_store_repository_interface import (
-    VectorStoreRepository,
-)
-from vector_store.vector_store_service import VectorStoreService
-
-from models.spacy_sentence_chunker import SpacySentenceChunker
-from models.llm.qwen3 import Qwen3
-from models.embedding.qwen3_embedding import Qwen3EmbeddingModel
-from models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
-
-
-RECORDINGS_DIR = "recordings"
-SAMPLE_RATE = 16000
+from dependency_container import Container
 
 
 class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
     """Provides methods that implement functionality of transcription service."""
 
-    def __init__(self):
-        # Initialize transcription model
-        self.transcriber = FasterWhisperTranscriber()
-        self.transcriber.initialize()
-
-        # Initialize vector store
-        embedding_model = Qwen3EmbeddingModel()
-        text_chunker = SpacySentenceChunker()
-        vector_store_repo: VectorStoreRepository = InMemoryQdrantVectorStoreRepository(
-            embedding_model, text_chunker
-        )
-        self.vector_store_service = VectorStoreService(vector_store_repo)
-
-        # Initialize LLM model and RAG service
-        self.llm_model = Qwen3()
-        self.rag_service = LLMRAGService(llm_model=self.llm_model)
-
-        # Initialize the persistence service
-        repository = FileRepository(storage_dir=RECORDINGS_DIR, sample_rate=SAMPLE_RATE)
-        self.persistence_service = PersistenceService(repository)
+    def __init__(self, container: Container):
+        self.transcriber = container.transcriber
+        self.vector_store_service = container.vector_store
+        self.rag_service = container.rag
+        self.persistence_service = container.persistence
+        self.sample_rate = container.sample_rate
 
     async def Transcribe(self, request_iterator, context):
         """Bidirectional streaming RPC for audio transcription."""
@@ -126,7 +93,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
                     audio_data += chunk.audio_data
 
                     # Process audio when buffer is large enough
-                    if len(buffer) >= SAMPLE_RATE * 4:
+                    if len(buffer) >= self.sample_rate * 4:
                         # Convert and transcribe audio
                         audio_array = (
                             np.frombuffer(buffer, dtype=np.int16).astype(np.float32)
@@ -220,7 +187,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
 
         # Get memory context
         memory_context = await self.vector_store_service.search(
-            question_memory, limit=10
+            question_memory, limit=5
         )
 
         # Generate answer
