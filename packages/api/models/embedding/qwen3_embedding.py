@@ -59,6 +59,13 @@ class Qwen3EmbeddingModel(LlamaCppEmbeddingModel):
             use_mmap=use_mmap,
             use_mlock=use_mlock,
             allow_gpu_fallback=allow_gpu_fallback,
+            embedding=True,
         )
 
         super().__init__(cfg=cfg, llama_factory=llama_factory)
+
+    async def embed_text(self, text: str) -> list[float]:
+        # Prepend "Instruct: " to the text
+        text_with_prefix = f"Instruct: {text}"
+        # Call the parent class's embed_text method
+        return await super().embed_text(text_with_prefix)
