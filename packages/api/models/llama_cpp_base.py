@@ -22,6 +22,7 @@ class LlamaCppConfig:
     main_gpu: int = 0
     tensor_split: Sequence[float] | None = None
     allow_gpu_fallback: bool = True  # retry on CPU if GPU offload fails
+    embedding: bool = False
 
 
 def _default_threads() -> int:
@@ -48,7 +49,6 @@ class LlamaCppBase:
         self._llama_factory = llama_factory or Llama
         self._llm = self._load_model()
 
-    # -------- loading --------
     def _load_model(self) -> Llama:
         path = str(Path(self.cfg.model_path).expanduser())
         kwargs: dict[str, Any] = dict(
@@ -62,6 +62,7 @@ class LlamaCppBase:
             n_gpu_layers=self.cfg.n_gpu_layers,
             use_mmap=self.cfg.use_mmap,
             use_mlock=self.cfg.use_mlock,
+            embedding=self.cfg.embedding,
         )
         if self.cfg.tensor_split is not None:
             kwargs["tensor_split"] = list(self.cfg.tensor_split)
