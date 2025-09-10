@@ -224,7 +224,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
 
         # Get memory context
         memory_context = await self.vector_store_service.search(
-            question_memory, limit=5
+            question_memory, limit=10
         )
 
         # Generate answer
