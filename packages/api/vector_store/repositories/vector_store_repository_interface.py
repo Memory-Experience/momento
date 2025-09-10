@@ -7,7 +7,7 @@ from uuid import UUID
 from domain.memory_context import MemoryContext
 from domain.memory_request import MemoryRequest
 
-from models.embedding_model_interface import EmbeddingModel
+from models.embedding.embedding_model_interface import EmbeddingModel
 from models.text_chunker_interface import TextChunker
 
 
