@@ -5,6 +5,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+import threading
 
 from llama_cpp import Llama
 
@@ -39,6 +40,9 @@ class LlamaCppBase:
     No singletons; each instance owns its Llama handle.
     """
 
+    _shared_llm: Llama | None = None
+    _lock = threading.Lock()
+
     def __init__(
         self,
         *,
@@ -47,7 +51,11 @@ class LlamaCppBase:
     ) -> None:
         self.cfg = cfg
         self._llama_factory = llama_factory or Llama
-        self._llm = self._load_model()
+        if LlamaCppBase._shared_llm is None:
+            with LlamaCppBase._lock:
+                if LlamaCppBase._shared_llm is None:
+                    LlamaCppBase._shared_llm = self._load_model()
+        self._llm = LlamaCppBase._shared_llm
 
     def _load_model(self) -> Llama:
         path = str(Path(self.cfg.model_path).expanduser())

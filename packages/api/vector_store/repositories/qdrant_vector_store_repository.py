@@ -114,22 +114,25 @@ class QdrantVectorStoreRepository(VectorStoreRepository):
             )
         )
 
-        # Now add points for each chunk
-        for i, chunk in enumerate(chunks):
-            chunk_id = str(uuid4())
-            chunk_vector = await self.embedding_model.embed_text(chunk)
+        if len(chunks) > 1:
+            # Now add points for each chunk
+            for i, chunk in enumerate(chunks):
+                chunk_id = str(uuid4())
+                chunk_vector = await self.embedding_model.embed_text(chunk)
 
-            chunk_metadata = {
-                **metadata,  # Copy the base metadata
-                "is_chunk": True,  # Flag to indicate this is a chunk
-                "parent_id": memory_id,  # Link back to the parent memory
-                "chunk_index": i,  # Store the index of this chunk
-                "text_content": chunk,  # Store the actual chunk text
-            }
+                chunk_metadata = {
+                    **metadata,  # Copy the base metadata
+                    "is_chunk": True,  # Flag to indicate this is a chunk
+                    "parent_id": memory_id,  # Link back to the parent memory
+                    "chunk_index": i,  # Store the index of this chunk
+                    "text_content": chunk,  # Store the actual chunk text
+                }
 
-            points.append(
-                PointStruct(id=chunk_id, vector=chunk_vector, payload=chunk_metadata)
-            )
+                points.append(
+                    PointStruct(
+                        id=chunk_id, vector=chunk_vector, payload=chunk_metadata
+                    )
+                )
 
         # Store all points in Qdrant
         self.client.upsert(collection_name=self.collection_name, points=points)
