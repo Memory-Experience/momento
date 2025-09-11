@@ -3,10 +3,10 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-from ..huggingface_helper import HuggingFaceHelper
-from ..llama_cpp_base import LlamaCppConfig
-from .llama_cpp_model import LlamaCppModel
-from ...domain.memory_context import MemoryContext
+from api.models.huggingface_helper import HuggingFaceHelper
+from api.models.llama_cpp_base import LlamaCppConfig
+from api.models.llm.llama_cpp_model import LlamaCppModel
+from api.domain.memory_context import MemoryContext
 
 
 class Qwen3(LlamaCppModel):

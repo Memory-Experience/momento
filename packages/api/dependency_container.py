@@ -1,20 +1,20 @@
 from dataclasses import dataclass
 
-from .persistence.persistence_service import PersistenceService
-from .persistence.repositories.file_repository import FileRepository
-from .rag.llm_rag_service import LLMRAGService
-from .vector_store.repositories.qdrant_vector_store_repository import (
+from api.persistence.persistence_service import PersistenceService
+from api.persistence.repositories.file_repository import FileRepository
+from api.rag.llm_rag_service import LLMRAGService
+from api.vector_store.repositories.qdrant_vector_store_repository import (
     InMemoryQdrantVectorStoreRepository,
 )
-from .vector_store.repositories.vector_store_repository_interface import (
+from api.vector_store.repositories.vector_store_repository_interface import (
     VectorStoreRepository,
 )
-from .vector_store.vector_store_service import VectorStoreService
+from api.vector_store.vector_store_service import VectorStoreService
 
-from .models.spacy_sentence_chunker import SpacySentenceChunker
-from .models.llm.qwen3 import Qwen3
-from .models.embedding.qwen3_embedding import Qwen3EmbeddingModel
-from .models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
+from api.models.spacy_sentence_chunker import SpacySentenceChunker
+from api.models.llm.qwen3 import Qwen3
+from api.models.embedding.qwen3_embedding import Qwen3EmbeddingModel
+from api.models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
 
 
 RECORDINGS_DIR = "recordings"
