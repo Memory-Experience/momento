@@ -1,10 +1,11 @@
 import logging
 import grpc
 
-from protos.generated.py import stt_pb2_grpc, stt_pb2
 import numpy as np
-from domain.memory_request import MemoryRequest, MemoryType
-from dependency_container import Container
+
+from protos.generated.py import stt_pb2_grpc, stt_pb2
+from .domain.memory_request import MemoryRequest, MemoryType
+from .dependency_container import Container
 
 
 class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):

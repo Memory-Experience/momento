@@ -1,8 +1,8 @@
 import logging
 
-from domain.memory_request import MemoryRequest
+from ..domain.memory_request import MemoryRequest
 
-from persistence.repositories.repository_interface import Repository
+from .repositories.repository_interface import Repository
 
 
 class PersistenceService:

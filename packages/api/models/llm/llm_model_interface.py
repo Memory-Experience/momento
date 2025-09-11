@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 
-from domain.memory_context import MemoryContext
-from domain.memory_request import MemoryRequest
+from ...domain.memory_context import MemoryContext
+from ...domain.memory_request import MemoryRequest
 
 
 class MemoryResponse:
