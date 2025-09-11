@@ -4,8 +4,8 @@ import sys
 
 import grpc
 from protos.generated.py import stt_pb2_grpc
-from transcription_servicer import TranscriptionServiceServicer
-from dependency_container import Container
+from .transcription_servicer import TranscriptionServiceServicer
+from .dependency_container import Container
 
 _cleanup_coroutines = []
 
