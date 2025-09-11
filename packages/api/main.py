@@ -17,7 +17,7 @@ from vector_store.repositories.vector_store_repository_interface import (
 )
 from vector_store.vector_store_service import VectorStoreService
 
-from models.character_text_chunker import CharacterTextChunker
+from models.spacy_sentence_chunker import SpacySentenceChunker
 from models.llm.qwen3 import Qwen3
 from models.embedding.qwen3_embedding import Qwen3EmbeddingModel
 from models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
@@ -40,7 +40,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
 
         # Initialize vector store
         embedding_model = Qwen3EmbeddingModel()
-        text_chunker = CharacterTextChunker()
+        text_chunker = SpacySentenceChunker()
         vector_store_repo: VectorStoreRepository = InMemoryQdrantVectorStoreRepository(
             embedding_model, text_chunker
         )
