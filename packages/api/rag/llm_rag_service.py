@@ -1,10 +1,10 @@
 import logging
 from collections.abc import AsyncIterator
 
-from domain.memory_context import MemoryContext
-from domain.memory_request import MemoryRequest
+from ..domain.memory_context import MemoryContext
+from ..domain.memory_request import MemoryRequest
 
-from models.llm.llm_model_interface import LLMModel, MemoryResponse
+from ..models.llm.llm_model_interface import LLMModel, MemoryResponse
 
 
 class LLMRAGService:
