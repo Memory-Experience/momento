@@ -1,43 +1,18 @@
 from __future__ import annotations
 
 import asyncio
-import multiprocessing
 import threading
-from collections.abc import AsyncIterator, Iterable, Sequence
-from dataclasses import dataclass
-from pathlib import Path
+from collections.abc import AsyncIterator
 from typing import Any
 
 from domain.memory_context import MemoryContext
 from domain.memory_request import MemoryRequest, MemoryType
-from llama_cpp import Llama
 
+from models.llama_cpp_base import LlamaCppBase, LlamaCppConfig
 from models.llm.llm_model_interface import LLMModel, MemoryResponse
 
 
-@dataclass(slots=True)
-class LlamaCppConfig:
-    model_path: str
-    n_ctx: int = 4096
-    n_batch: int = 256
-    n_threads: int | None = None
-    n_gpu_layers: int = -1  # -1: offload as much as possible; 0: CPU
-    seed: int = 42
-    use_mmap: bool = True
-    use_mlock: bool = True
-    main_gpu: int = 0
-    tensor_split: Sequence[float] | None = None
-    allow_gpu_fallback: bool = True  # retry on CPU if GPU offload fails
-
-
-def _default_threads() -> int:
-    try:
-        return max(1, multiprocessing.cpu_count() // 2)
-    except Exception:
-        return 4
-
-
-class LlamaCppModel(LLMModel):
+class LlamaCppModel(LlamaCppBase, LLMModel):
     """
     llama.cpp-backed model implementing the streaming generator API.
     No singletons; each instance owns its Llama handle. DI supported via llama_factory.
@@ -56,7 +31,7 @@ class LlamaCppModel(LLMModel):
         chunk_size_tokens: int = 1,
         llama_factory: Any | None = None,
     ) -> None:
-        self.cfg = cfg
+        super().__init__(cfg=cfg, llama_factory=llama_factory)
         self.model_name = model_name
         self.system_prompt = system_prompt
         self.stop = stop or ["</s>"]
@@ -64,97 +39,19 @@ class LlamaCppModel(LLMModel):
         self.top_p = float(top_p)
         self.top_k_memories = int(top_k_memories)
         self.chunk_size_tokens = max(1, int(chunk_size_tokens))
-        self._llama_factory = llama_factory or Llama
-        self._llm = self._load_model()
-
-    # -------- loading --------
-    def _load_model(self) -> Llama:
-        path = str(Path(self.cfg.model_path).expanduser())
-        kwargs: dict[str, Any] = dict(
-            model_path=path,
-            n_ctx=self.cfg.n_ctx,
-            n_batch=self.cfg.n_batch,
-            n_threads=self.cfg.n_threads
-            if self.cfg.n_threads is not None
-            else _default_threads(),
-            seed=self.cfg.seed,
-            n_gpu_layers=self.cfg.n_gpu_layers,
-            use_mmap=self.cfg.use_mmap,
-            use_mlock=self.cfg.use_mlock,
-        )
-        if self.cfg.tensor_split is not None:
-            kwargs["tensor_split"] = list(self.cfg.tensor_split)
-        if self.cfg.main_gpu is not None:
-            kwargs["main_gpu"] = self.cfg.main_gpu
-
-        try:
-            return self._llama_factory(**kwargs)
-        except Exception:
-            if self.cfg.allow_gpu_fallback and self.cfg.n_gpu_layers != 0:
-                kwargs["n_gpu_layers"] = 0
-                return self._llama_factory(**kwargs)
-            raise
 
     # -------- prompt building from MemoryContext --------
-    def _format_memories(self, top: Iterable[tuple], max_chars: int = 1200) -> str:
-        lines: list[str] = []
-        for mem, matched_text, score in top:
-            snippet = (matched_text or "").strip()
-            if max_chars and len(snippet) > max_chars:
-                snippet = snippet[: max_chars - 3] + "..."
-            lines.append(f"- score={score:.4f} | id={mem.id} | {snippet}")
-        return "\n".join(lines)
-
-    def _build_messages(
+    def build_messages(
         self, prompt: str, memory_context: MemoryContext | None
     ) -> list[dict[str, str]]:
         """
         Build messages for the chat completion API using the provided prompt
-        and memory context. Format the context in a way that's easier for
-        small models to understand.
+        and memory context. Subclasses must override this method to define
+        their own formatting.
         """
-        messages: list[dict[str, str]] = [
-            {"role": "system", "content": self.system_prompt}
-        ]
-
-        if memory_context and not memory_context.is_empty():
-            top = memory_context.get_top_memories(limit=self.top_k_memories)
-
-            # Format context in a clearer, more explicit way for the model
-            context_parts = ["Here are relevant memories:"]
-
-            for i, (mem, matched_text, _score) in enumerate(top, 1):
-                snippet = (matched_text or "").strip()
-                if len(snippet) > 1200:
-                    snippet = snippet[:1197] + "..."
-                context_parts.append(f"Memory #{i} (ID: {mem.id}): {snippet}")
-
-            context_parts.append(
-                "\nAnswer the question using ONLY the information above."
-            )
-
-            messages.append({
-                "role": "system",
-                "content": "\n\n".join(context_parts),
-            })
-
-        messages.append({"role": "user", "content": prompt})
-        return messages
-
-    def _suggest_max_tokens(self) -> int:
-        """
-        Suggest a reasonable maximum number of tokens to generate based on context size.
-        """
-        # In llama.cpp, the context size is a method
-        # on the context object (_ctx.n_ctx())
-        # This is the proper way to get the context size
-        try:
-            n_ctx = self._llm.n_ctx()
-        except (AttributeError, TypeError):
-            # Fall back to the config value if the method isn't available
-            n_ctx = self.cfg.n_ctx
-
-        return max(256, n_ctx // 3)
+        raise NotImplementedError(
+            "Subclasses must implement their own build_messages method"
+        )
 
     # -------- main API: async generator --------
     async def generate_with_memory(
@@ -174,7 +71,7 @@ class LlamaCppModel(LLMModel):
         if isinstance(prompt, list):
             prompt = " ".join(prompt)
 
-        messages = self._build_messages(prompt, memory_context)
+        messages = self.build_messages(prompt, memory_context)
 
         # Override instance chunk_size if provided in method call
         # For small models, increase chunk size to avoid character-by-character output

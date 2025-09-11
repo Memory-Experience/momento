@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 # gRPC Server configuration
 SERVER_ADDRESS = "localhost:50051"
+LIMIT_DOCS = 1_000
 
 
 class RAGEvaluationClient:
@@ -34,6 +35,8 @@ class RAGEvaluationClient:
         self.server_address = server_address
         self.channel = None
         self.stub = None
+        self.doc_to_memory: dict[str, str] = {}
+        self.memory_to_doc: dict[str, str] = {}
 
     async def connect(self):
         """Establish connection to the gRPC server."""
@@ -48,14 +51,9 @@ class RAGEvaluationClient:
             logger.info("Disconnected from server")
 
     async def stream_memories(self, dataset, max_docs: int | None = None) -> int:
-        """Stream documents as memories to the backend.
-
-        Args:
-            dataset: Dataset containing documents
-            max_docs: Maximum number of documents to stream (None for all)
-
-        Returns:
-            Number of documents successfully streamed
+        """
+        Stream documents as memories AND build a mapping:
+        dataset_doc_id -> saved_memory_id and saved_memory_id -> dataset_doc_id
         """
         docs_df = dataset.docs
         total_docs = len(docs_df) if max_docs is None else min(max_docs, len(docs_df))
@@ -63,113 +61,140 @@ class RAGEvaluationClient:
         logger.info(f"Streaming {total_docs} documents as memories...")
         success_count = 0
 
+        # reset mapping every run
+        self.doc_to_memory.clear()
+        self.memory_to_doc.clear()
+
         for i, (_, doc) in enumerate(tqdm(docs_df.iterrows(), total=total_docs)):
             if max_docs is not None and i >= max_docs:
                 break
 
             session_id = str(uuid.uuid4())
-            memory_id = str(doc["id"])
+            dataset_doc_id = str(doc["id"])
             content = str(doc["content"])
 
             try:
                 # bind into closure defaults to avoid B023
                 async def memory_stream(
                     session_id: str = session_id,
-                    memory_id: str = memory_id,
+                    dataset_doc_id: str = dataset_doc_id,
                     content: str = content,
                 ):
-                    # First chunk with metadata
-                    metadata = stt_pb2.ChunkMetadata(
-                        session_id=session_id,
-                        memory_id=memory_id,
-                        type=stt_pb2.ChunkType.MEMORY,
+                    # First chunk with metadata + content
+                    yield stt_pb2.MemoryChunk(
+                        text_data=content,
+                        metadata=stt_pb2.ChunkMetadata(
+                            session_id=session_id,
+                            memory_id=dataset_doc_id,  # we tag with the dataset doc id
+                            type=stt_pb2.ChunkType.MEMORY,
+                            is_final=False,
+                        ),
+                    )
+                    # NEW: explicit final marker to trigger saving on the server
+                    yield stt_pb2.MemoryChunk(
+                        text_data="",
+                        metadata=stt_pb2.ChunkMetadata(
+                            session_id=session_id,
+                            memory_id=dataset_doc_id,
+                            type=stt_pb2.ChunkType.MEMORY,
+                            is_final=True,
+                        ),
                     )
 
-                    yield stt_pb2.MemoryChunk(text_data=content, metadata=metadata)
+                saved_memory_id = None
 
-                # Send memory to server and collect responses
-                responses = []
+                # Collect server responses and capture the NEW saved memory id
                 async for response in self.stub.Transcribe(memory_stream()):
-                    responses.append(response)
+                    # Server will echo TRANSCRIPT chunks; ignore those.
+                    # The confirmation we want is a MEMORY chunk with is_final=True.
+                    if (
+                        response.metadata.type == stt_pb2.ChunkType.MEMORY
+                        and response.metadata.is_final
+                    ):
+                        saved_memory_id = response.metadata.memory_id
 
-                success_count += 1
+                if saved_memory_id:
+                    self.doc_to_memory[dataset_doc_id] = saved_memory_id
+                    self.memory_to_doc[saved_memory_id] = dataset_doc_id
+                    success_count += 1
 
-                # Log every 100 documents or if in debug mode
-                if i % 100 == 0 or logger.level == logging.DEBUG:
-                    logger.info(
-                        f"Streamed document {i + 1}/{total_docs} (id: {memory_id})"
+                    if i % 100 == 0 or logger.level == logging.DEBUG:
+                        logger.info(
+                            f"Streamed doc {i + 1}/{total_docs} "
+                            f"(dataset_doc_id: {dataset_doc_id} "
+                            f"-> memory_id: {saved_memory_id})"
+                        )
+                else:
+                    logger.error(
+                        "Did not receive saved memory "
+                        f"id for dataset_doc_id={dataset_doc_id}"
                     )
 
             except Exception as e:
-                logger.error(f"Error streaming document {memory_id}: {str(e)}")
+                logger.error(f"Error streaming document {dataset_doc_id}: {str(e)}")
 
-        logger.info(f"Successfully streamed {success_count}/{total_docs} documents")
+        logger.info(
+            f"Successfully streamed {success_count}/{total_docs} documents; "
+            f"built mapping for {len(self.doc_to_memory)} docs"
+        )
         return success_count
 
     async def process_query(
         self,
         query_id: str,
         query_text: str,
-        relevant_doc_ids: list[str],
-        relevance_scores: dict[str, float] | None = None,
     ) -> tuple[dict, list[str], str, float]:
-        """Process a single query and evaluate results.
-
-        Args:
-            query_id: ID of the query
-            query_text: Text of the query
-            relevant_doc_ids: List of relevant document IDs for this query
-            relevance_scores: Optional mapping of doc_id to relevance score
-
-        Returns:
-            Tuple of (retrieved_docs, retrieved_doc_ids_ordered, answer, response_time)
-        """
         session_id = str(uuid.uuid4())
-        retrieved_docs = {}
-        retrieved_doc_ids_ordered = []
+        retrieved_docs: dict[str, str] = {}
+        retrieved_doc_ids_ordered: list[str] = []
         full_answer = ""
-
         start_time = time.time()
 
         try:
-            # bind into closure to avoid capturing loop vars
+
             async def query_stream(
                 session_id: str = session_id,
                 query_id: str = query_id,
                 query_text: str = query_text,
             ):
-                # Send query with metadata
-                metadata = stt_pb2.ChunkMetadata(
-                    session_id=session_id,
-                    memory_id=query_id,
-                    type=stt_pb2.ChunkType.QUESTION,
+                # Send question text
+                yield stt_pb2.MemoryChunk(
+                    text_data=query_text,
+                    metadata=stt_pb2.ChunkMetadata(
+                        session_id=session_id,
+                        memory_id=query_id,
+                        type=stt_pb2.ChunkType.QUESTION,
+                        is_final=False,
+                    ),
+                )
+                # NEW: explicit final marker to trigger answer generation
+                yield stt_pb2.MemoryChunk(
+                    text_data="",
+                    metadata=stt_pb2.ChunkMetadata(
+                        session_id=session_id,
+                        memory_id=query_id,
+                        type=stt_pb2.ChunkType.QUESTION,
+                        is_final=True,
+                    ),
                 )
 
-                yield stt_pb2.MemoryChunk(text_data=query_text, metadata=metadata)
+            answer_chunks: list[str] = []
 
-            # Process responses
-            answer_chunks = []
             async for response in self.stub.Transcribe(query_stream()):
                 if response.metadata.type == stt_pb2.ChunkType.MEMORY:
-                    # Store retrieved memory in order received (ranking order)
-                    doc_id = response.metadata.memory_id
-                    retrieved_docs[doc_id] = response.text_data
-                    retrieved_doc_ids_ordered.append(doc_id)
-                    logger.debug(f"Retrieved memory: {doc_id}")
-
+                    # Server sends retrieved memories (by *saved* memory_id)
+                    mem_id = response.metadata.memory_id
+                    retrieved_docs[mem_id] = response.text_data
+                    retrieved_doc_ids_ordered.append(mem_id)
                 elif response.metadata.type == stt_pb2.ChunkType.ANSWER:
-                    # Collect answer chunks
                     answer_chunks.append(response.text_data)
-                    logger.debug(f"Received answer chunk: {response.text_data[:50]}...")
 
-            # Combine answer chunks
             full_answer = " ".join(answer_chunks)
 
         except Exception as e:
             logger.error(f"Error processing query {query_id}: {str(e)}")
 
         response_time = time.time() - start_time
-
         return retrieved_docs, retrieved_doc_ids_ordered, full_answer, response_time
 
     def evaluate_retrieval(
@@ -408,13 +433,18 @@ class RAGEvaluationClient:
                 retrieved_doc_ids_ordered,
                 answer,
                 response_time,
-            ) = await self.process_query(
-                query_id, query_text, relevant_doc_ids, relevance_scores
-            )
+            ) = await self.process_query(query_id, query_text)
+
+            retrieved_doc_ids_for_eval = [
+                self.memory_to_doc.get(mem_id, mem_id)
+                for mem_id in retrieved_doc_ids_ordered
+            ]
 
             # Evaluate retrieval
             retrieval_metrics = self.evaluate_retrieval(
-                retrieved_doc_ids_ordered, relevant_doc_ids, relevance_scores
+                retrieved_doc_ids_for_eval,  # <- mapped to dataset doc IDs
+                relevant_doc_ids,
+                relevance_scores,
             )
 
             # Evaluate generation (using gold answers if available)
@@ -436,18 +466,17 @@ class RAGEvaluationClient:
                 retrieved_docs,
             )
 
-            # Store results for this query
             query_result = {
                 "query_id": query_id,
                 "query_text": query_text,
-                "retrieved_docs": retrieved_docs,
+                "retrieved_docs": retrieved_docs,  # keyed by memory_id
                 "retrieved_doc_ids_ordered": retrieved_doc_ids_ordered,
+                "retrieved_doc_ids_for_eval": retrieved_doc_ids_for_eval,
                 "answer": answer,
                 "response_time": response_time,
                 "retrieval_metrics": retrieval_metrics,
                 "generation_metrics": generation_metrics,
             }
-
             results["queries"].append(query_result)
             results["response_times"].append(response_time)
 
@@ -497,7 +526,7 @@ async def main():
     """Main evaluation function."""
     try:
         # Create MS MARCO dataset
-        dataset = MSMarcoDataset(limit=100)  # Limit to 100 items for faster evaluation
+        dataset = MSMarcoDataset(limit=LIMIT_DOCS)
         logger.info(f"Loaded dataset: {dataset}")
 
         # Initialize and connect client
@@ -505,7 +534,9 @@ async def main():
         await client.connect()
 
         # Run evaluation
-        results = await client.run_evaluation(dataset, max_docs=50, max_queries=20)
+        results = await client.run_evaluation(
+            dataset, max_docs=LIMIT_DOCS, max_queries=20
+        )
 
         # Print summary results
         logger.info("\n===== EVALUATION RESULTS =====")
