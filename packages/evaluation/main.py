@@ -3,6 +3,9 @@ import logging
 import time
 import uuid
 from typing import Any
+from multiprocessing import Process
+from api.main import serve
+from api.dependency_container import Container
 
 import grpc
 import pandas as pd
@@ -521,10 +524,34 @@ class RAGEvaluationClient:
 
         return results
 
+async def start_backend_service():
+    """Start the backend service in a separate process and wait until it is ready."""
+    def run_server():
+        container = Container.create()
+        asyncio.run(serve(container))
+
+    process = Process(target=run_server)
+    process.start()
+
+    # Wait for the backend to be ready (e.g., by checking logs or a delay)
+    logger.info("Waiting for backend service to be ready...")
+    await asyncio.sleep(10)  # Adjust this delay as needed
+
+    return process
+
+async def stop_backend_service(process):
+    """Stop the backend service process."""
+    logger.info("Stopping backend service...")
+    process.terminate()
+    process.join()
 
 async def main():
     """Main evaluation function."""
+    backend_process = None
     try:
+        # Start the backend service
+        backend_process = await start_backend_service()
+
         # Create MS MARCO dataset
         dataset = MSMarcoDataset(limit=LIMIT_DOCS)
         logger.info(f"Loaded dataset: {dataset}")
@@ -578,6 +605,10 @@ async def main():
     except Exception as e:
         logger.error(f"Evaluation failed: {str(e)}")
         raise
+
+    finally:
+        if backend_process:
+            await stop_backend_service(backend_process)
 
 
 if __name__ == "__main__":
