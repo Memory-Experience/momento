@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ctypes
 import multiprocessing
 from collections.abc import Sequence
 from dataclasses import dataclass
@@ -7,7 +8,13 @@ from pathlib import Path
 from typing import Any
 import threading
 
-from llama_cpp import Llama
+from llama_cpp import Llama, llama_log_set, llama_log_callback
+
+
+EMBED_WARN = (
+    b"embeddings required but some input "
+    b"tokens were not marked as outputs -> overriding"
+)
 
 
 @dataclass(slots=True)
@@ -49,6 +56,8 @@ class LlamaCppBase:
         cfg: LlamaCppConfig,
         llama_factory: Any | None = None,
     ) -> None:
+        self._log_fp = None
+
         self.cfg = cfg
         self._llama_factory = llama_factory or Llama
         if LlamaCppBase._shared_llm is None:
@@ -71,18 +80,37 @@ class LlamaCppBase:
             use_mmap=self.cfg.use_mmap,
             use_mlock=self.cfg.use_mlock,
             embedding=self.cfg.embedding,
+            verbose=False,
         )
         if self.cfg.tensor_split is not None:
             kwargs["tensor_split"] = list(self.cfg.tensor_split)
         if self.cfg.main_gpu is not None:
             kwargs["main_gpu"] = self.cfg.main_gpu
 
+        def _cb(level, text, user_data):
+            # text is usually bytes (c_char_p), but be defensive:
+            if text is None:
+                return
+            buf = (
+                text
+                if isinstance(text, (bytes, bytearray))
+                else (ctypes.cast(text, ctypes.c_char_p).value or b"")
+            )
+            if EMBED_WARN in buf:
+                return  # ignore just this warning
+
+        self._log_fp = llama_log_callback(_cb)
+
         try:
-            return self._llama_factory(**kwargs)
+            llama = self._llama_factory(**kwargs)
+            llama_log_set(self._log_fp, None)
+            return llama
         except Exception:
             if self.cfg.allow_gpu_fallback and self.cfg.n_gpu_layers != 0:
                 kwargs["n_gpu_layers"] = 0
-                return self._llama_factory(**kwargs)
+                llama = self._llama_factory(**kwargs)
+                llama_log_set(self._log_fp, None)
+                return llama
             raise
 
     def _suggest_max_tokens(self) -> int:
