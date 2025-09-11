@@ -1,4 +1,4 @@
-from .text_chunker_interface import ChunkerConfig, TextChunker
+from api.models.text_chunker_interface import ChunkerConfig, TextChunker
 
 
 class CharacterTextChunker(TextChunker):

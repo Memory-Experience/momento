@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from unittest.mock import AsyncMock, MagicMock
 import pytest
 
-import main
-from domain.memory_context import MemoryContext
+import api.main as main
+from api.domain.memory_context import MemoryContext
 from protos.generated.py.stt_pb2 import ChunkMetadata, ChunkType, MemoryChunk
 
 

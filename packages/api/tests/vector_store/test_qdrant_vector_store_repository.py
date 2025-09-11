@@ -3,19 +3,19 @@ from datetime import datetime
 
 import pytest
 import pytest_asyncio
-from domain.memory_context import MemoryContext
-from domain.memory_request import MemoryRequest, MemoryType
-from vector_store.repositories.qdrant_vector_store_repository import (
+from api.domain.memory_context import MemoryContext
+from api.domain.memory_request import MemoryRequest, MemoryType
+from api.vector_store.repositories.qdrant_vector_store_repository import (
     InMemoryQdrantVectorStoreRepository,
 )
-from vector_store.repositories.vector_store_repository_interface import (
+from api.vector_store.repositories.vector_store_repository_interface import (
     FilterCondition,
     FilterOperator,
     VectorStoreRepository,
 )
 
-from models.embedding.embedding_model_interface import EmbeddingModel
-from models.text_chunker_interface import TextChunker
+from api.models.embedding.embedding_model_interface import EmbeddingModel
+from api.models.text_chunker_interface import TextChunker
 
 
 class MockEmbeddingModel(EmbeddingModel):

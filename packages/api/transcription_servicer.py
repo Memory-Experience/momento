@@ -4,8 +4,8 @@ import grpc
 import numpy as np
 
 from protos.generated.py import stt_pb2_grpc, stt_pb2
-from .domain.memory_request import MemoryRequest, MemoryType
-from .dependency_container import Container
+from api.domain.memory_request import MemoryRequest, MemoryType
+from api.dependency_container import Container
 
 
 class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
