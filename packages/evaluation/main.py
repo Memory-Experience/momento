@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 SERVER_ADDRESS = "localhost:50051"
 LIMIT_DOCS = 1_000
 
+
 class RAGEvaluationClient:
     """Client for evaluating RAG system performance using gRPC."""
 
@@ -120,11 +121,13 @@ class RAGEvaluationClient:
                     if i % 100 == 0 or logger.level == logging.DEBUG:
                         logger.info(
                             f"Streamed doc {i + 1}/{total_docs} "
-                            f"(dataset_doc_id: {dataset_doc_id} -> memory_id: {saved_memory_id})"
+                            f"(dataset_doc_id: {dataset_doc_id} "
+                            f"-> memory_id: {saved_memory_id})"
                         )
                 else:
                     logger.error(
-                        f"Did not receive saved memory id for dataset_doc_id={dataset_doc_id}"
+                        "Did not receive saved memory "
+                        f"id for dataset_doc_id={dataset_doc_id}"
                     )
 
             except Exception as e:
@@ -148,6 +151,7 @@ class RAGEvaluationClient:
         start_time = time.time()
 
         try:
+
             async def query_stream(
                 session_id: str = session_id,
                 query_id: str = query_id,
@@ -429,12 +433,11 @@ class RAGEvaluationClient:
                 retrieved_doc_ids_ordered,
                 answer,
                 response_time,
-            ) = await self.process_query(
-                query_id, query_text
-            )
+            ) = await self.process_query(query_id, query_text)
 
             retrieved_doc_ids_for_eval = [
-                self.memory_to_doc.get(mem_id, mem_id) for mem_id in retrieved_doc_ids_ordered
+                self.memory_to_doc.get(mem_id, mem_id)
+                for mem_id in retrieved_doc_ids_ordered
             ]
 
             # Evaluate retrieval
@@ -467,8 +470,8 @@ class RAGEvaluationClient:
                 "query_id": query_id,
                 "query_text": query_text,
                 "retrieved_docs": retrieved_docs,  # keyed by memory_id
-                "retrieved_doc_ids_ordered": retrieved_doc_ids_ordered,      # memory IDs
-                "retrieved_doc_ids_for_eval": retrieved_doc_ids_for_eval,    # dataset doc IDs (mapped)
+                "retrieved_doc_ids_ordered": retrieved_doc_ids_ordered,
+                "retrieved_doc_ids_for_eval": retrieved_doc_ids_for_eval,
                 "answer": answer,
                 "response_time": response_time,
                 "retrieval_metrics": retrieval_metrics,
@@ -523,7 +526,7 @@ async def main():
     """Main evaluation function."""
     try:
         # Create MS MARCO dataset
-        dataset = MSMarcoDataset(limit=LIMIT_DOCS)  # Limit to 100 items for faster evaluation
+        dataset = MSMarcoDataset(limit=LIMIT_DOCS)
         logger.info(f"Loaded dataset: {dataset}")
 
         # Initialize and connect client
@@ -531,7 +534,9 @@ async def main():
         await client.connect()
 
         # Run evaluation
-        results = await client.run_evaluation(dataset, max_docs=LIMIT_DOCS, max_queries=20)
+        results = await client.run_evaluation(
+            dataset, max_docs=LIMIT_DOCS, max_queries=20
+        )
 
         # Print summary results
         logger.info("\n===== EVALUATION RESULTS =====")
