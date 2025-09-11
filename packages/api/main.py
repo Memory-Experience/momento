@@ -9,7 +9,6 @@ from persistence.persistence_service import PersistenceService
 from persistence.repositories.file_repository import FileRepository
 from protos.generated.py import stt_pb2, stt_pb2_grpc
 from rag.llm_rag_service import LLMRAGService
-from tests.vector_store.test_qdrant_vector_store_repository import MockEmbeddingModel
 from vector_store.repositories.qdrant_vector_store_repository import (
     InMemoryQdrantVectorStoreRepository,
 )
@@ -18,8 +17,9 @@ from vector_store.repositories.vector_store_repository_interface import (
 )
 from vector_store.vector_store_service import VectorStoreService
 
-from models.character_text_chunker import CharacterTextChunker
+from models.spacy_sentence_chunker import SpacySentenceChunker
 from models.llm.qwen3 import Qwen3
+from models.embedding.qwen3_embedding import Qwen3EmbeddingModel
 from models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
 
 _cleanup_coroutines = []
@@ -39,8 +39,8 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
         self.transcriber.initialize()
 
         # Initialize vector store
-        embedding_model = MockEmbeddingModel()
-        text_chunker = CharacterTextChunker()
+        embedding_model = Qwen3EmbeddingModel()
+        text_chunker = SpacySentenceChunker()
         vector_store_repo: VectorStoreRepository = InMemoryQdrantVectorStoreRepository(
             embedding_model, text_chunker
         )
@@ -224,7 +224,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
 
         # Get memory context
         memory_context = await self.vector_store_service.search(
-            question_memory, limit=5
+            question_memory, limit=10
         )
 
         # Generate answer

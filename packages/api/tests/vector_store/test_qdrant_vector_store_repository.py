@@ -14,7 +14,7 @@ from vector_store.repositories.vector_store_repository_interface import (
     VectorStoreRepository,
 )
 
-from models.embedding_model_interface import EmbeddingModel
+from models.embedding.embedding_model_interface import EmbeddingModel
 from models.text_chunker_interface import TextChunker
 
 
