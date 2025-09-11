@@ -1,23 +1,24 @@
-import { createContext, Dispatch, SetStateAction } from "react";
+import { createContext, Dispatch, ReactNode, SetStateAction } from "react";
 
-export interface TranscriptionItem {
-  type: "transcript" | "answer";
-  text: string;
-  timestamp: number;
-}
-
-export const ChatContext = createContext<{
+interface ChatContextType {
   mode: "memory" | "question" | undefined;
   setMode: Dispatch<SetStateAction<"memory" | "question" | undefined>>;
   isRecording: boolean;
   setIsRecording: Dispatch<SetStateAction<boolean>>;
-  transcriptions: TranscriptionItem[];
-  setTranscriptions: Dispatch<SetStateAction<TranscriptionItem[]>>;
-}>({
+  isProcessing: boolean;
+  setIsProcessing: Dispatch<SetStateAction<boolean>>;
+  messages: ReactNode[];
+  setMessages: Dispatch<SetStateAction<ReactNode[]>>;
+}
+
+// Create context with default empty values
+export const ChatContext = createContext<ChatContextType>({
   mode: undefined,
   setMode: () => {},
   isRecording: false,
   setIsRecording: () => {},
-  transcriptions: [],
-  setTranscriptions: () => {},
+  isProcessing: false,
+  setIsProcessing: () => {},
+  messages: [],
+  setMessages: () => {},
 });
