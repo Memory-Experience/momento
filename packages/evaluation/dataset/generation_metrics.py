@@ -14,7 +14,7 @@ class GenerationMetrics:
             return ""
         end_idx = text.find("</think>")
         if end_idx != -1:
-            text = text[end_idx + len("</think>"):]
+            text = text[end_idx + len("</think>") :]
         text = text.lower()
         text = text.translate(GenerationMetrics._PUNCT_TABLE)
         text = re.sub(r"\s+", " ", text).strip()
