@@ -295,6 +295,7 @@ venv.bak/
 
 # mkdocs documentation
 /site
+/docs/web/ts
 
 # mypy
 .mypy_cache/
