@@ -3,6 +3,7 @@
 A Python-based gRPC server providing real-time speech transcription services using Faster Whisper and Protocol Buffers for efficient communication.
 
 ## Getting Started
+
 **Prerequisites**: Complete the setup steps in the [root README Prerequisites section](https://github.com/Memory-Experience/momento/blob/main/README.md#prerequisites) and follow the steps to install dependencies and protocol buffer definitions in the [root README Quick Start section](https://github.com/Memory-Experience/momento/blob/main/README.md#quick-start).
 
 ### Start the Server

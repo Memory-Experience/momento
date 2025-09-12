@@ -106,5 +106,7 @@ import { TranscriptionServiceClient } from "./generated/ts/clients/stt";
 
 // Create client and message
 const client = new TranscriptionServiceClient("http://localhost:8080");
-const audioChunk = MemoryChunk.create({ audio_data: new Uint8Array(audioData) });
+const audioChunk = MemoryChunk.create({
+  audio_data: new Uint8Array(audioData),
+});
 ```
