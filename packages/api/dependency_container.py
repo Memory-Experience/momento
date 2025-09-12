@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from api.persistence.persistence_service import PersistenceService
 from api.persistence.repositories.file_repository import FileRepository
 from api.rag.llm_rag_service import LLMRAGService
+from api.rag.threshold_filter_service import ThresholdFilterService
 from api.vector_store.repositories.qdrant_vector_store_repository import (
     InMemoryQdrantVectorStoreRepository,
 )
@@ -28,6 +29,7 @@ class Container:
     vector_store: VectorStoreService
     persistence: PersistenceService
     rag: LLMRAGService
+    threshold_filter: ThresholdFilterService
     transcriber: FasterWhisperTranscriber
 
     sample_rate: int = SAMPLE_RATE
@@ -55,6 +57,9 @@ class Container:
         llm_model = Qwen3()
         rag_service = LLMRAGService(llm_model=llm_model)
 
+        # Threshold filter service
+        threshold_filter_service = ThresholdFilterService(relevance_threshold=0.7)
+
         # Persistence (fix swapped args)
         repository = FileRepository(
             storage_dir=recordings_dir,
@@ -66,6 +71,7 @@ class Container:
             vector_store=vector_store_service,
             persistence=persistence_service,
             rag=rag_service,
+            threshold_filter=threshold_filter_service,
             transcriber=transcriber,
             sample_rate=sample_rate,
             recordings_dir=recordings_dir,
