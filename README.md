@@ -1,4 +1,4 @@
-# UZH Master Project &middot; [![Build](https://github.com/oberpierre/uzh-masterproject/actions/workflows/build.yaml/badge.svg)](https://github.com/oberpierre/uzh-masterproject/actions/workflows/build.yaml)
+# UZH Master Project &middot; [![Build](https://github.com/Memory-Experience/momento/actions/workflows/build.yaml/badge.svg)](https://github.com/Memory-Experience/momento/actions/workflows/build.yaml)
 
 A real-time speech-to-text transcription system built with gRPC, featuring a Python backend API and Next.js web frontend.
 
@@ -6,16 +6,16 @@ A real-time speech-to-text transcription system built with gRPC, featuring a Pyt
 
 This monorepo contains three main packages:
 
-- **[`packages/api/`](packages/api/README.md)** - Python gRPC server for speech transcription
-- **[`packages/protos/`](packages/protos/README.md)** - Protocol Buffers definitions and code generation
-- **[`packages/web/`](packages/web/README.md)** - Next.js frontend with real-time audio recording and transcription
+- **[`packages/api/`](https://github.com/Memory-Experience/momento/blob/main/packages/api/README.md)** - Python gRPC server for speech transcription
+- **[`packages/protos/`](https://github.com/Memory-Experience/momento/blob/main/packages/protos/README.md)** - Protocol Buffers definitions and code generation
+- **[`packages/web/`](https://github.com/Memory-Experience/momento/blob/main/packages/web/README.md)** - Next.js frontend with real-time audio recording and transcription
 
 ## Prerequisites
 
 ### System Requirements
 
-- **Node.js** v22 (see [`.nvmrc`](.nvmrc))
-- **Python** 3.12 (see [`.python-version`](.python-version))
+- **Node.js** v22 (see [`.nvmrc`](https://github.com/Memory-Experience/momento/blob/main/.nvmrc))
+- **Python** 3.12 (see [`.python-version`](https://github.com/Memory-Experience/momento/blob/main/.python-version))
 - **pnpm** v10.14+ for Node.js package management
 - **uv** v0.8+ for Python package management
 - **FFmpeg** required by the transcription API
@@ -100,10 +100,10 @@ Python tools can be run using `uvx ruff` (similar to `npx` for Node.js).
 
 **Configuration files:**
 
-- [`.lintstagedrc.yaml`](.lintstagedrc.yaml) - Pre-commit hooks
-- [`pyproject.toml`](pyproject.toml) - Python workspace
-- [`ruff.toml`](ruff.toml) - Ruff configuration
-- [`pnpm-workspace.yaml`](pnpm-workspace.yaml) - Node.js workspace configuration
+- [`.lintstagedrc.yaml`](https://github.com/Memory-Experience/momento/blob/main/.lintstagedrc.yaml) - Pre-commit hooks
+- [`pyproject.toml`](https://github.com/Memory-Experience/momento/blob/main/pyproject.toml) - Python workspace
+- [`ruff.toml`](https://github.com/Memory-Experience/momento/blob/main/ruff.toml) - Ruff configuration
+- [`pnpm-workspace.yaml`](https://github.com/Memory-Experience/momento/blob/main/pnpm-workspace.yaml) - Node.js workspace configuration
 
 ### Available Scripts
 

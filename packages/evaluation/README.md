@@ -4,7 +4,7 @@ A python based evaluation runner providing a Dataset interface with which the ru
 
 ## Getting Started
 
-**Prerequisites**: Complete the setup steps in the [root README Prerequisites section](../../README.md#prerequisites) and follow the steps to install dependencies and protocol buffer definitions in the [root README Quick Start section](../../README.md#quick-start).
+**Prerequisites**: Complete the setup steps in the [root README Prerequisites section](https://github.com/Memory-Experience/momento/blob/main/README.md#prerequisites) and follow the steps to install dependencies and protocol buffer definitions in the [root README Quick Start section](https://github.com/Memory-Experience/momento/blob/main/README.md#quick-start).
 
 ### Start the Server
 
@@ -20,7 +20,7 @@ uv run main.py
 
 ### Managing Dependencies
 
-Use `uv add` to add new Python dependencies, which automatically updates both the local [`pyproject.toml`](pyproject.toml) and the workspace [`pyproject.toml`](../../pyproject.toml):
+Use `uv add` to add new Python dependencies, which automatically updates both the local [`pyproject.toml`](https://github.com/Memory-Experience/momento/blob/main/packages/evaluation/pyproject.toml) and the workspace [`pyproject.toml`](https://github.com/Memory-Experience/momento/blob/main/pyproject.toml):
 
 ```bash
 # Add a new dependency
