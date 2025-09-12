@@ -24,7 +24,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # gRPC Server configuration
-LIMIT_DOCS = 1_000
+LIMIT_DOCS = 10_000
 
 
 async def main():
@@ -65,7 +65,7 @@ async def main():
 
         # Run evaluation
         results = await client.run_evaluation(
-            dataset, max_docs=LIMIT_DOCS, max_queries=20
+            dataset, max_queries=20
         )
 
         # Create a timestamped filename
