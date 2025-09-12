@@ -31,18 +31,18 @@ async def main():
     """Main evaluation function."""
     try:
         # Create MS MARCO dataset
-        dataset_dir = 'qdrant_ms_marco_small'
+        dataset_dir = "qdrant_ms_marco_small"
         dataset = MSMarcoDataset(limit=LIMIT_DOCS)
         logger.info(f"Loaded dataset: {dataset}")
-
 
         transcriber = FasterWhisperTranscriber()
         transcriber.initialize()
 
-        vector_store_service, doc_to_memory, memory_to_doc = \
-            await DatasetLoader.create_filled_vector_store_service(
-                dataset, dataset_dir
-            )
+        (
+            vector_store_service,
+            doc_to_memory,
+            memory_to_doc,
+        ) = await DatasetLoader.create_filled_vector_store_service(dataset, dataset_dir)
 
         # LLM + RAG
         llm_model = Qwen3()
@@ -58,15 +58,13 @@ async def main():
             rag=rag_service,
             transcriber=transcriber,
         )
-    
+
         servicer = TranscriptionServiceServicer(container)
         # Initialize and connect client
         client = RAGEvaluationClient(servicer, doc_to_memory, memory_to_doc)
 
         # Run evaluation
-        results = await client.run_evaluation(
-            dataset, max_queries=20
-        )
+        results = await client.run_evaluation(dataset, max_queries=20)
 
         # Create a timestamped filename
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")

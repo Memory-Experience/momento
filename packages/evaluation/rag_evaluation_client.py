@@ -24,7 +24,12 @@ logger = logging.getLogger(__name__)
 class RAGEvaluationClient:
     """Client for evaluating RAG system performance using gRPC."""
 
-    def __init__(self, servicer: TranscriptionServiceServicer, doc_to_memory: dict[str, str], memory_to_doc: dict[str, str]):
+    def __init__(
+        self,
+        servicer: TranscriptionServiceServicer,
+        doc_to_memory: dict[str, str],
+        memory_to_doc: dict[str, str],
+    ):
         """Initialize the evaluation client.
 
         Args:
@@ -33,7 +38,6 @@ class RAGEvaluationClient:
         self.servicer = servicer
         self.doc_to_memory: dict[str, str] = doc_to_memory or {}
         self.memory_to_doc: dict[str, str] = memory_to_doc or {}
-
 
     async def process_query(
         self,
@@ -76,7 +80,7 @@ class RAGEvaluationClient:
 
             answer_chunks: list[str] = []
 
-            async for response in self.servicer.Transcribe(query_stream(), 'context'):
+            async for response in self.servicer.Transcribe(query_stream(), "context"):
                 if response.metadata.type == stt_pb2.ChunkType.MEMORY:
                     # Server sends retrieved memories (by *saved* memory_id)
                     mem_id = response.metadata.memory_id
