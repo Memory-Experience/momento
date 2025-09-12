@@ -28,9 +28,11 @@ nav:
   - Python Backend:
       - Readme: api/readme_link.md
       - Reference (PY): api/py.md
-  - Evaluation:
-      - Readme: evaluation/readme_link.md
-      - Reference (PY): evaluation/py.md
+  - Communication (Protobuf):
+      - Readme: protos/readme_link.md
   - Web Frontend:
       - Readme: web/readme_link.md
       - Reference (TS): web/ts/globals.md
+  - Evaluation:
+      - Readme: evaluation/readme_link.md
+      - Reference (PY): evaluation/py.md
