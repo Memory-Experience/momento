@@ -329,7 +329,7 @@ class RAGEvaluationClient:
             ) = await self.process_query(query_id, query_text)
 
             retrieved_doc_ids_for_eval = [
-                self.memory_to_doc.get(mem_id, mem_id)
+                self.memory_to_doc.get(uuid.UUID(mem_id))
                 for mem_id in retrieved_doc_ids_ordered
             ]
 
