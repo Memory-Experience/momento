@@ -34,8 +34,7 @@ class DatasetLoader:
         embedding_model = Qwen3EmbeddingModel()
         text_chunker = SpacySentenceChunker()
         vector_store_repo: VectorStoreRepository = LocalFileQdrantVectorStoreRepository(
-            embedding_model, text_chunker,
-            dataset_folder
+            embedding_model, text_chunker, dataset_folder
         )
         return VectorStoreService(vector_store_repo)
 
@@ -51,7 +50,7 @@ class DatasetLoader:
             return doc_to_memory, memory_to_doc
 
         if os.path.exists(dataset_folder):
-        # If pickles do not exist, clean the directory
+            # If pickles do not exist, clean the directory
             for file in os.listdir(dataset_folder):
                 file_path = os.path.join(dataset_folder, file)
                 if os.path.isfile(file_path):
