@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from domain.memory_request import MemoryRequest
+from api.domain.memory_request import MemoryRequest
 
 
 class Repository(ABC):
