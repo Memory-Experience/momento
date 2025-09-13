@@ -2,8 +2,8 @@ import asyncio
 from uuid import uuid4
 
 import pytest
-from domain.memory_request import MemoryRequest
-from persistence.repositories.in_memory_repository import (
+from api.domain.memory_request import MemoryRequest
+from api.persistence.repositories.in_memory_repository import (
     IN_MEMORY_URI_SCHEME,
     InMemoryRepository,
 )

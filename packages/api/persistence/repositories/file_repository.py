@@ -4,10 +4,10 @@ import os
 from datetime import datetime
 from uuid import UUID, uuid4
 
-from domain.memory_request import MemoryRequest, MemoryType
 from pydub import AudioSegment
 
-from .repository_interface import Repository
+from api.domain.memory_request import MemoryRequest, MemoryType
+from api.persistence.repositories.repository_interface import Repository
 
 # Constants
 FILE_URI_SCHEME = "file://"

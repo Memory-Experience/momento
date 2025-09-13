@@ -332,6 +332,7 @@ name = "evaluation"
 version = "0.1.0"
 source = { editable = "packages/evaluation" }
 dependencies = [
+    { name = "api" },
     { name = "grpcio" },
     { name = "ir-datasets" },
     { name = "numpy" },
@@ -342,6 +343,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "api", editable = "packages/api" },
     { name = "grpcio", specifier = ">=1.71.2" },
     { name = "ir-datasets", specifier = ">=0.5.11" },
     { name = "numpy", specifier = ">=2.3.2" },

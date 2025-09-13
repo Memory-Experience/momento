@@ -3,10 +3,10 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 from typing import Any
 
-from models.huggingface_helper import HuggingFaceHelper
-from models.llama_cpp_base import LlamaCppConfig
-from models.llm.llama_cpp_model import LlamaCppModel
-from domain.memory_context import MemoryContext
+from api.models.huggingface_helper import HuggingFaceHelper
+from api.models.llama_cpp_base import LlamaCppConfig
+from api.models.llm.llama_cpp_model import LlamaCppModel
+from api.domain.memory_context import MemoryContext
 
 
 class Qwen3(LlamaCppModel):
@@ -60,8 +60,6 @@ They are here to demonstrate the answering format.
 Ignore all example blocks when generating an answer. 
 Only use memory JSONs that appear after this point and outside of <examples>
 </examples>
-
-/nothink
 """
 
     def __init__(

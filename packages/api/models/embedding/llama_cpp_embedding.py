@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from models.llama_cpp_base import LlamaCppBase, LlamaCppConfig
-from models.embedding.embedding_model_interface import EmbeddingModel
+from api.models.llama_cpp_base import LlamaCppBase, LlamaCppConfig
+from api.models.embedding.embedding_model_interface import EmbeddingModel
 
 
 class LlamaCppEmbeddingModel(LlamaCppBase, EmbeddingModel):
@@ -43,7 +43,7 @@ class LlamaCppEmbeddingModel(LlamaCppBase, EmbeddingModel):
         except Exception:
             return 0
 
-    async def embed_text(self, text: str) -> list[float]:
+    async def embed_text(self, text: str | list[str]) -> list[float]:
         def _compute() -> list[float]:
             out = self._llm.create_embedding(input=text)
             vec = out["data"][0]["embedding"]
