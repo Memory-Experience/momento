@@ -13,12 +13,8 @@ from api.vector_store.repositories.qdrant_vector_store_repository import (
 from api.vector_store.repositories.vector_store_repository_interface import (
     VectorStoreRepository,
 )
-from api.vector_store.vector_store_service import VectorStoreService
-
 from api.models.spacy_sentence_chunker import SpacySentenceChunker
-from api.models.llm.qwen3 import Qwen3
 from api.models.embedding.qwen3_embedding import Qwen3EmbeddingModel
-
 import gc
 
 
