@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 
-from domain.memory_request import MemoryRequest
+from api.domain.memory_request import MemoryRequest
 
 
 @dataclass

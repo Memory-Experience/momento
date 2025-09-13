@@ -1,8 +1,6 @@
 import logging
 from uuid import UUID, uuid4
 
-from domain.memory_context import MemoryContext
-from domain.memory_request import MemoryRequest, MemoryType
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from qdrant_client.http.models import (
@@ -13,10 +11,13 @@ from qdrant_client.http.models import (
     Range,
 )
 
-from models.embedding.embedding_model_interface import EmbeddingModel
-from models.text_chunker_interface import TextChunker
+from api.models.embedding.embedding_model_interface import EmbeddingModel
+from api.models.text_chunker_interface import TextChunker
 
-from .vector_store_repository_interface import (
+from api.domain.memory_context import MemoryContext
+from api.domain.memory_request import MemoryRequest, MemoryType
+
+from api.vector_store.repositories.vector_store_repository_interface import (
     FilterArg,
     FilterCondition,
     FilterGroup,
@@ -114,22 +115,25 @@ class QdrantVectorStoreRepository(VectorStoreRepository):
             )
         )
 
-        # Now add points for each chunk
-        for i, chunk in enumerate(chunks):
-            chunk_id = str(uuid4())
-            chunk_vector = await self.embedding_model.embed_text(chunk)
+        if len(chunks) > 1:
+            # Now add points for each chunk
+            for i, chunk in enumerate(chunks):
+                chunk_id = str(uuid4())
+                chunk_vector = await self.embedding_model.embed_text(chunk)
 
-            chunk_metadata = {
-                **metadata,  # Copy the base metadata
-                "is_chunk": True,  # Flag to indicate this is a chunk
-                "parent_id": memory_id,  # Link back to the parent memory
-                "chunk_index": i,  # Store the index of this chunk
-                "text_content": chunk,  # Store the actual chunk text
-            }
+                chunk_metadata = {
+                    **metadata,  # Copy the base metadata
+                    "is_chunk": True,  # Flag to indicate this is a chunk
+                    "parent_id": memory_id,  # Link back to the parent memory
+                    "chunk_index": i,  # Store the index of this chunk
+                    "text_content": chunk,  # Store the actual chunk text
+                }
 
-            points.append(
-                PointStruct(id=chunk_id, vector=chunk_vector, payload=chunk_metadata)
-            )
+                points.append(
+                    PointStruct(
+                        id=chunk_id, vector=chunk_vector, payload=chunk_metadata
+                    )
+                )
 
         # Store all points in Qdrant
         self.client.upsert(collection_name=self.collection_name, points=points)
@@ -535,6 +539,34 @@ class InMemoryQdrantVectorStoreRepository(QdrantVectorStoreRepository):
 
         # Initialize in-memory Qdrant client
         client = QdrantClient(":memory:")
+
+        super().__init__(
+            client=client,
+            embedding_model=embedding_model,
+            text_chunker=text_chunker,
+            collection_name=collection_name,
+        )
+
+
+class LocalFileQdrantVectorStoreRepository(QdrantVectorStoreRepository):
+    def __init__(
+        self,
+        embedding_model: EmbeddingModel,
+        text_chunker: TextChunker,
+        database_path: str,
+        collection_name="memories",
+    ):
+        """
+        Initialize the Qdrant in-memory vector store repository.
+
+        Args:
+            collection_name: Name of the collection to store vectors
+            vector_size: Dimension of vectors
+                (should match your embedding model's output)
+        """
+
+        # Initialize in-memory Qdrant client
+        client = QdrantClient(path=database_path)
 
         super().__init__(
             client=client,

@@ -13,9 +13,9 @@ dependencies = [
     "torch>=2.8.0",
     "numpy>=2.3.2",
     "faster-whisper>=1.2.0",
-    "qdrant-client>=1.15.1",
     "llama-cpp-python>=0.3.16",
     "huggingface-hub>=0.34.4",
+    "qdrant-client>=1.15.1",
     "spacy>=3.8.7",
 ]
 
@@ -26,9 +26,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 # Install top-level module "main.py" as an importable module
 py-modules = ["main"]
+packages = ["api", "api.domain", "api.models", "api.vector_store"]
 
-[tool.setuptools.packages.find]
-# Flat layout: discover packages from the current directory
-where = ["."]
-include = ["domain/*", "persistence/*", "transcriber/*", "vector_store/*", "tests/*", "models/*"]
-exclude = ["recordings*", "recordings/*", "**/__pycache__"]
+[tool.setuptools.package-dir]
+api = "."
