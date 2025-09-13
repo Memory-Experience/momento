@@ -18,6 +18,7 @@ class DummyContainer:
     persistence: object
     vector_store: object
     rag: object
+    threshold_filter: object
     sample_rate: int = 16000
     recordings_dir: str = "recordings"
 
@@ -42,11 +43,16 @@ def container():
     # RAG (we’ll configure in the text test)
     rag = MagicMock()
 
+    # Threshold filter
+    threshold_filter = MagicMock()
+    threshold_filter.filter_context = MagicMock()
+
     return DummyContainer(
         transcriber=transcriber,
         persistence=persistence,
         vector_store=vector_store,
         rag=rag,
+        threshold_filter=threshold_filter,
     )
 
 
