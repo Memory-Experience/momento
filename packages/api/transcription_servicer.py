@@ -15,6 +15,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
         self.transcriber = container.transcriber
         self.vector_store_service = container.vector_store
         self.rag_service = container.rag
+        self.threshold_filter_service = container.threshold_filter
         self.persistence_service = container.persistence
         self.sample_rate = container.sample_rate
 
@@ -191,28 +192,30 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
             question_memory, limit=5
         )
 
+        # Apply threshold filtering for better precision
+        filtered_context = self.threshold_filter_service.filter_context(memory_context)
+
         # Generate answer
         response_generator = self.rag_service.answer_question(
             query=question_memory,
-            memory_context=memory_context,
+            memory_context=filtered_context,
             chunk_size_tokens=8,
         )
 
         # Stream memory context first if available
-        if memory_context and memory_context.memories:
-            logging.info(
-                f"Sending {len(memory_context.memories)} memories from context"
-            )
-            for memory in memory_context.memories.values():
+        if filtered_context and filtered_context.memories:
+            memory_count = len(filtered_context.memories)
+            logging.info(f"Sending {memory_count} filtered memories from context")
+            for memory in filtered_context.memories.values():
                 # Create the memory chunk using the factory method
                 memory_chunk = memory.to_chunk(
                     session_id=session_id, chunk_type=stt_pb2.ChunkType.MEMORY
                 )
 
-                # Then add the score from memory_context
-                if memory.id in memory_context.scores:
+                # Then add the score from filtered_context
+                if memory.id in filtered_context.scores:
                     memory_chunk.metadata.score = float(
-                        memory_context.scores[memory.id]
+                        filtered_context.scores[memory.id]
                     )
 
                 yield memory_chunk

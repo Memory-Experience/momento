@@ -52,18 +52,16 @@ class VectorStoreService:
         Args:
             query: The search query
             limit: Maximum number of results to return
-            filters: Optional filters to apply
 
         Returns:
             MemoryContext containing the search results
         """
-        # The repository is responsible for converting the query to embeddings
+
+        # Get results from repository
         context = await self.repository.search_similar(query=query, limit=limit)
 
-        logging.info(
-            f"Search for '{query.text}' "
-            f"returned {len(context.get_memory_objects())} results"
-        )
+        result_count = len(context.get_memory_objects())
+        logging.info(f"Search for '{query.text}' returned {result_count} results")
         return context
 
     async def delete_memory(self, memory_id: UUID) -> None:

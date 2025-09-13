@@ -11,6 +11,7 @@ from api.persistence.repositories.in_memory_repository import InMemoryRepository
 from api.rag.llm_rag_service import LLMRAGService
 from api.models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
 from api.models.llm.qwen3 import Qwen3
+from api.rag.threshold_filter_service import ThresholdFilterService
 
 from dataset_loader import DatasetLoader
 from rag_evaluation_client import RAGEvaluationClient
@@ -48,11 +49,15 @@ async def main():
         llm_model = Qwen3()
         rag_service = LLMRAGService(llm_model=llm_model)
 
+        # Threshold filter service
+        threshold_filter_service = ThresholdFilterService(relevance_threshold=0.7)
+
         # Persistence
         repository = InMemoryRepository()
         persistence_service = PersistenceService(repository)
 
         container = Container(
+            threshold_filter=threshold_filter_service,
             vector_store=vector_store_service,
             persistence=persistence_service,
             rag=rag_service,
