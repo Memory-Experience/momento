@@ -14,19 +14,18 @@ dependencies = [
     "pytest>=8.0.0",
 ]
 
+
 [build-system]
 requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools]
 # Install top-level module "main.py" as an importable module
-py-modules = ["main"]
+py-modules = ["main", "dataset_loader", "rag_evaluation_client"]
+packages = ["evaluation", "evaluation.dataset"]
 
-[tool.setuptools.packages.find]
-# Flat layout: discover packages from the current directory
-where = ["."]
-include = ["dataset*", "core*", "adapters*"]
-exclude = ["tests*"]
+[tool.setuptools.package-dir]
+evaluation = "."
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

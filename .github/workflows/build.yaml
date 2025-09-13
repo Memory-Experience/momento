@@ -1,40 +1,52 @@
-name: Build
+name: CI & Docs
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
-    branches:
-      - "*"
+    branches: ["*"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      # Node + pnpm (includes pnpm store cache)
+      - uses: pnpm/action-setup@v4
         with:
-          package_json_file: "package.json" # Reads packageManger property from package.json
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
+          package_json_file: package.json
+      - uses: actions/setup-node@v4
         with:
-          node-version-file: ".nvmrc"
-          cache: "pnpm"
+          node-version-file: .nvmrc
+          cache: pnpm # ← caches pnpm store (~/.pnpm-store)
 
-      - name: Set up Python
+      # Python + uv
+      - id: setup-python
         uses: actions/setup-python@v5
         with:
-          python-version-file: ".python-version"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v6
+          python-version-file: .python-version
+      - uses: astral-sh/setup-uv@v6
         with:
-          enable-cache: true
+          enable-cache: true # ← caches uv download cache (~/.cache/uv)
+
+      # Cache the virtualenv created by `uv sync`
+      - name: Cache Python venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('uv.lock', 'pyproject.toml') }}
+          restore-keys: |
+            venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-
 
       - name: Install dependencies
         run: |
@@ -50,4 +62,70 @@ jobs:
         run: pnpm run build
 
       - name: Run API tests
-        run: pnpm --filter ./packages/api run test:ci
+        run: pnpm --filter ./packages/api test:ci
+
+      - name: Run Evaluation tests
+        run: pnpm --filter ./packages/evaluation test:ci
+
+  build-docs:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Node + pnpm (uses cached pnpm store)
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      # Python + uv (uses cached uv download cache)
+      - id: setup-python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      # Reuse the venv across jobs when lockfile matches
+      - name: Cache Python venv
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('uv.lock', 'pyproject.toml') }}
+          restore-keys: |
+            venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-
+
+      - name: Install dependencies
+        run: |
+          pnpm install --frozen-lockfile
+          uv sync --locked
+
+      - name: Build project
+        run: pnpm run build
+
+      - name: Build TypeScript docs
+        run: pnpm typedoc
+
+      - name: Build MkDocs site
+        run: uv run mkdocs build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-docs
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

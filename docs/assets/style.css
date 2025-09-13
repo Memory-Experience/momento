@@ -1,0 +1,4 @@
+/* Example: tweak header background and link colors */
+.wy-side-nav-search {
+  background-color: #323d4d !important; /* dark background for sidebar header */
+}
