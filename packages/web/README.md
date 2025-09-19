@@ -1,62 +1,36 @@
-# Web Frontend
-
-A Next.js application providing a modern web interface for real-time audio recording and transcription. Built with TypeScript, Tailwind CSS, and WebRTC audio capture.
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
 
-**Prerequisites**: Complete the setup steps in the [root README Prerequisites section](https://github.com/Memory-Experience/momento/blob/main/README.md#prerequisites) and follow the steps to install dependencies and protocol buffer definitions in the [root README Quick Start section](https://github.com/Memory-Experience/momento/blob/main/README.md#quick-start).
-
-### Start Development Server
+First, run the development server:
 
 ```bash
-cd packages/web
-pnpm run dev
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-### Production Build
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-```bash
-pnpm run build
-pnpm run start
-```
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-## Development
+## Learn More
 
-### Managing Dependencies
+To learn more about Next.js, take a look at the following resources:
 
-Use `pnpm add` or `pnpm install` to manage Node.js package dependencies.
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-See [`package.json`](https://github.com/Memory-Experience/momento/blob/main/packages/web/package.json) for a complete list of dependencies.
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-### Available Scripts
+## Deploy on Vercel
 
-**Development & Build:**
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-```bash
-pnpm run dev          # Start development server with Turbopack
-pnpm run build        # Build for production
-pnpm run start        # Start production server
-pnpm run lint         # Run ESLint
-```
-
-**Code Quality:**
-
-```bash
-# From project root (recommended)
-pnpm run format       # Format all files
-pnpm run format:check # Check formatting
-pnpm run lint         # Run all linting
-
-# Alternative workspace commands
-pnpm run -w format    # Format from any package directory
-```
-
-### Code Quality
-
-This package uses ESLint and Prettier with automatic formatting via git hooks. Configuration is inherited from the [root workspace](https://github.com/Memory-Experience/momento/blob/main/.lintstagedrc.yaml).
-
-## Attribution
-
-This frontend package is based on the [HumeAI EVI Next.js starter template](https://github.com/HumeAI/hume-evi-next-js-starter), available via [Vercel](https://vercel.com/templates/ai/empathic-voice-interface-starter). The original HumeAI functionality has been removed and replaced with our speech transcription implementation, while retaining the base UI components and project structure.
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
