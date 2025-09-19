@@ -1,7 +1,7 @@
 "!packages/**/*": "prettier --ignore-unknown --write"
 "packages/web/**/*.{ts,tsx}":
   - "prettier --ignore-unknown --write"
-  - "pnpm run --dir packages/web lint --max-warnings 0 --fix --file"
+  - "pnpm run --dir packages/web lint --max-warnings 0 --fix --no-warn-ignored"
 "packages/api/**/*.{py,toml}":
   # Format first, then lint without isort checks
   - "uvx ruff format"
