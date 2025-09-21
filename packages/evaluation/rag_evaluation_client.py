@@ -295,6 +295,7 @@ class RAGEvaluationClient:
                 "relevant_count": 0,
                 "true_positives": 0,
                 "aqwv": 0,
+                "map": 0,
             },
             "generation_metrics": {
                 "exact_match": 0,
@@ -312,6 +313,10 @@ class RAGEvaluationClient:
 
         # Get collection size for AQWV calculation
         collection_size = len(dataset.docs)
+
+        # Store data for MAP calculation
+        all_retrieved_docs = []
+        all_relevant_docs = []
 
         for i, (_, query) in enumerate(
             tqdm(queries_df.iterrows(), total=total_queries)
@@ -347,6 +352,10 @@ class RAGEvaluationClient:
                 self.memory_to_doc.get(uuid.UUID(mem_id))
                 for mem_id in retrieved_doc_ids_ordered
             ]
+
+            # Store for MAP calculation
+            all_retrieved_docs.append(retrieved_doc_ids_for_eval)
+            all_relevant_docs.append(relevant_doc_ids)
 
             # Evaluate retrieval
             retrieval_metrics = self.evaluate_retrieval(
@@ -417,10 +426,18 @@ class RAGEvaluationClient:
             )
             logger.info(f"  Response time: {response_time:.2f}s")
 
+        # Calculate MAP across all queries
+        map_score = RetrievalMetrics.mean_average_precision(
+            all_retrieved_docs, 
+            all_relevant_docs
+        )
+        results["retrieval_metrics"]["map"] = map_score
+
         # Calculate averages for metrics
         if total_queries > 0:
             for metric in results["retrieval_metrics"]:
-                results["retrieval_metrics"][metric] /= total_queries
+                if metric != "map":  # MAP is already calculated as global metric
+                    results["retrieval_metrics"][metric] /= total_queries
 
             for metric in results["generation_metrics"]:
                 results["generation_metrics"][metric] /= total_queries
