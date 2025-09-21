@@ -1,13 +1,20 @@
-name: Build
+name: Deploy Pages
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: ["*"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  build-and-test:
+  build-docs-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,7 +26,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: pnpm # ← caches pnpm store (~/.pnpm-store)
+          cache: pnpm
 
       # Python + uv
       - id: setup-python
@@ -28,7 +35,7 @@ jobs:
           python-version-file: .python-version
       - uses: astral-sh/setup-uv@v6
         with:
-          enable-cache: true # ← caches uv download cache (~/.cache/uv)
+          enable-cache: true
 
       # Cache the virtualenv created by `uv sync`
       - name: Cache Python venv
@@ -44,16 +51,21 @@ jobs:
           pnpm install --frozen-lockfile
           uv sync --locked
 
-      - name: Check code quality
-        run: |
-          pnpm run format:check
-          pnpm run lint
-
       - name: Build project
         run: pnpm run build
 
-      - name: Run API tests
-        run: pnpm --filter ./packages/api test:ci
+      - name: Build TypeScript docs
+        run: pnpm typedoc
 
-      - name: Run Evaluation tests
-        run: pnpm --filter ./packages/evaluation test:ci
+      - name: Build MkDocs site
+        run: uv run mkdocs build
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
+        with:
+          artifact_name: github-pages
