@@ -1,3 +1,6 @@
 pnpm-lock.yaml
 *.gguf
 *.json
+*.sqlite
+*.pt
+**/site/**

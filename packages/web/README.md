@@ -4,7 +4,7 @@ A Next.js application providing a modern web interface for real-time audio recor
 
 ## Getting Started
 
-**Prerequisites**: Complete the setup steps in the [root README Prerequisites section](../../README.md#prerequisites) and follow the steps to install dependencies and protocol buffer definitions in the [root README Quick Start section](../../README.md#quick-start).
+**Prerequisites**: Complete the setup steps in the [root README Prerequisites section](https://github.com/Memory-Experience/momento/blob/main/README.md#prerequisites) and follow the steps to install dependencies and protocol buffer definitions in the [root README Quick Start section](https://github.com/Memory-Experience/momento/blob/main/README.md#quick-start).
 
 ### Start Development Server
 
@@ -28,7 +28,7 @@ pnpm run start
 
 Use `pnpm add` or `pnpm install` to manage Node.js package dependencies.
 
-See [`package.json`](package.json) for a complete list of dependencies.
+See [`package.json`](https://github.com/Memory-Experience/momento/blob/main/packages/web/package.json) for a complete list of dependencies.
 
 ### Available Scripts
 
@@ -55,7 +55,7 @@ pnpm run -w format    # Format from any package directory
 
 ### Code Quality
 
-This package uses ESLint and Prettier with automatic formatting via git hooks. Configuration is inherited from the [root workspace](../../.lintstagedrc.yaml).
+This package uses ESLint and Prettier with automatic formatting via git hooks. Configuration is inherited from the [root workspace](https://github.com/Memory-Experience/momento/blob/main/.lintstagedrc.yaml).
 
 ## Attribution
 

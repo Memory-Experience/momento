@@ -1,0 +1,39 @@
+site_name: Momento
+theme:
+  name: readthedocs
+  logo: assets/logo.png
+extra_css:
+  - assets/style.css
+docs_dir: src
+site_dir: site
+plugins:
+  - search
+  - autorefs
+  - mkdocstrings:
+      handlers:
+        python:
+          paths:
+            - ..
+          options:
+            show_submodules: true
+            docstring_style: google
+            separate_signature: true
+            members_order: source
+            filters: ["!^_"]
+markdown_extensions:
+  - pymdownx.snippets:
+      base_path: ../..
+      check_paths: false
+nav:
+  - Overview: index.md
+  - Python Backend:
+      - Readme: api/readme_link.md
+      - Reference (PY): api/py.md
+  - Communication (Protobuf):
+      - Readme: protos/readme_link.md
+  - Web Frontend:
+      - Readme: web/readme_link.md
+      - Reference (TS): web/ts/globals.md
+  - Evaluation:
+      - Readme: evaluation/readme_link.md
+      - Reference (PY): evaluation/py.md
