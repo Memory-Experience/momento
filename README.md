@@ -4,11 +4,13 @@ A real-time speech-to-text transcription system built with gRPC, featuring a Pyt
 
 ## Architecture
 
-This monorepo contains three main packages:
+This monorepo contains multiple packages:
 
 - **[`packages/api/`](https://github.com/Memory-Experience/momento/blob/main/packages/api/README.md)** - Python gRPC server for speech transcription
 - **[`packages/protos/`](https://github.com/Memory-Experience/momento/blob/main/packages/protos/README.md)** - Protocol Buffers definitions and code generation
 - **[`packages/web/`](https://github.com/Memory-Experience/momento/blob/main/packages/web/README.md)** - Next.js frontend with real-time audio recording and transcription
+- **[`packages/evaluation/`](https://github.com/Memory-Experience/momento/blob/main/packages/evaluation/README.md)** - Python based runner evaluating the RAG performance
+- **[`packages/docs/`](https://github.com/Memory-Experience/momento/blob/main/packages/docs/README.md)** - MkDocs Documentation of the project
 
 ## Prerequisites
 
