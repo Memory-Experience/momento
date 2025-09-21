@@ -95,6 +95,7 @@ async def main():
         logger.info(f"  R@5: {results['retrieval_metrics']['recall@5']:.4f}")
         logger.info(f"  MRR: {results['retrieval_metrics']['mrr']:.4f}")
         logger.info(f"  NDCG@5: {results['retrieval_metrics']['ndcg@5']:.4f}")
+        logger.info(f"  MAP: {results['retrieval_metrics']['map']:.4f}")
         logger.info(f"  AQWV: {results['retrieval_metrics']['aqwv']:.4f}")
 
         logger.info("\nGeneration Performance (averages):")
