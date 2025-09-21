@@ -163,6 +163,9 @@ class RetrievalMetrics:
         Returns:
             AQWV score
         """
+
+        if collection_size <= 0:
+            raise ValueError(f"collection_size must be positive, got {collection_size}")
         
         if not relevant_docs:
             # If no relevant docs exist for this query, pMiss = 0
