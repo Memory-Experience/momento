@@ -2,3 +2,4 @@ recordings/
 
 # Ignore model files
 *.gguf
+*.pt

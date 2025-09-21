@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from faster_whisper import WhisperModel
 
-from .base import Segment, TranscriberInterface
+from .transcriber_interface import Segment, TranscriberInterface
 
 
 class FasterWhisperTranscriber(TranscriberInterface):
