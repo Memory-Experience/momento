@@ -199,3 +199,25 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+
+## SimulStreaming Backend License
+
+**When using the SimulStreaming backend (SimulWhisper), additional licensing terms apply:**
+
+SimulStreaming (https://github.com/ufal/SimulStreaming) is dual-licensed:
+
+### 🔹 Non-Commercial Use
+You may use SimulStreaming under the **PolyForm Noncommercial License 1.0.0** if you obtain the code through the GitHub repository. This license is **free of charge** and comes with **no obligations** for non-commercial users.
+
+### 🔸 Commercial Use
+Understanding who uses SimulStreaming commercially helps improve and prioritize development. Therefore, **registration is required** for those who acquire a commercial license.
+
+Commercial licenses are planned to be **affordable** to SMEs and individuals. They are considering providing commercial licenses either for free or for a symbolic one-time fee, and may also provide additional support. You can share your preference via the [questionnaire](https://forms.cloud.microsoft.com/e/7tCxb4gJfB).
+
+You can also leave your contact [there](https://forms.cloud.microsoft.com/e/7tCxb4gJfB) to be notified when commercial licenses become available.
+
+**Contact for SimulStreaming licensing:**  
+[Dominik Macháček](https://ufal.mff.cuni.cz/dominik-machacek/), machacek@ufal.mff.cuni.cz
+
+> Required Notice: Copyright Yoyodyne, Inc. (http://example.com)
