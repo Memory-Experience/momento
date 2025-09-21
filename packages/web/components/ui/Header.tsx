@@ -1,9 +1,13 @@
+import Image from "next/image";
+import Link from "next/link";
 import { FC } from "react";
 
 const Header: FC = () => {
   return (
-    <header className="flex p-4 shadow-md">
-      <h1 className="text-lg font-bold">Momento</h1>
+    <header className="flex p-4 px-12 shadow-md">
+      <Link href="/" className="flex items-center">
+        <Image src="/logo.png" alt="Momento Logo" width={122} height={30} />
+      </Link>
     </header>
   );
 };

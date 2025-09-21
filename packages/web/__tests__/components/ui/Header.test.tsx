@@ -6,8 +6,11 @@ describe("Header", () => {
   it("renders Header component", () => {
     render(<Header />);
 
-    const header = screen.getByRole("heading", { name: "Momento" });
+    const link = screen.getByRole("link", { name: "Momento Logo" });
+    const header = screen.getByRole("img", { name: "Momento Logo" });
 
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "/");
     expect(header).toBeInTheDocument();
   });
 });
