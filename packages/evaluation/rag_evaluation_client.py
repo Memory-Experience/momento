@@ -180,7 +180,10 @@ class RAGEvaluationClient:
 
         # Calculate AQWV
         aqwv = RetrievalMetrics.aqwv(
-            retrieved_doc_ids, relevant_doc_ids, beta=40.0, collection_size=collection_size
+            retrieved_doc_ids,
+            relevant_doc_ids,
+            beta=40.0,
+            collection_size=collection_size,
         )
 
         return {
