@@ -147,7 +147,7 @@ class RetrievalMetrics:
         relevant_docs: list[str],
         threshold: float,
         beta: float = 40.0,
-        collection_size: int = 1000,
+        collection_size: int=-1,
     ) -> float:
         """Calculate Average Query Weighted Value (AQWV).
         
@@ -163,6 +163,7 @@ class RetrievalMetrics:
         Returns:
             AQWV score
         """
+        
         if not relevant_docs:
             # If no relevant docs exist for this query, pMiss = 0
             # Only false alarms matter
@@ -187,3 +188,59 @@ class RetrievalMetrics:
         aqwv = 1.0 - p_miss - beta * p_fa
         
         return aqwv
+
+    @staticmethod
+    def average_precision(
+        retrieved_docs: list[str],
+        relevant_docs: list[str],
+    ) -> float:
+        """Calculate Average Precision (AP) for a single query.
+        
+        Args:
+            retrieved_docs: List of retrieved document IDs in rank order
+            relevant_docs: List of relevant document IDs
+            
+        Returns:
+            Average Precision score
+        """
+        if not retrieved_docs or not relevant_docs:
+            return 0.0
+        
+        relevant_set = set(relevant_docs)
+        precision_sum = 0.0
+        relevant_retrieved = 0
+        
+        for i, doc_id in enumerate(retrieved_docs):
+            if doc_id in relevant_set:
+                relevant_retrieved += 1
+                precision_at_i = relevant_retrieved / (i + 1)
+                precision_sum += precision_at_i
+        
+        return precision_sum / len(relevant_docs)
+
+    @staticmethod
+    def mean_average_precision(
+        retrieved_docs_per_query: list[list[str]],
+        relevant_docs_per_query: list[list[str]],
+    ) -> float:
+        """Calculate Mean Average Precision (MAP) across multiple queries.
+        
+        Args:
+            retrieved_docs_per_query: List of retrieved doc lists for each query
+            relevant_docs_per_query: List of relevant doc lists for each query
+            
+        Returns:
+            MAP score
+        """
+        if not retrieved_docs_per_query or not relevant_docs_per_query:
+            return 0.0
+            
+        if len(retrieved_docs_per_query) != len(relevant_docs_per_query):
+            raise ValueError("Retrieved and relevant docs lists must have same length")
+        
+        ap_scores = []
+        for retrieved_docs, relevant_docs in zip(retrieved_docs_per_query, relevant_docs_per_query, strict=False):
+            ap = RetrievalMetrics.average_precision(retrieved_docs, relevant_docs)
+            ap_scores.append(ap)
+        
+        return sum(ap_scores) / len(ap_scores) if ap_scores else 0.0
