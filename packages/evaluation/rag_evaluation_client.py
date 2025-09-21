@@ -132,7 +132,7 @@ class RAGEvaluationClient:
                 "aqwv": RetrievalMetrics.aqwv(
                     retrieved_doc_ids,
                     relevant_doc_ids,
-                    0.5,
+                    beta=40.0,
                     collection_size=collection_size,
                 ),
             }
@@ -180,7 +180,7 @@ class RAGEvaluationClient:
 
         # Calculate AQWV
         aqwv = RetrievalMetrics.aqwv(
-            retrieved_doc_ids, relevant_doc_ids, 0.5, collection_size=collection_size
+            retrieved_doc_ids, relevant_doc_ids, beta=40.0, collection_size=collection_size
         )
 
         return {
@@ -321,9 +321,9 @@ class RAGEvaluationClient:
         # Get collection size for AQWV calculation
         collection_size = len(dataset.docs)
 
-        # Store data for MAP calculation
-        all_retrieved_docs = []
-        all_relevant_docs = []
+        # Store data for MAP calculation (per-query lists)
+        retrieved_docs_per_query = []
+        relevant_docs_per_query = []
 
         for i, (_, query) in enumerate(
             tqdm(queries_df.iterrows(), total=total_queries)
@@ -361,8 +361,8 @@ class RAGEvaluationClient:
             ]
 
             # Store for MAP calculation
-            all_retrieved_docs.append(retrieved_doc_ids_for_eval)
-            all_relevant_docs.append(relevant_doc_ids)
+            retrieved_docs_per_query.append(retrieved_doc_ids_for_eval)
+            relevant_docs_per_query.append(relevant_doc_ids)
 
             # Evaluate retrieval
             retrieval_metrics = self.evaluate_retrieval(
@@ -433,9 +433,9 @@ class RAGEvaluationClient:
             )
             logger.info(f"  Response time: {response_time:.2f}s")
 
-        # Calculate MAP across all queries
+        # Calculate MAP across all queries (global corpus-level metric)
         map_score = RetrievalMetrics.mean_average_precision(
-            all_retrieved_docs, all_relevant_docs
+            retrieved_docs_per_query, relevant_docs_per_query
         )
         results["retrieval_metrics"]["map"] = map_score
 
