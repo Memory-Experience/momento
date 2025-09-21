@@ -140,3 +140,50 @@ class RetrievalMetrics:
             return 0.0
 
         return dcg / idcg
+
+    @staticmethod
+    def aqwv(
+        retrieved_docs: list[str],
+        relevant_docs: list[str],
+        threshold: float,
+        beta: float = 40.0,
+        collection_size: int = 1000,
+    ) -> float:
+        """Calculate Average Query Weighted Value (AQWV).
+        
+        AQWV = 1 - pMiss - β * pFA
+        
+        Args:
+            retrieved_docs: List of retrieved document IDs in rank order
+            relevant_docs: List of relevant document IDs
+            threshold: Decision threshold (not used in this simplified version)
+            beta: Weight factor for false alarms (default: 40.0 from MATERIAL)
+            collection_size: Total size of document collection
+            
+        Returns:
+            AQWV score
+        """
+        if not relevant_docs:
+            # If no relevant docs exist for this query, pMiss = 0
+            # Only false alarms matter
+            num_false_alarms = len(retrieved_docs)
+            p_fa = num_false_alarms / collection_size if collection_size > 0 else 0.0
+            return 1.0 - beta * p_fa
+        
+        # Convert to sets for efficient operations
+        retrieved_set = set(retrieved_docs)
+        relevant_set = set(relevant_docs)
+        
+        # Calculate misses and false alarms
+        true_positives = len(retrieved_set.intersection(relevant_set))
+        num_misses = len(relevant_set) - true_positives
+        num_false_alarms = len(retrieved_set) - true_positives
+        
+        # Calculate rates
+        p_miss = num_misses / len(relevant_set)
+        p_fa = num_false_alarms / (collection_size - len(relevant_set)) if (collection_size - len(relevant_set)) > 0 else 0.0
+        
+        # Calculate AQWV
+        aqwv = 1.0 - p_miss - beta * p_fa
+        
+        return aqwv
