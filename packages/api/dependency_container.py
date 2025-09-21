@@ -16,6 +16,7 @@ from api.models.spacy_sentence_chunker import SpacySentenceChunker
 from api.models.llm.qwen3 import Qwen3
 from api.models.embedding.qwen3_embedding import Qwen3EmbeddingModel
 from api.models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
+from api.models.transcription.transcriber_interface import TranscriberInterface
 
 
 RECORDINGS_DIR = "recordings"
@@ -31,7 +32,7 @@ class Container:
     persistence: PersistenceService
     rag: LLMRAGService
     threshold_filter: ThresholdFilterService
-    transcriber: FasterWhisperTranscriber
+    transcriber: TranscriberInterface
 
     sample_rate: int = SAMPLE_RATE
     recordings_dir: str = RECORDINGS_DIR
