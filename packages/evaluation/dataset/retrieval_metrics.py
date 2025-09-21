@@ -145,7 +145,6 @@ class RetrievalMetrics:
     def aqwv(
         retrieved_docs: list[str],
         relevant_docs: list[str],
-        threshold: float,
         beta: float = 40.0,
         collection_size: int = -1,
     ) -> float:
@@ -156,7 +155,6 @@ class RetrievalMetrics:
         Args:
             retrieved_docs: List of retrieved document IDs in rank order
             relevant_docs: List of relevant document IDs
-            threshold: Decision threshold (not used in this simplified version)
             beta: Weight factor for false alarms (default: 40.0 from MATERIAL)
             collection_size: Total size of document collection
 
