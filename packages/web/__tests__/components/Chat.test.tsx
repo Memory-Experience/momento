@@ -3,11 +3,18 @@ import { render, screen } from "@testing-library/react";
 import Chat from "@/components/Chat";
 
 describe("Chat", () => {
-  it("renders Chat component", () => {
+  it("renders a Chat component with textbox and buttons", () => {
     render(<Chat />);
 
-    const chat = screen.getByText("Chat component");
+    const textarea = screen.getByRole("textbox");
 
-    expect(chat).toBeInTheDocument();
+    expect(textarea).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Dictate" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Ask Question" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Save Memory" }),
+    ).toBeInTheDocument();
   });
 });

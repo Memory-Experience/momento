@@ -2,7 +2,7 @@ import { FC } from "react";
 
 const Header: FC = () => {
   return (
-    <header className="flex items-center justify-between p-4 shadow-md">
+    <header className="flex p-4 shadow-md">
       <h1 className="text-lg font-bold">Momento</h1>
     </header>
   );
