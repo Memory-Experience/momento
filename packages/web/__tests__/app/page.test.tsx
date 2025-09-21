@@ -1,13 +1,21 @@
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import Page from "../../app/page";
+import Chat from "../../components/Chat";
+
+jest.mock("../../components/Chat", () => {
+  return jest.fn(() => <h1>Chat Component</h1>);
+});
 
 describe("Page", () => {
-  it("renders a Next.js image", () => {
+  it("renders Chat component", () => {
     render(<Page />);
 
-    const image = screen.getByRole("img", { name: "Next.js logo" });
+    const chatComponent = screen.getByRole("heading", {
+      name: "Chat Component",
+    });
 
-    expect(image).toBeInTheDocument();
+    expect(chatComponent).toBeInTheDocument();
+    expect(Chat).toHaveBeenCalledTimes(1);
   });
 });
