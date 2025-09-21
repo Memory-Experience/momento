@@ -102,7 +102,7 @@ class RAGEvaluationClient:
         retrieved_doc_ids: list[str],
         relevant_doc_ids: list[str],
         relevance_scores: dict[str, float] | None = None,
-        collection_size: int=-1,
+        collection_size: int = -1,
     ) -> dict:
         """Evaluate retrieval performance using standard IR metrics.
 
@@ -129,7 +129,12 @@ class RAGEvaluationClient:
                 "mrr": 0,
                 "ndcg@3": 0,
                 "ndcg@5": 0,
-                "aqwv": RetrievalMetrics.aqwv(retrieved_doc_ids, relevant_doc_ids, 0.5, collection_size=collection_size),
+                "aqwv": RetrievalMetrics.aqwv(
+                    retrieved_doc_ids,
+                    relevant_doc_ids,
+                    0.5,
+                    collection_size=collection_size,
+                ),
             }
 
         # Get binary relevance scores if not provided
@@ -174,7 +179,9 @@ class RAGEvaluationClient:
         ndcg_at_5 = RetrievalMetrics.ndcg_at_k(retrieved_doc_ids, relevance_scores, 5)
 
         # Calculate AQWV
-        aqwv = RetrievalMetrics.aqwv(retrieved_doc_ids, relevant_doc_ids, 0.5, collection_size=collection_size)
+        aqwv = RetrievalMetrics.aqwv(
+            retrieved_doc_ids, relevant_doc_ids, 0.5, collection_size=collection_size
+        )
 
         return {
             "precision": precision,
@@ -428,8 +435,7 @@ class RAGEvaluationClient:
 
         # Calculate MAP across all queries
         map_score = RetrievalMetrics.mean_average_precision(
-            all_retrieved_docs, 
-            all_relevant_docs
+            all_retrieved_docs, all_relevant_docs
         )
         results["retrieval_metrics"]["map"] = map_score
 
