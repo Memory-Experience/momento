@@ -102,6 +102,7 @@ class RAGEvaluationClient:
         retrieved_doc_ids: list[str],
         relevant_doc_ids: list[str],
         relevance_scores: dict[str, float] | None = None,
+        collection_size: int=-1,
     ) -> dict:
         """Evaluate retrieval performance using standard IR metrics.
 
@@ -110,6 +111,7 @@ class RAGEvaluationClient:
                 (in rank order)
             relevant_doc_ids: List of document IDs known to be relevant
             relevance_scores: Optional mapping of doc_id to relevance score
+            collection_size: Total size of document collection for AQWV
 
         Returns:
             Dictionary of retrieval metrics
@@ -127,6 +129,7 @@ class RAGEvaluationClient:
                 "mrr": 0,
                 "ndcg@3": 0,
                 "ndcg@5": 0,
+                "aqwv": RetrievalMetrics.aqwv(retrieved_doc_ids, relevant_doc_ids, 0.5, collection_size=collection_size),
             }
 
         # Get binary relevance scores if not provided
@@ -170,6 +173,9 @@ class RAGEvaluationClient:
         ndcg_at_3 = RetrievalMetrics.ndcg_at_k(retrieved_doc_ids, relevance_scores, 3)
         ndcg_at_5 = RetrievalMetrics.ndcg_at_k(retrieved_doc_ids, relevance_scores, 5)
 
+        # Calculate AQWV
+        aqwv = RetrievalMetrics.aqwv(retrieved_doc_ids, relevant_doc_ids, 0.5, collection_size=collection_size)
+
         return {
             "precision": precision,
             "recall": recall,
@@ -185,6 +191,7 @@ class RAGEvaluationClient:
             "retrieved_count": len(retrieved_set),
             "relevant_count": len(relevant_set),
             "true_positives": true_positives,
+            "aqwv": aqwv,
         }
 
     # evaluate generation
@@ -287,6 +294,7 @@ class RAGEvaluationClient:
                 "retrieved_count": 0,
                 "relevant_count": 0,
                 "true_positives": 0,
+                "aqwv": 0,
             },
             "generation_metrics": {
                 "exact_match": 0,
@@ -301,6 +309,9 @@ class RAGEvaluationClient:
             "response_times": [],
             "total_docs_streamed": len(dataset.docs),
         }
+
+        # Get collection size for AQWV calculation
+        collection_size = len(dataset.docs)
 
         for i, (_, query) in enumerate(
             tqdm(queries_df.iterrows(), total=total_queries)
@@ -342,6 +353,7 @@ class RAGEvaluationClient:
                 retrieved_doc_ids_for_eval,  # <- mapped to dataset doc IDs
                 relevant_doc_ids,
                 relevance_scores,
+                collection_size=collection_size,
             )
 
             # Evaluate generation (using gold answers if available)
@@ -391,10 +403,11 @@ class RAGEvaluationClient:
                 f"Processed query {i + 1}/{total_queries}: {query_text[:50]}..."
             )
             logger.info(
-                "  Precision: %.2f, Recall: %.2f, F1: %.2f",
+                "  Precision: %.2f, Recall: %.2f, F1: %.2f, AQWV: %.2f",
                 retrieval_metrics["precision"],
                 retrieval_metrics["recall"],
                 retrieval_metrics["f1"],
+                retrieval_metrics["aqwv"],
             )
             logger.info(
                 "  P@1: %.2f, P@5: %.2f, MRR: %.2f",
