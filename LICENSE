@@ -200,10 +200,30 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 
----
+## NOTICE REGARDING THIRD-PARTY COMPONENTS
 
-NOTICE REGARDING THIRD-PARTY COMPONENTS
+### SimulStreaming Backend License
 
+**When using the SimulStreaming backend (SimulWhisper), additional licensing terms apply:**
+
+SimulStreaming (https://github.com/ufal/SimulStreaming) is dual-licensed:
+
+#### 🔹 Non-Commercial Use
+You may use SimulStreaming under the **PolyForm Noncommercial License 1.0.0** if you obtain the code through the GitHub repository. This license is **free of charge** and comes with **no obligations** for non-commercial users.
+
+#### 🔸 Commercial Use
+Understanding who uses SimulStreaming commercially helps improve and prioritize development. Therefore, **registration is required** for those who acquire a commercial license.
+
+Commercial licenses are planned to be **affordable** to SMEs and individuals. They are considering providing commercial licenses either for free or for a symbolic one-time fee, and may also provide additional support. You can share your preference via the [questionnaire](https://forms.cloud.microsoft.com/e/7tCxb4gJfB).
+
+You can also leave your contact [there](https://forms.cloud.microsoft.com/e/7tCxb4gJfB) to be notified when commercial licenses become available.
+
+**Contact for SimulStreaming licensing:**  
+[Dominik Macháček](https://ufal.mff.cuni.cz/dominik-machacek/), machacek@ufal.mff.cuni.cz
+
+> Required Notice: Copyright Yoyodyne, Inc. (http://example.com)
+
+## TimelineQA Evaluation Dataset
 This project uses TimelineQA solely for evaluation purposes.
 
 TimelineQA is licensed under the Creative Commons Attribution-NonCommercial
@@ -213,11 +233,11 @@ You may obtain a copy of the license at:
 
 Copyright © Meta Platforms, Inc. and affiliates (Facebook Research)
 
-Only the evaluation functionality of this project uses TimelineQA. 
+The evaluation pipeline of this project uses TimelineQA. 
 The TimelineQA code has been edited to be used directly as python
 function instead of only as a command line interface.
 
 Accordingly, while the original portions of this project are licensed under the Apache
 License, Version 2.0 and may be used for commercial purposes, running the
-evaluation component that uses TimelineQA is subject to the CC BY-NC 4.0
+evaluation component and its results that use TimelineQA are subject to the CC BY-NC 4.0
 license and may not be used for commercial purposes.
