@@ -4,7 +4,7 @@ Protocol Buffer definitions and code generation for the speech transcription gRP
 
 ## Getting Started
 
-**Prerequisites**: Complete the setup steps in the [root README Prerequisites section](../../README.md#prerequisites) first and follow the steps to install dependencies in the [root README Quick Start section](../../README.md#quick-start).
+**Prerequisites**: Complete the setup steps in the [root README Prerequisites section](https://github.com/Memory-Experience/momento/blob/main/README.md#prerequisites) and follow the steps to install dependencies and protocol buffer definitions in the [root README Quick Start section](https://github.com/Memory-Experience/momento/blob/main/README.md#quick-start).
 
 ### Generate Protocol Buffer Code
 
@@ -31,7 +31,7 @@ This command executes the following steps:
 - **Python**: Use `uv add` to manage Python dependencies
 - **Node.js**: Use `pnpm add` or `pnpm install` to manage Node.js packages
 
-See [`pyproject.toml`](pyproject.toml) and [`package.json`](package.json) for complete dependency lists.
+See [`pyproject.toml`](https://github.com/Memory-Experience/momento/blob/main/packages/protos/pyproject.toml) and [`package.json`](https://github.com/Memory-Experience/momento/blob/main/packages/protos/package.json) for complete dependency lists.
 
 ### Available Scripts
 
@@ -60,7 +60,7 @@ uvx ruff check        # Lint Python code
 uvx ruff check --fix  # Lint and automatically fix issues
 ```
 
-For complete script details, see [`package.json`](package.json).
+For complete script details, see [`package.json`](https://github.com/Memory-Experience/momento/blob/main/packages/protos/package.json).
 
 ### Generated Code
 
@@ -79,10 +79,19 @@ from protos.generated.py import stt_pb2, stt_pb2_grpc
 # Create a gRPC stub
 stub = stt_pb2_grpc.TranscriptionServiceStub(channel)
 
-# Create message instances
-audio_chunk = stt_pb2.AudioChunk(data=audio_bytes)
-response = stt_pb2.StreamResponse(
-    transcript=stt_pb2.Transcript(text="Hello world")
+# Create a MemoryChunk message
+memory_chunk = stt_pb2.MemoryChunk(audio_data=audio_bytes)
+
+# Create a response message
+response = stt_pb2.MemoryChunk(
+    text_data=str,
+    metadata=stt_pb2.ChunkMetadata(
+        session_id=str,
+        memory_id=str,
+        type=stt_pb2.ChunkType.TRANSCRIPT,
+        is_final=bool,
+        score=float
+    )
 )
 ```
 
@@ -90,12 +99,14 @@ response = stt_pb2.StreamResponse(
 
 ```typescript
 // Import generated types
-import { AudioChunk, StreamResponse } from "./generated/ts/stt";
+import { MemoryChunk, ChunkMetadata, ChunkType } from "./generated/ts/stt";
 
 // Import gRPC-Web client
 import { TranscriptionServiceClient } from "./generated/ts/clients/stt";
 
 // Create client and message
 const client = new TranscriptionServiceClient("http://localhost:8080");
-const audioChunk = AudioChunk.create({ data: new Uint8Array(audioData) });
+const audioChunk = MemoryChunk.create({
+  audio_data: new Uint8Array(audioData),
+});
 ```

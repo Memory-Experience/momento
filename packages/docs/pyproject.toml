@@ -1,0 +1,21 @@
+[project]
+name = "docs"
+version = "0.1.0"
+description = "This is the documentation of the momento project"
+readme = "README.md"
+requires-python = ">=3.12"
+
+[dependency-groups]
+dev = [
+    "mkdocs>=1.6.1",
+    "mkdocs-autoapi>=0.4.1",
+    "mkdocs-autorefs>=1.4.3",
+    "mkdocstrings[python]>=0.30.0",
+    "pymdown-extensions>=10.16.1",
+]
+
+[tool.setuptools]
+packages = ["docs"]
+
+[tool.setuptools.package-dir]
+docs = "."
