@@ -1,6 +1,6 @@
-# API Package
+# Evaluation Package
 
-A Python-based gRPC server providing real-time speech transcription services using Faster Whisper and Protocol Buffers for efficient communication.
+A python based evaluation runner providing a Dataset interface with which the runner can evaluate the backend API package.
 
 ## Getting Started
 
@@ -9,20 +9,18 @@ A Python-based gRPC server providing real-time speech transcription services usi
 ### Start the Server
 
 ```bash
-cd packages/api
+cd packages/evaluation
 pnpm run start
 
 # Alternative: run directly with uv
 uv run main.py
 ```
 
-The gRPC server will start on `localhost:50051` ready to accept requests.
-
 ## Development
 
 ### Managing Dependencies
 
-Use `uv add` to add new Python dependencies, which automatically updates both the local [`pyproject.toml`](https://github.com/Memory-Experience/momento/blob/main/packages/api/pyproject.toml) and the workspace [`pyproject.toml`](https://github.com/Memory-Experience/momento/blob/main/pyproject.toml):
+Use `uv add` to add new Python dependencies, which automatically updates both the local [`pyproject.toml`](https://github.com/Memory-Experience/momento/blob/main/packages/evaluation/pyproject.toml) and the workspace [`pyproject.toml`](https://github.com/Memory-Experience/momento/blob/main/pyproject.toml):
 
 ```bash
 # Add a new dependency
@@ -47,10 +45,10 @@ pnpm run test         # Run pytest with uv (Python 3.12)
 pnpm run test:ci      # Quiet test run for CI
 
 # Filter tests
-pnpm run test -- -k persistence
+pnpm run test -- -k dataset
 
 # Run a single file
-pnpm run test -- tests/test_persistence_service.py -q
+pnpm run test -- tests/test_dataset.py -q
 ```
 
 **Code Quality:**

@@ -1,0 +1,1 @@
+--8<-- "packages/protos/README.md"
