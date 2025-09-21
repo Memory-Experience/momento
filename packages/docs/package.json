@@ -1,0 +1,14 @@
+{
+  "name": "docs",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "pnpm typedoc && uv run mkdocs build",
+    "start": "uv run mkdocs serve"
+  },
+  "dependencies": {
+    "web": "workspace:*",
+    "typedoc": "^0.28.13",
+    "typedoc-plugin-markdown": "^4.9.0"
+  }
+}

@@ -4,6 +4,8 @@ theme:
   logo: assets/logo.png
 extra_css:
   - assets/style.css
+docs_dir: src
+site_dir: site
 plugins:
   - search
   - autorefs
@@ -11,10 +13,7 @@ plugins:
       handlers:
         python:
           paths:
-            - packages
-          setup_commands:
-            - import os, sys
-            - sys.path.insert(0, os.path.abspath("packages"))
+            - ..
           options:
             show_submodules: true
             docstring_style: google
@@ -22,7 +21,9 @@ plugins:
             members_order: source
             filters: ["!^_"]
 markdown_extensions:
-  - pymdownx.snippets
+  - pymdownx.snippets:
+      base_path: ../..
+      check_paths: false
 nav:
   - Overview: index.md
   - Python Backend:

@@ -1,0 +1,7 @@
+{
+  "entryPoints": ["../web/public-api.ts"],
+  "plugin": ["typedoc-plugin-markdown"],
+  "out": "src/web/ts",
+  "excludePrivate": true,
+  "tsconfig": "../web/tsconfig.json",
+}
