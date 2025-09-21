@@ -54,16 +54,10 @@ jobs:
       - name: Build project
         run: pnpm run build
 
-      - name: Build TypeScript docs
-        run: pnpm typedoc
-
-      - name: Build MkDocs site
-        run: uv run mkdocs build
-
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: site
+          path: packages/docs/site
 
       - name: Deploy to GitHub Pages
         uses: actions/deploy-pages@v4
