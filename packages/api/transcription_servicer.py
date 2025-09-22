@@ -18,6 +18,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
         self.threshold_filter_service = container.threshold_filter
         self.persistence_service = container.persistence
         self.sample_rate = container.sample_rate
+        self.retrieval_limit = container.retrieval_limit
 
     async def Transcribe(self, request_iterator, context):
         """Bidirectional streaming RPC for audio transcription."""
@@ -189,7 +190,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
 
         # Get memory context
         memory_context = await self.vector_store_service.search(
-            question_memory, limit=5
+            question_memory, limit=self.retrieval_limit
         )
 
         # Apply threshold filtering for better precision

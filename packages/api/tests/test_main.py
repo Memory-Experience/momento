@@ -4,6 +4,7 @@ import pytest
 
 import api.main as main
 from api.domain.memory_context import MemoryContext
+from api.dependency_container import RETRIEVAL_LIMIT
 from protos.generated.py.stt_pb2 import ChunkMetadata, ChunkType, MemoryChunk
 
 
@@ -21,6 +22,7 @@ class DummyContainer:
     threshold_filter: object
     sample_rate: int = 16000
     recordings_dir: str = "recordings"
+    retrieval_limit: int = RETRIEVAL_LIMIT
 
 
 @pytest.fixture

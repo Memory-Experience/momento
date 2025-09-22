@@ -20,6 +20,7 @@ from api.models.transcription.faster_whisper_transcriber import FasterWhisperTra
 
 RECORDINGS_DIR = "recordings"
 SAMPLE_RATE = 16000
+RETRIEVAL_LIMIT = 2
 
 
 @dataclass
@@ -34,12 +35,14 @@ class Container:
 
     sample_rate: int = SAMPLE_RATE
     recordings_dir: str = RECORDINGS_DIR
+    retrieval_limit: int = RETRIEVAL_LIMIT
 
     @classmethod
     def create(
         cls,
         sample_rate: int = SAMPLE_RATE,
         recordings_dir: str = RECORDINGS_DIR,
+        retrieval_limit: int = RETRIEVAL_LIMIT,
     ) -> "Container":
         # Transcriber
         transcriber = FasterWhisperTranscriber()
@@ -75,4 +78,5 @@ class Container:
             transcriber=transcriber,
             sample_rate=sample_rate,
             recordings_dir=recordings_dir,
+            retrieval_limit=retrieval_limit,
         )
