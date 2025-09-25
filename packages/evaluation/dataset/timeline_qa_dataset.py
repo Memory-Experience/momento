@@ -1,7 +1,8 @@
 import json
 import hashlib
 import logging
-from typing import Dict, Tuple, Iterable, Any
+from typing import Any
+from collections.abc import Iterable
 
 import pandas as pd
 
@@ -15,7 +16,7 @@ def _safe_id(s: str, prefix: str = "") -> str:
     return f"{prefix}{h}" if prefix else h
 
 
-def _iter_lifelog_events(llqa: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
+def _iter_lifelog_events(llqa: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """
     Yield flattened LifelogQA events with keys:
       - date (str)
@@ -43,17 +44,17 @@ def _iter_lifelog_events(llqa: Dict[str, Any]) -> Iterable[Dict[str, Any]]:
 
 
 def _convert_lifelogqa_to_dataframes(
-    llqa: Dict[str, Any],
-) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    llqa: dict[str, Any],
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Convert a LifelogQA json dict to MS MARCO-like DataFrames:
       - docs_df:    ['id', 'content']
       - queries_df: ['id', 'text']
       - qrels_df:   ['query_id', 'doc_id', 'relevance']
     """
-    # 1) Documents: one per event (always keep, even if empty)
+    # 1) Documents: one per event
     docs_rows = []
-    event_index: Dict[str, Dict[str, Any]] = {}  # eid -> event info
+    event_index: dict[str, dict[str, Any]] = {}  # eid -> event info
     for ev in _iter_lifelog_events(llqa):
         doc_id = ev["eid"]
         docs_rows.append({"id": doc_id, "content": ev["text"]})
@@ -61,7 +62,8 @@ def _convert_lifelogqa_to_dataframes(
 
     docs_df = pd.DataFrame(docs_rows, columns=["id", "content"])
 
-    # 2) Queries: one per atomic QA question; 3) Qrels: link to source doc with relevance=1
+    # 2) Queries: one per atomic QA question; 3) Qrels:
+    #   link to source doc with relevance=1
     queries_rows = []
     qrels_rows = []
 
@@ -112,7 +114,7 @@ class LifelogQADataset(DataFrameDataset):
         ds = LifelogQADataset.generate(seed=42, ...)
     """
 
-    def __init__(self, data: Dict[str, Any], name: str = "LifelogQA"):
+    def __init__(self, data: dict[str, Any], name: str = "LifelogQA"):
         """
         Initialize the LifelogQA dataset adapter.
 
@@ -135,7 +137,7 @@ class LifelogQADataset(DataFrameDataset):
     @classmethod
     def from_file(cls, path: str, **_: Any) -> "LifelogQADataset":
         """Convenience constructor from a JSON file path."""
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
         return cls(data=data)
 
