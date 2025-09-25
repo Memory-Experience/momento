@@ -13,10 +13,11 @@ from api.vector_store.repositories.qdrant_vector_store_repository import (
 from api.vector_store.repositories.vector_store_repository_interface import (
     VectorStoreRepository,
 )
-from api.models.spacy_sentence_chunker import SpacySentenceChunker
 from api.models.embedding.qwen3_embedding import Qwen3EmbeddingModel
 
 import gc
+
+from baseline.dummy_text_chunker import DummyTextChunker
 
 
 # Configure logging
@@ -29,7 +30,7 @@ logger = logging.getLogger(__name__)
 class DatasetLoader:
     def _create_vector_store_service(dataset_folder) -> VectorStoreService:
         embedding_model = Qwen3EmbeddingModel()
-        text_chunker = SpacySentenceChunker()
+        text_chunker = DummyTextChunker()
         vector_store_repo: VectorStoreRepository = LocalFileQdrantVectorStoreRepository(
             embedding_model, text_chunker, dataset_folder
         )

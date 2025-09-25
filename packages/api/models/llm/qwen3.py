@@ -60,6 +60,8 @@ They are here to demonstrate the answering format.
 Ignore all example blocks when generating an answer. 
 Only use memory JSONs that appear after this point and outside of <examples>
 </examples>
+
+/nothink
 """
 
     def __init__(
