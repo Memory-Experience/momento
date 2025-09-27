@@ -12,14 +12,17 @@ from .cross_encoder_scorer import CrossEncoderScorer
 class GenerationMetrics:
     _ARTICLES = {"a", "an", "the"}
     _PUNCT_TABLE = str.maketrans("", "", string.punctuation)
+    _THINKING_TRACE_END_TAG = "</think>"
+    _SOURCE_TAG_PATTERN = r"<source>.*?</source>"
 
     @staticmethod
     def _normalize(text: str) -> str:
         if text is None:
             return ""
-        end_idx = text.find("</think>")
+        end_idx = text.find(GenerationMetrics._THINKING_TRACE_END_TAG)
         if end_idx != -1:
-            text = text[end_idx + len("</think>") :]
+            text = text[end_idx + len(GenerationMetrics._THINKING_TRACE_END_TAG) :]
+        text = re.sub(GenerationMetrics._SOURCE_TAG_PATTERN, "", text, flags=re.DOTALL)
         text = text.lower()
         text = text.translate(GenerationMetrics._PUNCT_TABLE)
         text = re.sub(r"\s+", " ", text).strip()
@@ -224,7 +227,7 @@ class GenerationMetrics:
             return 0.0
 
         # Get embeddings concurrently
-        ans_vec_task = await embedder.embed_text(answer or "")
+        ans_vec_task = await embedder.embed_text(GenerationMetrics._normalize(answer) or "")
         gold_vec_tasks = [await embedder.embed_text(g or "") for g in gold_answers]
 
         ans_vec = np.array(ans_vec_task, dtype=float)
@@ -260,4 +263,4 @@ class GenerationMetrics:
         if not gold_answers:
             return 0.0
         # Synchronous call (wrapper handles async under the hood)
-        return await scorer.best_of(answer or "", gold_answers, reduction=reduction)
+        return await scorer.best_of(GenerationMetrics._normalize(answer) or "", gold_answers, reduction=reduction)
