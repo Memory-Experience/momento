@@ -5,6 +5,7 @@ from collections import Counter
 import numpy as np
 
 from api.models.embedding.embedding_model_interface import EmbeddingModel
+from .cross_encoder_scorer import CrossEncoderScorer
 
 
 # Generation metrics
@@ -199,7 +200,7 @@ class GenerationMetrics:
         }
 
     @staticmethod
-    async def sbert_similarity_async(
+    async def sbert_similarity(
         answer: str,
         gold_answers: list[str],
         embedder: EmbeddingModel,
@@ -242,3 +243,21 @@ class GenerationMetrics:
         if reduction == "mean":
             return float(np.mean(sims))
         return float(np.max(sims))
+
+    @staticmethod
+    async def cross_encoder_similarity(
+        answer: str,
+        gold_answers: list[str],
+        scorer: CrossEncoderScorer,
+        reduction: str = "max",  # "max" or "mean"
+    ) -> float:
+        """
+        Score semantic similarity/relevance between `answer` and `gold_answers`
+        using a cross-encoder (e.g., 'cross-encoder/ms-marco-MiniLM-L-6-v2').
+
+        Returns a single float (max or mean across gold answers).
+        """
+        if not gold_answers:
+            return 0.0
+        # Synchronous call (wrapper handles async under the hood)
+        return await scorer.best_of(answer or "", gold_answers, reduction=reduction)
