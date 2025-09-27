@@ -142,7 +142,7 @@ class RAGEvaluationClient:
             }
 
         # Get binary relevance scores if not provided
-        if relevance_scores is None:
+        if not relevance_scores:
             relevance_scores = {doc_id: 1.0 for doc_id in relevant_doc_ids}
 
         # Calculate standard set-based metrics
@@ -475,6 +475,7 @@ class RAGEvaluationClient:
             query_result = {
                 "query_id": query_id,
                 "query_text": query_text,
+                "gold_answers": gold_answers,
                 "retrieved_docs": retrieved_docs,  # keyed by memory_id
                 "retrieved_doc_ids_ordered": retrieved_doc_ids_ordered,
                 "retrieved_doc_ids_for_eval": retrieved_doc_ids_for_eval,
