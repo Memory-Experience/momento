@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-from typing import List, Optional, Sequence, Tuple
+from collections.abc import Sequence
 
 import numpy as np
 
 from sentence_transformers import CrossEncoder
+
 
 class CrossEncoderScorer:
     """
@@ -21,9 +22,9 @@ class CrossEncoderScorer:
     def __init__(
         self,
         model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2",
-        device: Optional[str] = None,   # "cuda", "mps", or "cpu"
-        max_length: int = 512,          # token budget for each pair
-        normalize: Optional[str] = None # None | "sigmoid" | "zscore"
+        device: str | None = None,  # "cuda", "mps", or "cpu"
+        max_length: int = 512,  # token budget for each pair
+        normalize: str | None = None,  # None | "sigmoid" | "zscore"
     ) -> None:
         self._model = CrossEncoder(model_name, device=device, max_length=max_length)
         self._normalize = normalize
@@ -38,10 +39,11 @@ class CrossEncoderScorer:
         sd = float(np.std(x)) or 1.0
         return (x - mu) / sd
 
-    async def score_pairs(self, pairs: Sequence[Tuple[str, str]]) -> List[float]:
+    async def score_pairs(self, pairs: Sequence[tuple[str, str]]) -> list[float]:
         """
         Score a batch of (text_a, text_b) pairs asynchronously.
         """
+
         def _predict_sync() -> np.ndarray:
             scores = self._model.predict(pairs, show_progress_bar=False)
             # CrossEncoder returns np.ndarray of shape (N,) or (N, 1)
@@ -59,7 +61,7 @@ class CrossEncoderScorer:
         self,
         text: str,
         candidates: Sequence[str],
-        reduction: str = "max"  # "max" or "mean"
+        reduction: str = "max",  # "max" or "mean"
     ) -> float:
         if not candidates:
             return 0.0
