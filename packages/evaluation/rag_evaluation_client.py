@@ -12,6 +12,8 @@ from protos.generated.py import stt_pb2
 from tqdm import tqdm
 
 from api.transcription_servicer import TranscriptionServiceServicer
+from api.models.embedding.embedding_model_interface import EmbeddingModel
+from api.models.embedding.sbert_embedding import SBertEmbeddingModel
 
 
 # Configure logging
@@ -252,7 +254,7 @@ class RAGEvaluationClient:
         }
 
     # evaluate generation
-    def evaluate_generation(
+    async def evaluate_generation(
         self,
         answer: str,
         query_text: str,
@@ -295,6 +297,11 @@ class RAGEvaluationClient:
             top_k_docs=top_k_docs_for_faithfulness,
         )
 
+        sbert_model: EmbeddingModel = SBertEmbeddingModel()
+        sbert_similarity = await GenerationMetrics.sbert_similarity_async(
+            answer, gold_answers, sbert_model
+        )
+
         return {
             "exact_match": em,
             "f1": f1,
@@ -304,6 +311,7 @@ class RAGEvaluationClient:
             "support_density": faith["support_density"],
             "hallucination_rate": faith["hallucination_rate"],
             "answer_len_tokens": len(GenerationMetrics._tokens(answer)),
+            "sbert_similarity": sbert_similarity,
         }
 
     async def run_evaluation(
@@ -376,6 +384,7 @@ class RAGEvaluationClient:
                 "support_density": 0,
                 "hallucination_rate": 0,
                 "answer_len_tokens": 0,
+                "sbert_similarity": 0,
             },
             "response_times": [],
             "total_docs_streamed": len(dataset.docs),
@@ -446,7 +455,7 @@ class RAGEvaluationClient:
                     gold_answers = [str(val)]
             elif "answer" in queries_df.columns and pd.notna(query.get("answer")):
                 gold_answers = [str(query["answer"])]
-            generation_metrics = self.evaluate_generation(
+            generation_metrics = await self.evaluate_generation(
                 answer,
                 query_text,
                 gold_answers,

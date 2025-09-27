@@ -2,6 +2,10 @@ import re
 import string
 from collections import Counter
 
+import numpy as np
+
+from api.models.embedding.embedding_model_interface import EmbeddingModel
+
 
 # Generation metrics
 class GenerationMetrics:
@@ -193,3 +197,48 @@ class GenerationMetrics:
             "support_density": support_density,
             "hallucination_rate": hallucination_rate,
         }
+
+    @staticmethod
+    async def sbert_similarity_async(
+        answer: str,
+        gold_answers: list[str],
+        embedder: EmbeddingModel,
+        reduction: str = "max",  # "max" or "mean"
+    ) -> float:
+        """
+        Compute SBERT cosine similarity between 
+        the generated answer and the gold answers.
+
+        Args:
+            answer: Generated answer string.
+            gold_answers: List of reference answers.
+            embedder: An EmbeddingModel (e.g., SbertEmbeddingModel).
+            reduction: How to combine multiple similarities: "max" (default) or "mean".
+
+        Returns:
+            Cosine similarity in [-1.0, 1.0]. If embeddings were normalized,
+                it's in [-1, 1], and typically in [0, 1] for natural language pairs.
+        """
+        if not gold_answers:
+            return 0.0
+
+        # Get embeddings concurrently
+        ans_vec_task = await embedder.embed_text(answer or "")
+        gold_vec_tasks = [await embedder.embed_text(g or "") for g in gold_answers]
+
+        ans_vec = np.array(ans_vec_task, dtype=float)
+        gold_vecs = [np.array(t, dtype=float) for t in gold_vec_tasks]
+
+        # Cosine similarity. If vectors are normalized, this is a dot product.
+        def _cos(u: np.ndarray, v: np.ndarray) -> float:
+            # Stable cosine even if not normalized in the embedder
+            u_norm = np.linalg.norm(u)
+            v_norm = np.linalg.norm(v)
+            if u_norm == 0.0 or v_norm == 0.0:
+                return 0.0
+            return float(np.dot(u, v) / (u_norm * v_norm))
+
+        sims = [_cos(ans_vec, gv) for gv in gold_vecs]
+        if reduction == "mean":
+            return float(np.mean(sims))
+        return float(np.max(sims))

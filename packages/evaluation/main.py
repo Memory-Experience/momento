@@ -12,6 +12,9 @@ from api.persistence.repositories.in_memory_repository import InMemoryRepository
 from api.rag.llm_rag_service import LLMRAGService
 from api.models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
 from api.models.llm.qwen3 import Qwen3
+from api.models.embedding.embedding_model_interface import EmbeddingModel
+from api.models.embedding.qwen3_embedding import Qwen3EmbeddingModel
+from api.models.embedding.sbert_embedding import SBertEmbeddingModel
 from api.rag.threshold_filter_service import ThresholdFilterService
 
 from baseline.bm25_dataset_loader import BM25DatasetLoader
@@ -64,12 +67,16 @@ async def baseline_configuration(dataset, dataset_dir) -> RAGEvaluationClient:
     return RAGEvaluationClient(servicer, doc_to_memory, memory_to_doc)
 
 
-async def momento_configuration(dataset, dataset_dir) -> RAGEvaluationClient:
+async def momento_configuration(
+    dataset, dataset_dir, embedding: EmbeddingModel
+) -> RAGEvaluationClient:
     (
         vector_store_service,
         doc_to_memory,
         memory_to_doc,
-    ) = await DatasetLoader.create_filled_vector_store_service(dataset, dataset_dir)
+    ) = await DatasetLoader.create_filled_vector_store_service(
+        dataset, dataset_dir, embedding
+    )
 
     transcriber = FasterWhisperTranscriber()
     transcriber.initialize()
@@ -97,7 +104,6 @@ async def momento_configuration(dataset, dataset_dir) -> RAGEvaluationClient:
 async def dataset_configurations() -> AsyncIterator[
     tuple[str, dataset.DataFrameDataset, RAGEvaluationClient]
 ]:
-    # TimelineQA Sparse
     dataset_dir = "runs/timeline_qa_sparse_baseline"
     timeline_qa_sparse = TimelineQADataset.generate(category=0)
 
@@ -136,10 +142,11 @@ async def dataset_configurations() -> AsyncIterator[
 
     dataset_dir = "runs/timeline_qa_sparse_momento"
 
+    qwen3_embedding = Qwen3EmbeddingModel()
     yield (
         dataset_dir,
         timeline_qa_sparse,
-        await momento_configuration(timeline_qa_sparse, dataset_dir),
+        await momento_configuration(timeline_qa_sparse, dataset_dir, qwen3_embedding),
     )
 
     dataset_dir = "runs/ms_marco_small_momento"
@@ -147,7 +154,7 @@ async def dataset_configurations() -> AsyncIterator[
     yield (
         dataset_dir,
         ms_marco_small,
-        await momento_configuration(ms_marco_small, dataset_dir),
+        await momento_configuration(ms_marco_small, dataset_dir, qwen3_embedding),
     )
 
     dataset_dir = "runs/timeline_qa_medium_momento"
@@ -155,15 +162,41 @@ async def dataset_configurations() -> AsyncIterator[
     yield (
         dataset_dir,
         timeline_qa_medium,
-        await momento_configuration(timeline_qa_medium, dataset_dir),
+        await momento_configuration(timeline_qa_medium, dataset_dir, qwen3_embedding),
     )
 
-    dataset_dir = "runs/timeline_qa_dense_momento"
+    # Too big of a dataset
+    # dataset_dir = "runs/timeline_qa_dense_momento"
+
+    # yield (
+    #    dataset_dir,
+    #    timeline_qa_dense,
+    #    await momento_configuration(timeline_qa_dense, dataset_dir, qwen3_embedding),
+    # )
+
+    dataset_dir = "runs/timeline_qa_sparse_sbert"
+
+    sbert_embedding = SBertEmbeddingModel()
+    yield (
+        dataset_dir,
+        timeline_qa_sparse,
+        await momento_configuration(timeline_qa_sparse, dataset_dir, sbert_embedding),
+    )
+
+    dataset_dir = "runs/ms_marco_small_sbert"
 
     yield (
         dataset_dir,
-        timeline_qa_dense,
-        await momento_configuration(timeline_qa_dense, dataset_dir),
+        ms_marco_small,
+        await momento_configuration(ms_marco_small, dataset_dir, sbert_embedding),
+    )
+
+    dataset_dir = "runs/timeline_qa_medium_sbert"
+
+    yield (
+        dataset_dir,
+        timeline_qa_medium,
+        await momento_configuration(timeline_qa_medium, dataset_dir, sbert_embedding),
     )
 
 
