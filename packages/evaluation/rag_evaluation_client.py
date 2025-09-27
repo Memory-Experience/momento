@@ -6,8 +6,8 @@ from typing import Any
 
 import pandas as pd
 from dataset.dataset import DataFrameDataset
-from dataset.generation_metrics import GenerationMetrics
-from dataset.retrieval_metrics import RetrievalMetrics
+from metrics.generation_metrics import GenerationMetrics
+from metrics.retrieval_metrics import RetrievalMetrics
 from protos.generated.py import stt_pb2
 from tqdm import tqdm
 
