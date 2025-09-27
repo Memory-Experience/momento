@@ -14,7 +14,6 @@ from api.models.transcription.faster_whisper_transcriber import FasterWhisperTra
 from api.models.llm.qwen3 import Qwen3
 from api.models.embedding.embedding_model_interface import EmbeddingModel
 from api.models.embedding.qwen3_embedding import Qwen3EmbeddingModel
-from api.models.embedding.sbert_embedding import SBertEmbeddingModel
 from api.rag.threshold_filter_service import ThresholdFilterService
 
 from baseline.bm25_dataset_loader import BM25DatasetLoader
@@ -22,7 +21,6 @@ from baseline.memory_reciter_llm_model import MemoryReciterModel
 
 from rag_evaluation_client import RAGEvaluationClient
 from dataset.marco_dataset import MSMarcoDataset
-from dataset.timeline_qa_dataset import TimelineQADataset
 from dataset import dataset
 from dataset_loader import DatasetLoader
 
@@ -131,7 +129,7 @@ async def dataset_configurations() -> AsyncIterator[
         timeline_qa_dense,
         await baseline_configuration(timeline_qa_dense, dataset_dir),
     )
-    
+
     dataset_dir = "runs/ms_marco_small_baseline"
     ms_marco_small = MSMarcoDataset(limit=LIMIT_DOCS)
 
@@ -149,7 +147,7 @@ async def dataset_configurations() -> AsyncIterator[
         timeline_qa_sparse,
         await momento_configuration(timeline_qa_sparse, dataset_dir, qwen3_embedding),
     )
-"""
+    """
     dataset_dir = "runs/ms_marco_qna_dev_momento"
     ms_marco_small = MSMarcoDataset(limit=100)
     qwen3_embedding = Qwen3EmbeddingModel()

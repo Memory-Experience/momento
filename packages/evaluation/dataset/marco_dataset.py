@@ -58,7 +58,11 @@ def _convert_ms_marco_to_dataframes(ms_marco_dataset, limit: int = 1000):
 
     for query in ms_marco_dataset.queries_iter():
         if query.query_id in needed_query_ids:
-            queries_data.append({"id": query.query_id, "text": query.text, "answer": query.answers})
+            queries_data.append({
+                "id": query.query_id,
+                "text": query.text,
+                "answer": query.answers,
+            })
             found_query_ids.add(query.query_id)
 
         if len(found_query_ids) >= len(needed_query_ids):
