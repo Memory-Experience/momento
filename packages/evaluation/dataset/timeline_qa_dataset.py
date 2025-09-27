@@ -6,8 +6,8 @@ from collections.abc import Iterable
 
 import pandas as pd
 
-from .dataset import DataFrameDataset
-from .timeline_qa import generateDB
+from evaluation.dataset.dataset import DataFrameDataset
+from evaluation.dataset.timeline_qa import generateDB
 
 
 def _safe_id(s: str, prefix: str = "") -> str:
@@ -73,16 +73,17 @@ def _convert_lifelogqa_to_dataframes(
             if not isinstance(pair, (list, tuple)) or len(pair) < 1:
                 continue
             question = str(pair[0]).strip()
+            answer = str(pair[1]).strip() if len(pair) > 1 else ""
             if not question:
                 continue
 
             query_id = f"q_{doc_id}_{idx}"
-            queries_rows.append({"id": query_id, "text": question})
+            queries_rows.append({"id": query_id, "text": question, "answer": answer})
             qrels_rows.append({"query_id": query_id, "doc_id": doc_id, "relevance": 1})
 
-    queries_df = pd.DataFrame(queries_rows, columns=["id", "text"]).drop_duplicates(
-        subset=["id"], keep="first"
-    )
+    queries_df = pd.DataFrame(
+        queries_rows, columns=["id", "text", "answer"]
+    ).drop_duplicates(subset=["id"], keep="first")
     qrels_df = pd.DataFrame(qrels_rows, columns=["query_id", "doc_id", "relevance"])
 
     # Defensive filtering to valid ids
