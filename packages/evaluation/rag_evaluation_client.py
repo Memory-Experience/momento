@@ -2,18 +2,20 @@ import logging
 import time
 import uuid
 from typing import Any
-
+from tqdm import tqdm
 
 import pandas as pd
-from dataset.dataset import DataFrameDataset
-from metrics.generation_metrics import GenerationMetrics
-from metrics.retrieval_metrics import RetrievalMetrics
+
 from protos.generated.py import stt_pb2
-from tqdm import tqdm
 
 from api.transcription_servicer import TranscriptionServiceServicer
 from api.models.embedding.embedding_model_interface import EmbeddingModel
 from api.models.embedding.sbert_embedding import SBertEmbeddingModel
+
+from dataset.dataset import DataFrameDataset
+from metrics.generation_metrics import GenerationMetrics
+from metrics.retrieval_metrics import RetrievalMetrics
+from metrics.cross_encoder_scorer import CrossEncoderScorer
 
 
 # Configure logging
@@ -298,8 +300,13 @@ class RAGEvaluationClient:
         )
 
         sbert_model: EmbeddingModel = SBertEmbeddingModel()
-        sbert_similarity = await GenerationMetrics.sbert_similarity_async(
+        sbert_similarity = await GenerationMetrics.sbert_similarity(
             answer, gold_answers, sbert_model
+        )
+
+        cross_encoder_model = CrossEncoderScorer(normalize="sigmoid")
+        cross_encoder_similarity = await GenerationMetrics.cross_encoder_similarity(
+            answer, gold_answers, cross_encoder_model
         )
 
         return {
@@ -312,6 +319,7 @@ class RAGEvaluationClient:
             "hallucination_rate": faith["hallucination_rate"],
             "answer_len_tokens": len(GenerationMetrics._tokens(answer)),
             "sbert_similarity": sbert_similarity,
+            "cross_encoder_similarity": cross_encoder_similarity,
         }
 
     async def run_evaluation(
@@ -385,6 +393,7 @@ class RAGEvaluationClient:
                 "hallucination_rate": 0,
                 "answer_len_tokens": 0,
                 "sbert_similarity": 0,
+                "cross_encoder_similarity": 0,
             },
             "response_times": [],
             "total_docs_streamed": len(dataset.docs),

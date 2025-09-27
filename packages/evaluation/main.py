@@ -104,6 +104,7 @@ async def momento_configuration(
 async def dataset_configurations() -> AsyncIterator[
     tuple[str, dataset.DataFrameDataset, RAGEvaluationClient]
 ]:
+    """
     dataset_dir = "runs/timeline_qa_sparse_baseline"
     timeline_qa_sparse = TimelineQADataset.generate(category=0)
 
@@ -130,7 +131,7 @@ async def dataset_configurations() -> AsyncIterator[
         timeline_qa_dense,
         await baseline_configuration(timeline_qa_dense, dataset_dir),
     )
-
+    
     dataset_dir = "runs/ms_marco_small_baseline"
     ms_marco_small = MSMarcoDataset(limit=LIMIT_DOCS)
 
@@ -148,15 +149,16 @@ async def dataset_configurations() -> AsyncIterator[
         timeline_qa_sparse,
         await momento_configuration(timeline_qa_sparse, dataset_dir, qwen3_embedding),
     )
-
-    dataset_dir = "runs/ms_marco_small_momento"
-
+"""
+    dataset_dir = "runs/ms_marco_qna_dev_momento"
+    ms_marco_small = MSMarcoDataset(limit=100)
+    qwen3_embedding = Qwen3EmbeddingModel()
     yield (
         dataset_dir,
         ms_marco_small,
         await momento_configuration(ms_marco_small, dataset_dir, qwen3_embedding),
     )
-
+    """
     dataset_dir = "runs/timeline_qa_medium_momento"
 
     yield (
@@ -197,7 +199,7 @@ async def dataset_configurations() -> AsyncIterator[
         dataset_dir,
         timeline_qa_medium,
         await momento_configuration(timeline_qa_medium, dataset_dir, sbert_embedding),
-    )
+    )"""
 
 
 async def main():
@@ -205,7 +207,7 @@ async def main():
     try:
         async for dataset_dir, dataset, client in dataset_configurations():
             # Run evaluation
-            results = await client.run_evaluation(dataset, max_queries=1_000)
+            results = await client.run_evaluation(dataset, max_queries=10)
 
             # Create a timestamped filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
