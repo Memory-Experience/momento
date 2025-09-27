@@ -199,3 +199,25 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+---
+
+NOTICE REGARDING THIRD-PARTY COMPONENTS
+
+This project uses TimelineQA solely for evaluation purposes.
+
+TimelineQA is licensed under the Creative Commons Attribution-NonCommercial
+4.0 International License (CC BY-NC 4.0).
+You may obtain a copy of the license at:
+    https://creativecommons.org/licenses/by-nc/4.0/
+
+Copyright © Meta Platforms, Inc. and affiliates (Facebook Research)
+
+Only the evaluation functionality of this project uses TimelineQA. 
+The TimelineQA code has been edited to be used directly as python
+function instead of only as a command line interface.
+
+Accordingly, while the original portions of this project are licensed under the Apache
+License, Version 2.0 and may be used for commercial purposes, running the
+evaluation component that uses TimelineQA is subject to the CC BY-NC 4.0
+license and may not be used for commercial purposes.

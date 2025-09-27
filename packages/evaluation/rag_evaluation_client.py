@@ -164,19 +164,53 @@ class RAGEvaluationClient:
         precision_at_5 = RetrievalMetrics.precision_at_k(
             retrieved_doc_ids, relevant_doc_ids, 5
         )
+        precision_at_10 = RetrievalMetrics.precision_at_k(
+            retrieved_doc_ids, relevant_doc_ids, 10
+        )
+        precision_at_20 = RetrievalMetrics.precision_at_k(
+            retrieved_doc_ids, relevant_doc_ids, 20
+        )
 
+        recall_at_1 = RetrievalMetrics.recall_at_k(
+            retrieved_doc_ids, relevant_doc_ids, 1
+        )
         recall_at_3 = RetrievalMetrics.recall_at_k(
             retrieved_doc_ids, relevant_doc_ids, 3
         )
         recall_at_5 = RetrievalMetrics.recall_at_k(
             retrieved_doc_ids, relevant_doc_ids, 5
         )
+        recall_at_10 = RetrievalMetrics.recall_at_k(
+            retrieved_doc_ids, relevant_doc_ids, 10
+        )
+        recall_at_20 = RetrievalMetrics.recall_at_k(
+            retrieved_doc_ids, relevant_doc_ids, 20
+        )
 
         mrr = RetrievalMetrics.mean_reciprocal_rank(retrieved_doc_ids, relevant_doc_ids)
 
+        mrr_at_1 = RetrievalMetrics.mean_reciprocal_rank(
+            retrieved_doc_ids[:1], relevant_doc_ids
+        )
+        mrr_at_3 = RetrievalMetrics.mean_reciprocal_rank(
+            retrieved_doc_ids[:3], relevant_doc_ids
+        )
+        mrr_at_5 = RetrievalMetrics.mean_reciprocal_rank(
+            retrieved_doc_ids[:5], relevant_doc_ids
+        )
+        mrr_at_10 = RetrievalMetrics.mean_reciprocal_rank(
+            retrieved_doc_ids[:10], relevant_doc_ids
+        )
+        mrr_at_20 = RetrievalMetrics.mean_reciprocal_rank(
+            retrieved_doc_ids[:20], relevant_doc_ids
+        )
+
         # For NDCG, we need relevance scores
+        ndcg_at_1 = RetrievalMetrics.ndcg_at_k(retrieved_doc_ids, relevance_scores, 1)
         ndcg_at_3 = RetrievalMetrics.ndcg_at_k(retrieved_doc_ids, relevance_scores, 3)
         ndcg_at_5 = RetrievalMetrics.ndcg_at_k(retrieved_doc_ids, relevance_scores, 5)
+        ndcg_at_10 = RetrievalMetrics.ndcg_at_k(retrieved_doc_ids, relevance_scores, 10)
+        ndcg_at_20 = RetrievalMetrics.ndcg_at_k(retrieved_doc_ids, relevance_scores, 20)
 
         # Calculate AQWV
         aqwv = RetrievalMetrics.aqwv(
@@ -193,11 +227,24 @@ class RAGEvaluationClient:
             "precision@1": precision_at_1,
             "precision@3": precision_at_3,
             "precision@5": precision_at_5,
+            "precision@10": precision_at_10,
+            "precision@20": precision_at_20,
+            "recall@1": recall_at_1,
             "recall@3": recall_at_3,
             "recall@5": recall_at_5,
+            "recall@10": recall_at_10,
+            "recall@20": recall_at_20,
             "mrr": mrr,
+            "mrr@1": mrr_at_1,
+            "mrr@3": mrr_at_3,
+            "mrr@5": mrr_at_5,
+            "mrr@10": mrr_at_10,
+            "mrr@20": mrr_at_20,
+            "ndcg@1": ndcg_at_1,
             "ndcg@3": ndcg_at_3,
             "ndcg@5": ndcg_at_5,
+            "ndcg@10": ndcg_at_10,
+            "ndcg@20": ndcg_at_20,
             "retrieved_count": len(retrieved_set),
             "relevant_count": len(relevant_set),
             "true_positives": true_positives,
@@ -296,11 +343,24 @@ class RAGEvaluationClient:
                 "precision@1": 0,
                 "precision@3": 0,
                 "precision@5": 0,
+                "precision@10": 0,
+                "precision@20": 0,
+                "recall@1": 0,
                 "recall@3": 0,
                 "recall@5": 0,
+                "recall@10": 0,
+                "recall@20": 0,
                 "mrr": 0,
+                "mrr@1": 0,
+                "mrr@3": 0,
+                "mrr@5": 0,
+                "mrr@10": 0,
+                "mrr@20": 0,
+                "ndcg@1": 0,
                 "ndcg@3": 0,
                 "ndcg@5": 0,
+                "ndcg@10": 0,
+                "ndcg@20": 0,
                 "retrieved_count": 0,
                 "relevant_count": 0,
                 "true_positives": 0,
