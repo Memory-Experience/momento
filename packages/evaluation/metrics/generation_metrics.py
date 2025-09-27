@@ -210,7 +210,7 @@ class GenerationMetrics:
         reduction: str = "max",  # "max" or "mean"
     ) -> float:
         """
-        Compute SBERT cosine similarity between 
+        Compute SBERT cosine similarity between
         the generated answer and the gold answers.
 
         Args:
@@ -227,7 +227,9 @@ class GenerationMetrics:
             return 0.0
 
         # Get embeddings concurrently
-        ans_vec_task = await embedder.embed_text(GenerationMetrics._normalize(answer) or "")
+        ans_vec_task = await embedder.embed_text(
+            GenerationMetrics._normalize(answer) or ""
+        )
         gold_vec_tasks = [await embedder.embed_text(g or "") for g in gold_answers]
 
         ans_vec = np.array(ans_vec_task, dtype=float)
@@ -263,4 +265,8 @@ class GenerationMetrics:
         if not gold_answers:
             return 0.0
         # Synchronous call (wrapper handles async under the hood)
-        return await scorer.best_of(GenerationMetrics._normalize(answer) or "", gold_answers, reduction=reduction)
+        return await scorer.best_of(
+            GenerationMetrics._normalize(answer) or "",
+            gold_answers,
+            reduction=reduction,
+        )
