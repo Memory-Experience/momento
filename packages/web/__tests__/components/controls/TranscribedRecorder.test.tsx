@@ -22,10 +22,7 @@ const mockWebSocket = {
 const mockWebSocketConstructor = jest.fn(() => mockWebSocket);
 
 // Helper to trigger WebSocket events
-const triggerWebSocketEvent = (
-  eventType: string,
-  data?: Record<string, unknown>,
-) => {
+const triggerWebSocketEvent = (eventType: string, data?: Uint8Array) => {
   const calls = mockWebSocket.addEventListener.mock.calls;
   const handler = calls.find((call) => call[0] === eventType)?.[1];
   if (handler) {
