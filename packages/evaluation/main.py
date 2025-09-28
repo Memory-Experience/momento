@@ -15,7 +15,7 @@ from api.rag.threshold_filter_service import ThresholdFilterService
 
 from dataset_loader import DatasetLoader
 from rag_evaluation_client import RAGEvaluationClient
-from dataset.marco_dataset import MSMarcoDataset
+from dataset.timeline_qa_dataset import TimelineQADataset
 
 
 # Configure logging
@@ -32,8 +32,9 @@ async def main():
     """Main evaluation function."""
     try:
         # Create MS MARCO dataset
-        dataset_dir = "qdrant_ms_marco_small"
-        dataset = MSMarcoDataset(limit=LIMIT_DOCS)
+        dataset_dir = "timeline_qa_medium"
+        # dataset = MSMarcoDataset(limit=LIMIT_DOCS)
+        dataset = TimelineQADataset.generate()
         logger.info(f"Loaded dataset: {dataset}")
 
         transcriber = FasterWhisperTranscriber()
@@ -50,7 +51,7 @@ async def main():
         rag_service = LLMRAGService(llm_model=llm_model)
 
         # Threshold filter service
-        threshold_filter_service = ThresholdFilterService(relevance_threshold=0.7)
+        threshold_filter_service = ThresholdFilterService(relevance_threshold=0.3)
 
         # Persistence
         repository = InMemoryRepository()
@@ -62,6 +63,7 @@ async def main():
             persistence=persistence_service,
             rag=rag_service,
             transcriber=transcriber,
+            retrieval_limit=5,
         )
 
         servicer = TranscriptionServiceServicer(container)
