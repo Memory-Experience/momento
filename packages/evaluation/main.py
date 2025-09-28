@@ -15,7 +15,7 @@ from api.rag.threshold_filter_service import ThresholdFilterService
 
 from dataset_loader import DatasetLoader
 from rag_evaluation_client import RAGEvaluationClient
-from dataset.timeline_qa_dataset import LifelogQADataset
+from dataset.timeline_qa_dataset import TimelineQADataset
 
 
 # Configure logging
@@ -34,7 +34,7 @@ async def main():
         # Create MS MARCO dataset
         dataset_dir = "timeline_qa_medium"
         # dataset = MSMarcoDataset(limit=LIMIT_DOCS)
-        dataset = LifelogQADataset.generate()
+        dataset = TimelineQADataset.generate()
         logger.info(f"Loaded dataset: {dataset}")
 
         transcriber = FasterWhisperTranscriber()
