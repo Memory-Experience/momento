@@ -11,6 +11,8 @@ dependencies = [
     "api",
     "evaluation",
     "protos",
+    "matplotlib>=3.10.6",
+    "seaborn>=0.13.2",
 ]
 
 [tool.uv.sources]
