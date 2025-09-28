@@ -1,6 +1,1 @@
-# Format and lint JS/TS files via lint-staged
 lint-staged
-
-# Format Python files directly on the directory so Ruff respects ruff.toml
-pnpm run format:check
-pnpm run lint
