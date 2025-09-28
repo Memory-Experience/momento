@@ -13,7 +13,7 @@ from api.vector_store.repositories.qdrant_vector_store_repository import (
 from api.vector_store.repositories.vector_store_repository_interface import (
     VectorStoreRepository,
 )
-from api.models.embedding.qwen3_embedding import Qwen3EmbeddingModel
+from api.models.embedding.embedding_model_interface import EmbeddingModel
 
 import gc
 
@@ -28,11 +28,12 @@ logger = logging.getLogger(__name__)
 
 
 class DatasetLoader:
-    def _create_vector_store_service(dataset_folder) -> VectorStoreService:
-        embedding_model = Qwen3EmbeddingModel()
+    def _create_vector_store_service(
+        embedding: EmbeddingModel, dataset_folder
+    ) -> VectorStoreService:
         text_chunker = DummyTextChunker()
         vector_store_repo: VectorStoreRepository = LocalFileQdrantVectorStoreRepository(
-            embedding_model, text_chunker, dataset_folder
+            embedding, text_chunker, dataset_folder
         )
         return VectorStoreService(vector_store_repo)
 
@@ -58,10 +59,15 @@ class DatasetLoader:
 
     @classmethod
     async def create_filled_vector_store_service(
-        cls, dataset: DataFrameDataset, dataset_folder: str
+        cls,
+        dataset: DataFrameDataset,
+        dataset_folder: str,
+        embedding: EmbeddingModel,
     ) -> tuple[VectorStoreService, dict[str, str], dict[str, str]]:
         doc_to_memory, memory_to_doc = cls._clean_if_incomplete(dataset_folder)
-        vector_store_service = cls._create_vector_store_service(dataset_folder)
+        vector_store_service = cls._create_vector_store_service(
+            embedding, dataset_folder
+        )
 
         if len(doc_to_memory) > 0 and len(doc_to_memory) == len(memory_to_doc):
             logger.info("Pickle files are valid. Skipping ingestion loop.")

@@ -2,19 +2,33 @@ import re
 import string
 from collections import Counter
 
+import numpy as np
+
+from api.models.embedding.embedding_model_interface import EmbeddingModel
+from .cross_encoder_scorer import CrossEncoderScorer
+
 
 # Generation metrics
 class GenerationMetrics:
     _ARTICLES = {"a", "an", "the"}
     _PUNCT_TABLE = str.maketrans("", "", string.punctuation)
+    _THINKING_TAG_PATTERN = r"<think>.*?</think>"
+    _SOURCE_TAG_PATTERN = r"<source>.*?</source>"
+
+    @staticmethod
+    def empty_gold_answer_guard(gold_answers: list[str]) -> bool:
+        return len(gold_answers) == 0 or all(
+            (g is None or g.strip() == "" or g.strip() == "()") for g in gold_answers
+        )
 
     @staticmethod
     def _normalize(text: str) -> str:
         if text is None:
             return ""
-        end_idx = text.find("</think>")
-        if end_idx != -1:
-            text = text[end_idx + len("</think>") :]
+        text = re.sub(
+            GenerationMetrics._THINKING_TAG_PATTERN, "", text, flags=re.DOTALL
+        )
+        text = re.sub(GenerationMetrics._SOURCE_TAG_PATTERN, "", text, flags=re.DOTALL)
         text = text.lower()
         text = text.translate(GenerationMetrics._PUNCT_TABLE)
         text = re.sub(r"\s+", " ", text).strip()
@@ -38,7 +52,7 @@ class GenerationMetrics:
 
     @staticmethod
     def f1(pred: str, gold_answers: list[str]) -> float:
-        if not gold_answers:
+        if GenerationMetrics.empty_gold_answer_guard(gold_answers):
             return 0.0
 
         def f1_pair(p: str, g: str) -> float:
@@ -58,6 +72,9 @@ class GenerationMetrics:
 
     @staticmethod
     def rouge_l_f1(pred: str, gold_answers: list[str]) -> float:
+        if GenerationMetrics.empty_gold_answer_guard(gold_answers):
+            return 0.0
+
         # LCS-based ROUGE-L F1 (single-ref max)
         def lcs(a: list[str], b: list[str]) -> int:
             m, n = len(a), len(b)
@@ -193,3 +210,77 @@ class GenerationMetrics:
             "support_density": support_density,
             "hallucination_rate": hallucination_rate,
         }
+
+    @staticmethod
+    async def sbert_similarity(
+        answer: str,
+        gold_answers: list[str],
+        embedder: EmbeddingModel,
+        reduction: str = "max",  # "max" or "mean"
+    ) -> float:
+        """
+        Compute SBERT cosine similarity between
+        the generated answer and the gold answers.
+
+        Args:
+            answer: Generated answer string.
+            gold_answers: List of reference answers.
+            embedder: An EmbeddingModel (e.g., SbertEmbeddingModel).
+            reduction: How to combine multiple similarities: "max" (default) or "mean".
+
+        Returns:
+            Cosine similarity in [-1.0, 1.0]. If embeddings were normalized,
+                it's in [-1, 1], and typically in [0, 1] for natural language pairs.
+            Note: If `gold_answers` is empty or contains only empty strings,
+                returns 0.0 to avoid misleading high similarity with empty answer.
+        """
+        if GenerationMetrics.empty_gold_answer_guard(gold_answers):
+            return 0.0
+
+        # Get embeddings concurrently
+        ans_vec_task = await embedder.embed_text(
+            GenerationMetrics._normalize(answer) or ""
+        )
+        gold_vec_tasks = [
+            await embedder.embed_text(GenerationMetrics._normalize(g) or "")
+            for g in gold_answers
+        ]
+
+        ans_vec = np.array(ans_vec_task, dtype=float)
+        gold_vecs = [np.array(t, dtype=float) for t in gold_vec_tasks]
+
+        # Cosine similarity. If vectors are normalized, this is a dot product.
+        def _cos(u: np.ndarray, v: np.ndarray) -> float:
+            # Stable cosine even if not normalized in the embedder
+            u_norm = np.linalg.norm(u)
+            v_norm = np.linalg.norm(v)
+            if u_norm == 0.0 or v_norm == 0.0:
+                return 0.0
+            return float(np.dot(u, v) / (u_norm * v_norm))
+
+        sims = [_cos(ans_vec, gv) for gv in gold_vecs]
+        if reduction == "mean":
+            return float(np.mean(sims))
+        return float(np.max(sims))
+
+    @staticmethod
+    async def cross_encoder_similarity(
+        answer: str,
+        gold_answers: list[str],
+        scorer: CrossEncoderScorer,
+        reduction: str = "max",  # "max" or "mean"
+    ) -> float:
+        """
+        Score semantic similarity/relevance between `answer` and `gold_answers`
+        using a cross-encoder (e.g., 'cross-encoder/ms-marco-MiniLM-L-6-v2').
+
+        Returns a single float (max or mean across gold answers).
+        """
+        if GenerationMetrics.empty_gold_answer_guard(gold_answers):
+            return 0.0
+        # Synchronous call (wrapper handles async under the hood)
+        return await scorer.best_of(
+            GenerationMetrics._normalize(answer) or "",
+            [GenerationMetrics._normalize(g) or "" for g in gold_answers],
+            reduction=reduction,
+        )
