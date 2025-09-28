@@ -36,6 +36,7 @@ const config: Config = {
     "!*.config.{ts,js,cjs,mjs}",
     "!**/.next/**",
     "!**/coverage/**",
+    "!**/types/*.ts",
   ],
   // The directory where Jest should output its coverage files
   coverageDirectory: "coverage",
