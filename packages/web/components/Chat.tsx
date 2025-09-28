@@ -1,10 +1,21 @@
 "use client";
 
-import { FC } from "react";
+import { FC, useState } from "react";
 import { Button, Textarea } from "@mui/joy";
-import { Help, MicNone, Save } from "@mui/icons-material";
+import { Help, Save } from "@mui/icons-material";
+import TranscribedRecorder from "./controls/TranscribedRecorder";
+import { MemoryChunk } from "protos/generated/ts/stt";
 
 const Chat: FC = () => {
+  const [text, setText] = useState("");
+
+  const handleTranscription = (transcript: MemoryChunk) => {
+    console.debug("Chat#handleTranscription", transcript);
+    setText((prevText) => {
+      return prevText + (transcript.textData || "");
+    });
+  };
+
   return (
     <div className="w-full h-full flex flex-col gap-2">
       <div className="flex-1 overflow-y-auto">
@@ -18,16 +29,11 @@ const Chat: FC = () => {
             maxRows={4}
             sx={{ width: "75%", margin: "0 auto" }}
             placeholder="Type your memory/question..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
             endDecorator={
               <div className="w-full flex gap-2">
-                <Button
-                  variant="plain"
-                  color="neutral"
-                  size="sm"
-                  startDecorator={<MicNone />}
-                >
-                  Dictate
-                </Button>
+                <TranscribedRecorder onTranscription={handleTranscription} />
                 <Button
                   sx={{ ml: "auto" }}
                   variant="plain"
