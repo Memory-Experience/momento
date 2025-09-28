@@ -28,6 +28,13 @@ logger = logging.getLogger(__name__)
 class RAGEvaluationClient:
     """Client for evaluating RAG system performance using gRPC."""
 
+    _NO_GOLD_ANSWER_NO_VALUE = [
+        "f1",
+        "rouge_l_f1",
+        "sbert_similarity",
+        "cross_encoder_similarity",
+    ]
+
     def __init__(
         self,
         servicer: TranscriptionServiceServicer,
@@ -406,6 +413,8 @@ class RAGEvaluationClient:
         retrieved_docs_per_query = []
         relevant_docs_per_query = []
 
+        missing_gold_answer_count = 0
+
         for i, (_, query) in enumerate(
             tqdm(queries_df.iterrows(), total=total_queries)
         ):
@@ -464,6 +473,10 @@ class RAGEvaluationClient:
                     gold_answers = [str(val)]
             elif "answer" in queries_df.columns and pd.notna(query.get("answer")):
                 gold_answers = [str(query["answer"])]
+
+            if GenerationMetrics.empty_gold_answer_guard(gold_answers):
+                missing_gold_answer_count += 1
+
             generation_metrics = await self.evaluate_generation(
                 answer,
                 query_text,
@@ -528,7 +541,18 @@ class RAGEvaluationClient:
                     results["retrieval_metrics"][metric] /= total_queries
 
             for metric in results["generation_metrics"]:
-                results["generation_metrics"][metric] /= total_queries
+                if metric in self._NO_GOLD_ANSWER_NO_VALUE:
+                    if total_queries - missing_gold_answer_count > 0:
+                        results["generation_metrics"][metric] /= (
+                            total_queries - missing_gold_answer_count
+                        )
+                    else:
+                        results["generation_metrics"][metric] = 0.0
+                else:
+                    results["generation_metrics"][metric] /= total_queries
+            results["generation_metrics"]["missing_gold_answer_count"] = (
+                missing_gold_answer_count
+            )
 
             results["avg_response_time"] = sum(results["response_times"]) / len(
                 results["response_times"]
