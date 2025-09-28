@@ -163,6 +163,7 @@ class TimelineQADataset(DataFrameDataset):
             current_age: The current age of the persona.
             verbose: Whether to enable verbose logging.
             category: Category of the dataset to generate.
+                0: sparse, 1: medium, 2: dense.
             output_directory: Directory to save the generated dataset.
 
         Returns:
