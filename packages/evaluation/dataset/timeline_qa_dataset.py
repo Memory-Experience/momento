@@ -16,9 +16,9 @@ def _safe_id(s: str, prefix: str = "") -> str:
     return f"{prefix}{h}" if prefix else h
 
 
-def _iter_lifelog_events(llqa: dict[str, Any]) -> Iterable[dict[str, Any]]:
+def _iter_timeline_events(llqa: dict[str, Any]) -> Iterable[dict[str, Any]]:
     """
-    Yield flattened LifelogQA events with keys:
+    Yield flattened TimelineQA events with keys:
       - date (str)
       - key (str)      # e.g., "birth_info", "chat0"
       - eid (str)
@@ -43,11 +43,11 @@ def _iter_lifelog_events(llqa: dict[str, Any]) -> Iterable[dict[str, Any]]:
             }
 
 
-def _convert_lifelogqa_to_dataframes(
+def _convert_timelineqa_to_dataframes(
     llqa: dict[str, Any],
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
-    Convert a LifelogQA json dict to MS MARCO-like DataFrames:
+    Convert a TimelineQA json dict to MS MARCO-like DataFrames:
       - docs_df:    ['id', 'content']
       - queries_df: ['id', 'text']
       - qrels_df:   ['query_id', 'doc_id', 'relevance']
@@ -55,7 +55,7 @@ def _convert_lifelogqa_to_dataframes(
     # 1) Documents: one per event
     docs_rows = []
     event_index: dict[str, dict[str, Any]] = {}  # eid -> event info
-    for ev in _iter_lifelog_events(llqa):
+    for ev in _iter_timeline_events(llqa):
         doc_id = ev["eid"]
         docs_rows.append({"id": doc_id, "content": ev["text"]})
         event_index[doc_id] = ev
@@ -100,43 +100,43 @@ def _convert_lifelogqa_to_dataframes(
     )
 
 
-class LifelogQADataset(DataFrameDataset):
+class TimelineQADataset(DataFrameDataset):
     """
-    LifelogQA dataset adapter in MS MARCO-like DataFrames.
+    TimelineQA dataset adapter in MS MARCO-like DataFrames.
 
     Usage:
         # In-memory dict
-        ds = LifelogQADataset(data_dict)
+        ds = TimelineQADataset(data_dict)
 
         # From a JSON file path
-        ds = LifelogQADataset.from_file("lifelogqa.json")
+        ds = TimelineQADataset.from_file("timelineqa.json")
 
         # Generate a synthetic dataset
-        ds = LifelogQADataset.generate(seed=42, ...)
+        ds = TimelineQADataset.generate(seed=42, ...)
     """
 
-    def __init__(self, data: dict[str, Any], name: str = "LifelogQA"):
+    def __init__(self, data: dict[str, Any], name: str = "TimelineQA"):
         """
-        Initialize the LifelogQA dataset adapter.
+        Initialize the TimelineQA dataset adapter.
 
         Args:
-            data: Parsed LifelogQA dict.
+            data: Parsed TimelineQA dict.
             name: Dataset name for reporting.
         """
         self.name = name
         try:
-            docs_df, queries_df, qrels_df = _convert_lifelogqa_to_dataframes(data)
+            docs_df, queries_df, qrels_df = _convert_timelineqa_to_dataframes(data)
             logging.info(
-                f"LifelogQA loaded: {len(docs_df)} docs, "
+                f"TimelineQA loaded: {len(docs_df)} docs, "
                 f"{len(queries_df)} queries, {len(qrels_df)} qrels"
             )
             super().__init__(docs_df=docs_df, queries_df=queries_df, qrels_df=qrels_df)
         except Exception as e:
-            logging.error(f"Failed to load LifelogQA: {e}")
+            logging.error(f"Failed to load TimelineQA: {e}")
             raise
 
     @classmethod
-    def from_file(cls, path: str, **_: Any) -> "LifelogQADataset":
+    def from_file(cls, path: str, **_: Any) -> "TimelineQADataset":
         """Convenience constructor from a JSON file path."""
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
@@ -152,9 +152,9 @@ class LifelogQADataset(DataFrameDataset):
         verbose: bool = False,
         category: int = 1,
         output_directory: str = ".",
-    ) -> "LifelogQADataset":
+    ) -> "TimelineQADataset":
         """
-        Generate a synthetic LifelogQA dataset using the internal generator.
+        Generate a synthetic TimelineQA dataset using the internal generator.
 
         Args:
             templatefilename: Path to the template file.
@@ -166,7 +166,7 @@ class LifelogQADataset(DataFrameDataset):
             output_directory: Directory to save the generated dataset.
 
         Returns:
-            An instance of LifelogQADataset with the generated data.
+            An instance of TimelineQADataset with the generated data.
         """
         _persona, episodic_db = generateDB.generateDb(
             templatefilename=templatefilename,
@@ -180,7 +180,7 @@ class LifelogQADataset(DataFrameDataset):
         return cls(data=episodic_db)
 
     def get_name(self) -> str:
-        return self.name or "LifelogQA"
+        return self.name or "TimelineQA"
 
     def get_sample_query(self) -> dict | None:
         """Return a sample query with relevant documents."""
