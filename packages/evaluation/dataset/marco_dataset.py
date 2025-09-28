@@ -58,7 +58,11 @@ def _convert_ms_marco_to_dataframes(ms_marco_dataset, limit: int = 1000):
 
     for query in ms_marco_dataset.queries_iter():
         if query.query_id in needed_query_ids:
-            queries_data.append({"id": query.query_id, "text": query.text})
+            queries_data.append({
+                "id": query.query_id,
+                "text": query.text,
+                "answer": query.answers,
+            })
             found_query_ids.add(query.query_id)
 
         if len(found_query_ids) >= len(needed_query_ids):
@@ -96,7 +100,7 @@ class MSMarcoDataset(DataFrameDataset):
 
     def __init__(
         self,
-        dataset_name: str = "msmarco-passage/dev/small",
+        dataset_name: str = "msmarco-qna/dev",
         limit: int = 1000,
     ):
         """Initialize MS MARCO dataset adapter.

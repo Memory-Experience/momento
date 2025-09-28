@@ -2,16 +2,20 @@ import logging
 import time
 import uuid
 from typing import Any
-
-
-import pandas as pd
-from dataset.dataset import DataFrameDataset
-from dataset.generation_metrics import GenerationMetrics
-from dataset.retrieval_metrics import RetrievalMetrics
-from protos.generated.py import stt_pb2
 from tqdm import tqdm
 
+import pandas as pd
+
+from protos.generated.py import stt_pb2
+
 from api.transcription_servicer import TranscriptionServiceServicer
+from api.models.embedding.embedding_model_interface import EmbeddingModel
+from api.models.embedding.sbert_embedding import SBertEmbeddingModel
+
+from dataset.dataset import DataFrameDataset
+from metrics.generation_metrics import GenerationMetrics
+from metrics.retrieval_metrics import RetrievalMetrics
+from metrics.cross_encoder_scorer import CrossEncoderScorer
 
 
 # Configure logging
@@ -23,6 +27,13 @@ logger = logging.getLogger(__name__)
 
 class RAGEvaluationClient:
     """Client for evaluating RAG system performance using gRPC."""
+
+    _NO_GOLD_ANSWER_NO_VALUE = [
+        "f1",
+        "rouge_l_f1",
+        "sbert_similarity",
+        "cross_encoder_similarity",
+    ]
 
     def __init__(
         self,
@@ -138,7 +149,7 @@ class RAGEvaluationClient:
             }
 
         # Get binary relevance scores if not provided
-        if relevance_scores is None:
+        if not relevance_scores:
             relevance_scores = {doc_id: 1.0 for doc_id in relevant_doc_ids}
 
         # Calculate standard set-based metrics
@@ -252,7 +263,7 @@ class RAGEvaluationClient:
         }
 
     # evaluate generation
-    def evaluate_generation(
+    async def evaluate_generation(
         self,
         answer: str,
         query_text: str,
@@ -295,6 +306,16 @@ class RAGEvaluationClient:
             top_k_docs=top_k_docs_for_faithfulness,
         )
 
+        sbert_model: EmbeddingModel = SBertEmbeddingModel()
+        sbert_similarity = await GenerationMetrics.sbert_similarity(
+            answer, gold_answers, sbert_model
+        )
+
+        cross_encoder_model = CrossEncoderScorer(normalize="sigmoid")
+        cross_encoder_similarity = await GenerationMetrics.cross_encoder_similarity(
+            answer, gold_answers, cross_encoder_model
+        )
+
         return {
             "exact_match": em,
             "f1": f1,
@@ -304,6 +325,8 @@ class RAGEvaluationClient:
             "support_density": faith["support_density"],
             "hallucination_rate": faith["hallucination_rate"],
             "answer_len_tokens": len(GenerationMetrics._tokens(answer)),
+            "sbert_similarity": sbert_similarity,
+            "cross_encoder_similarity": cross_encoder_similarity,
         }
 
     async def run_evaluation(
@@ -376,6 +399,8 @@ class RAGEvaluationClient:
                 "support_density": 0,
                 "hallucination_rate": 0,
                 "answer_len_tokens": 0,
+                "sbert_similarity": 0,
+                "cross_encoder_similarity": 0,
             },
             "response_times": [],
             "total_docs_streamed": len(dataset.docs),
@@ -387,6 +412,8 @@ class RAGEvaluationClient:
         # Store data for MAP calculation (per-query lists)
         retrieved_docs_per_query = []
         relevant_docs_per_query = []
+
+        missing_gold_answer_count = 0
 
         for i, (_, query) in enumerate(
             tqdm(queries_df.iterrows(), total=total_queries)
@@ -446,7 +473,11 @@ class RAGEvaluationClient:
                     gold_answers = [str(val)]
             elif "answer" in queries_df.columns and pd.notna(query.get("answer")):
                 gold_answers = [str(query["answer"])]
-            generation_metrics = self.evaluate_generation(
+
+            if GenerationMetrics.empty_gold_answer_guard(gold_answers):
+                missing_gold_answer_count += 1
+
+            generation_metrics = await self.evaluate_generation(
                 answer,
                 query_text,
                 gold_answers,
@@ -457,6 +488,7 @@ class RAGEvaluationClient:
             query_result = {
                 "query_id": query_id,
                 "query_text": query_text,
+                "gold_answers": gold_answers,
                 "retrieved_docs": retrieved_docs,  # keyed by memory_id
                 "retrieved_doc_ids_ordered": retrieved_doc_ids_ordered,
                 "retrieved_doc_ids_for_eval": retrieved_doc_ids_for_eval,
@@ -509,7 +541,18 @@ class RAGEvaluationClient:
                     results["retrieval_metrics"][metric] /= total_queries
 
             for metric in results["generation_metrics"]:
-                results["generation_metrics"][metric] /= total_queries
+                if metric in self._NO_GOLD_ANSWER_NO_VALUE:
+                    if total_queries - missing_gold_answer_count > 0:
+                        results["generation_metrics"][metric] /= (
+                            total_queries - missing_gold_answer_count
+                        )
+                    else:
+                        results["generation_metrics"][metric] = 0.0
+                else:
+                    results["generation_metrics"][metric] /= total_queries
+            results["generation_metrics"]["missing_gold_answer_count"] = (
+                missing_gold_answer_count
+            )
 
             results["avg_response_time"] = sum(results["response_times"]) / len(
                 results["response_times"]
