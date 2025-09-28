@@ -16,7 +16,7 @@ const renderWithContext = (
   );
 };
 
-type NonReactiveRecordingContextType = Exclude<
+type NonReactiveRecordingContextType = Omit<
   RecordingContextType,
   "isRecording" | "setIsRecording"
 >;
