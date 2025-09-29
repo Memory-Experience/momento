@@ -24,18 +24,22 @@ const mockWebSocketConstructor = jest.fn(() => mockWebSocket);
 // Helper to trigger WebSocket events
 const triggerWebSocketEvent = (eventType: string, data?: Uint8Array) => {
   const calls = mockWebSocket.addEventListener.mock.calls;
-  const handler = calls.find((call) => call[0] === eventType)?.[1];
+  const handler: EventListener[] = calls
+    .filter((call) => call[0] === eventType)
+    .map((call) => call[1]);
   if (handler) {
     if (eventType === "message") {
-      handler({ data });
+      handler.forEach((curr) => {
+        curr({ data } as MessageEvent);
+      });
     } else if (eventType === "open") {
       mockWebSocket.readyState = states.OPEN;
-      handler({});
+      handler.forEach((curr) => curr({} as Event));
     } else if (eventType === "close") {
       mockWebSocket.readyState = states.CLOSED;
-      handler({});
+      handler.forEach((curr) => curr({} as Event));
     } else {
-      handler({});
+      handler.forEach((curr) => curr({} as Event));
     }
   }
 };

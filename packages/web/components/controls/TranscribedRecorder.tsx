@@ -1,79 +1,31 @@
-import { FC, useCallback, useEffect, useRef, useState } from "react";
+import { FC, useCallback, useState } from "react";
 import RecordingContextProvider from "@/context/RecordingContext";
 import AudioRecorder from "./AudioRecorder";
 import { ChunkType, MemoryChunk } from "protos/generated/ts/stt";
+import { useWebSocket } from "@/hooks/useWebSocket";
 
 const TranscribedRecorder: FC<{
   onTranscription: (transcript: MemoryChunk) => void;
 }> = ({ onTranscription }) => {
   const [isRecording, setIsRecording] = useState(false);
-  const [, setIsConnected] = useState(false);
-  const socketRef = useRef<WebSocket | null>(null);
-  const socketClosingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    const socket = socketRef.current;
-
-    return () => {
-      if (socket) {
-        socket.close();
-      }
-    };
-  }, [socketRef]);
+  const { addEventListener, connect, disconnect, send } = useWebSocket(
+    "ws://localhost:8080/ws/transcribe",
+  );
 
   const stopTranscription = useCallback(() => {
-    if (socketRef.current) {
-      socketRef.current.send(
-        MemoryChunk.encode({
-          metadata: {
-            sessionId: "",
-            memoryId: "",
-            type: ChunkType.TRANSCRIPT,
-            isFinal: true,
-            score: 0,
-          },
-        }).finish(),
-      );
-
-      if (socketClosingTimeoutRef.current) {
-        console.debug("Clearing existing socket close timeout");
-        clearTimeout(socketClosingTimeoutRef.current);
-      }
-      socketClosingTimeoutRef.current = setTimeout(() => {
-        if (socketRef.current) {
-          socketRef.current.close();
-          socketRef.current = null;
-        }
-      }, 5000);
-    }
-  }, []);
+    disconnect();
+  }, [disconnect]);
 
   const startTranscription = useCallback(() => {
-    socketRef.current = new WebSocket("ws://localhost:8080/ws/transcribe");
+    connect();
 
-    socketRef.current.addEventListener("open", () => {
-      console.log("WebSocket connection established");
-      setIsConnected(true);
-    });
-
-    socketRef.current.addEventListener("message", async (event) => {
+    const success = addEventListener("message", async (event: MessageEvent) => {
       const data =
         event.data instanceof Blob ? await event.data.bytes() : event.data;
       if (data) {
         const message = MemoryChunk.decode(new Uint8Array(data));
         console.debug("TranscribedRecorder: Message received", message);
         if (message.metadata?.type === ChunkType.TRANSCRIPT) {
-          if (message.metadata.isFinal) {
-            console.debug("Final transcript: ", message.textData);
-            if (socketClosingTimeoutRef.current) {
-              console.debug(
-                "TranscribedRecorder: isFinal received, clearing existing socket close timeout",
-              );
-              clearTimeout(socketClosingTimeoutRef.current);
-            }
-            socketRef.current?.close();
-            socketRef.current = null;
-          }
           onTranscription(message);
         } else {
           console.log("Ignored message:", message);
@@ -82,27 +34,26 @@ const TranscribedRecorder: FC<{
         console.warn("TranscribedRecorder: Received empty message", data);
       }
     });
+    if (!success) {
+      console.error("Failed to add message event listener");
+      stopTranscription();
+      return;
+    }
 
-    socketRef.current.addEventListener("close", () => {
-      console.log("WebSocket connection closed");
-      setIsConnected(false);
-    });
-
-    socketRef.current.addEventListener("error", (error) => {
+    addEventListener("error", (error) => {
       console.error("WebSocket error: ", error);
       stopTranscription();
     });
-  }, [onTranscription, stopTranscription]);
+  }, [addEventListener, connect, onTranscription, stopTranscription]);
 
   const onStartRecording = useCallback(async () => {
     console.debug("TranscribedRecorder#onStartRecording");
     startTranscription();
-    setIsConnected(true);
   }, [startTranscription]);
 
-  const onAudioData = useCallback(async (audioData: Uint8Array) => {
-    console.debug("TranscribedRecorder#onAudioData", audioData);
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+  const onAudioData = useCallback(
+    async (audioData: Uint8Array) => {
+      console.debug("TranscribedRecorder#onAudioData", audioData);
       const data: MemoryChunk = {
         audioData: audioData,
         metadata: {
@@ -115,11 +66,10 @@ const TranscribedRecorder: FC<{
       };
       // send as binary encoded protobuf message
       const message = MemoryChunk.encode(data).finish();
-      socketRef.current.send(message);
-    } else {
-      console.warn("Unable to send audio data.");
-    }
-  }, []);
+      send(message);
+    },
+    [send],
+  );
 
   const onStopRecording = useCallback(async () => {
     console.debug("TranscribedRecorder#onStopRecording");
