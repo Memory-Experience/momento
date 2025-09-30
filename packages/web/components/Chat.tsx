@@ -93,28 +93,32 @@ const Chat: FC = () => {
         console.debug("Chat: Received message", message);
         if (message.metadata?.type === ChunkType.ANSWER) {
           setMessages((prev) => {
-            const messageIx = prev.findIndex(
-              ({ id }) => id === message.metadata?.sessionId,
-            );
+            const sessionId = message.metadata?.sessionId;
+            const messageIx = prev.findIndex(({ id }) => id === sessionId);
+
             if (messageIx >= 0) {
-              prev[messageIx].text += message.textData ?? "";
-              console.debug("Chat: update existing message for question", [
-                ...prev,
-              ]);
-              return [...prev];
+              // update existing message
+              const post = [...prev];
+              post[messageIx] = {
+                ...post[messageIx],
+                text: post[messageIx].text + (message.textData ?? ""),
+              };
+              return post;
             }
-            const post = [
+            // create new message pair (question + answer)
+            return [
               ...prev,
               { id: crypto.randomUUID(), text },
               {
-                id: message.metadata?.sessionId ?? crypto.randomUUID(),
+                id: sessionId ?? crypto.randomUUID(),
                 text: message.textData ?? "",
               },
             ];
-            console.debug("Chat: update new message for question", [...post]);
-            return post;
           });
-          setText("");
+
+          if (message.metadata?.isFinal) {
+            setText("");
+          }
         }
       } else {
         console.warn("Chat: Received empty message", data);
@@ -133,11 +137,8 @@ const Chat: FC = () => {
       askQuestion();
     }
 
-    addEventListener("close", () => {
-      console.log("Chat: WebSocket closed");
-      setMode(null);
-    });
-  }, [addEventListener, connect, askQuestion, saveMemory, mode]);
+    setMode(null);
+  }, [mode, setMode, askQuestion, saveMemory]);
 
   return (
     <div className="w-full h-full flex flex-col gap-2">
