@@ -31,7 +31,7 @@ export const useWebSocket = (url: string | null) => {
     socketRef.current = new WebSocket(url);
 
     socketRef.current.addEventListener("open", () => {
-      console.log("WebSocket connection established");
+      console.log(`WebSocket connection to ${url} established`);
       setIsConnected(true);
     });
 
@@ -50,7 +50,8 @@ export const useWebSocket = (url: string | null) => {
         if (data) {
           const message = MemoryChunk.decode(new Uint8Array(data));
           if (message.metadata?.isFinal) {
-            closeImmediately();
+            // Close after a small delay to allow other handlers to process
+            setTimeout(() => closeImmediately(), 0);
           }
         }
       },
