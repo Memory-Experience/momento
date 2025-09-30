@@ -10,6 +10,7 @@ import uvicorn
 from protos.generated.py import stt_pb2
 from api.transcription_servicer import TranscriptionServiceServicer
 from api.memory_persist_service import MemoryPersistService
+from api.question_answer_service import QuestionAnswerService
 from api.dependency_container import Container
 
 # Constants
@@ -37,6 +38,7 @@ class WebSocketTranscriptionHandler:
     def __init__(self, container: Container):
         self.servicer = TranscriptionServiceServicer(container)
         self.persist_servicer = MemoryPersistService(container)
+        self.qa_servicer = QuestionAnswerService(container)
 
     async def handle_connection(self, websocket: WebSocket, connection_type: str):
         """Handle a WebSocket connection."""
@@ -51,6 +53,8 @@ class WebSocketTranscriptionHandler:
                 await self._process_transcription(websocket, connection_id)
             elif connection_type == "memory":
                 await self._process_memory(websocket, connection_id)
+            elif connection_type == "ask":
+                await self._process_question(websocket, connection_id)
             else:
                 logging.error(f"Unknown connection type: {connection_type}")
                 await websocket.close(code=1003, reason="Unknown connection type")
@@ -112,6 +116,23 @@ class WebSocketTranscriptionHandler:
             logging.error(f"Error in memory processing: {e}")
             await websocket.close(code=1011, reason=f"Server error: {str(e)}")
 
+    async def _process_question(self, websocket: WebSocket, connection_id: int):
+        """Process incoming ask messages from the WebSocket connection."""
+
+        # Create a message generator that yields protobuf messages
+        message_generator = self._message_generator(websocket)
+
+        # Process messages using the memory store logic
+        try:
+            async for response in self.qa_servicer.AnswerQuestion(
+                message_generator, None
+            ):
+                logging.debug(f">>>Sending memory response: {response}")
+                await websocket.send_bytes(response.SerializeToString())
+        except Exception as e:
+            logging.error(f"Error in memory processing: {e}")
+            await websocket.close(code=1011, reason=f"Server error: {str(e)}")
+
 
 # Global handler instance
 handler = None
@@ -144,6 +165,16 @@ async def websocket_memory(websocket: WebSocket):
         return
 
     await handler.handle_connection(websocket, "memory")
+
+
+@app.websocket("/ws/ask")
+async def websocket_ask(websocket: WebSocket):
+    """WebSocket endpoint for answering questions."""
+    if handler is None:
+        await websocket.close(code=1011, reason="Server not initialized")
+        return
+
+    await handler.handle_connection(websocket, "ask")
 
 
 @app.get("/health")

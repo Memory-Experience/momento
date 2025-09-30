@@ -1,7 +1,7 @@
 import { ChunkType, MemoryChunk } from "protos/generated/ts/stt";
 import { useState, useRef, useCallback, useEffect } from "react";
 
-export const useWebSocket = (url: string) => {
+export const useWebSocket = (url: string | null) => {
   const [isConnected, setIsConnected] = useState(false);
   const socketRef = useRef<WebSocket | null>(null);
   const socketClosingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -20,6 +20,10 @@ export const useWebSocket = (url: string) => {
   }, [url]);
 
   const connect = useCallback(() => {
+    if (!url) {
+      console.warn("WebSocket URL is null. Cannot connect.");
+      return;
+    }
     if (socketRef.current) {
       console.warn("WebSocket is already connected.");
       return;
