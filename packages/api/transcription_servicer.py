@@ -72,11 +72,10 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
 
                         # Process based on session type
                         if session_type == stt_pb2.ChunkType.MEMORY:
-                            # Save memory and return ID to client
-                            async for res in self._process_memory_saving(
-                                audio_data, transcription, session_id, memory_id
-                            ):
-                                yield res
+                            logging.warning(
+                                "Deprecated memory handling in TranscriptionService"
+                            )
+                            continue
                         elif (
                             session_type == stt_pb2.ChunkType.QUESTION
                             and not question_completed
@@ -142,39 +141,6 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
             logging.info("Client disconnected.")
             # We no longer save memory in the finally block
             # All saving is now done when a final marker is received
-
-    async def _process_memory_saving(
-        self, audio_data, transcription, session_id, memory_id
-    ):
-        """Save a memory and send confirmation to client."""
-        if not audio_data and not transcription:
-            return
-
-        # Create memory object
-        memory = MemoryRequest.create(
-            audio_data=bytes(audio_data) if audio_data else None,
-            text=transcription,
-            memory_type=MemoryType.MEMORY,
-        )
-
-        # Save and index the memory
-        uri = await self.persistence_service.save_memory(memory)
-
-        logging.info(f"Memory saved with URI: {uri}")
-        await self.vector_store_service.index_memory(memory)
-        new_memory_id = str(memory.id)
-
-        # Send confirmation with memory ID back to client
-        yield stt_pb2.MemoryChunk(
-            text_data=f"Memory saved with ID: {new_memory_id}",
-            metadata=stt_pb2.ChunkMetadata(
-                session_id=session_id,
-                memory_id=new_memory_id,
-                type=stt_pb2.ChunkType.MEMORY,
-                is_final=True,
-            ),
-        )
-        logging.info(f"Sent memory confirmation with ID: {new_memory_id}")
 
     async def _process_question(self, audio_data, transcription, session_id, memory_id):
         """Process a question, fetch context, and stream answer."""
