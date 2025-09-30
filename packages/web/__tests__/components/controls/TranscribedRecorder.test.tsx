@@ -274,6 +274,7 @@ describe("TranscribedRecorder", () => {
 
     act(() => {
       triggerWebSocketEvent("message", encodedMessage);
+      jest.runAllTimers();
     });
 
     expect(onTranscription).toHaveBeenCalledTimes(1);
