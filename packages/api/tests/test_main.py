@@ -67,6 +67,12 @@ def servicer(container):
 
 
 @pytest.fixture
+def memory_servicer(container):
+    """Memory persistence service under test with DI'd container."""
+    return main.MemoryPersistService(container)
+
+
+@pytest.fixture
 def websocket_handler(container):
     """WebSocket handler with mocked container."""
     return main.WebSocketTranscriptionHandler(container)
@@ -132,17 +138,35 @@ async def test_websocket_handler_init(container):
     """Test that WebSocket handler initializes correctly."""
     handler = main.WebSocketTranscriptionHandler(container)
     assert handler.servicer is not None
+    assert handler.persist_servicer is not None
     assert isinstance(handler.servicer, main.TranscriptionServiceServicer)
+    assert isinstance(handler.persist_servicer, main.MemoryPersistService)
 
 
 @pytest.mark.asyncio
-async def test_websocket_connection_lifecycle(websocket_handler, mock_websocket):
-    """Test WebSocket connection acceptance and cleanup."""
+async def test_transcription_connection_lifecycle(websocket_handler, mock_websocket):
+    """Test WebSocket ws/transcribe connection acceptance and cleanup."""
     # Mock the message processing to avoid complexity
-    with patch.object(websocket_handler, "_process_messages") as mock_process:
+    with patch.object(websocket_handler, "_process_transcription") as mock_process:
         mock_process.side_effect = WebSocketDisconnect()
 
-        await websocket_handler.handle_connection(mock_websocket)
+        await websocket_handler.handle_connection(mock_websocket, "transcribe")
+
+        # Verify connection was accepted
+        mock_websocket.accept.assert_awaited_once()
+
+        # Verify message processing was attempted
+        mock_process.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_memory_connection_lifecycle(websocket_handler, mock_websocket):
+    """Test WebSocket ws/memory connection acceptance and cleanup."""
+    # Mock the message processing to avoid complexity
+    with patch.object(websocket_handler, "_process_memory") as mock_process:
+        mock_process.side_effect = WebSocketDisconnect()
+
+        await websocket_handler.handle_connection(mock_websocket, "memory")
 
         # Verify connection was accepted
         mock_websocket.accept.assert_awaited_once()
@@ -155,10 +179,10 @@ async def test_websocket_connection_lifecycle(websocket_handler, mock_websocket)
 async def test_websocket_connection_error_handling(websocket_handler, mock_websocket):
     """Test WebSocket error handling during connection."""
     # Mock the message processing to raise an exception
-    with patch.object(websocket_handler, "_process_messages") as mock_process:
+    with patch.object(websocket_handler, "_process_transcription") as mock_process:
         mock_process.side_effect = Exception("Test error")
 
-        await websocket_handler.handle_connection(mock_websocket)
+        await websocket_handler.handle_connection(mock_websocket, "transcribe")
 
         # Verify connection was accepted
         mock_websocket.accept.assert_awaited_once()
@@ -211,20 +235,15 @@ async def test_websocket_message_processing_memory(
     mock_websocket.send_bytes.side_effect = mock_send_bytes
 
     # Run the message processing
-    await websocket_handler._process_messages(mock_websocket, id(mock_websocket))
+    await websocket_handler._process_memory(mock_websocket, id(mock_websocket))
 
     # Verify that transcription and memory saving occurred
     assert container.persistence.save_memory.awaited
 
-    # Verify transcript responses were sent
-    transcript_messages = [
-        msg for msg in sent_messages if msg.metadata.type == ChunkType.TRANSCRIPT
-    ]
     memory_messages = [
         msg for msg in sent_messages if msg.metadata.type == ChunkType.MEMORY
     ]
 
-    assert len(transcript_messages) > 0  # Should have transcript responses
     assert len(memory_messages) > 0  # Should have memory confirmation
 
 
@@ -291,7 +310,7 @@ async def test_websocket_message_processing_question(
     mock_websocket.send_bytes.side_effect = mock_send_bytes
 
     # Run the message processing
-    await websocket_handler._process_messages(mock_websocket, id(mock_websocket))
+    await websocket_handler._process_transcription(mock_websocket, id(mock_websocket))
 
     # Verify transcript responses were sent
     transcript_messages = [
@@ -335,7 +354,7 @@ async def test_startup_event():
 
 
 @pytest.mark.asyncio
-async def test_transcribe_saves_memory(container, servicer, collect_responses):
+async def test_transcribe_saves_memory(container, memory_servicer, collect_responses):
     """Test that memory transcription works through servicer (legacy compatibility)."""
     session_id = "test_session"
     memory_id = "test-memory-id"
@@ -359,9 +378,10 @@ async def test_transcribe_saves_memory(container, servicer, collect_responses):
         yield audio_chunk
         yield final_chunk
 
-    responses = await collect_responses(request_iterator(), servicer.Transcribe, None)
+    responses = await collect_responses(
+        request_iterator(), memory_servicer.StoreMemory, None
+    )
 
-    assert any(r.text_data == "test" for r in responses)
     container.persistence.save_memory.assert_awaited()
     assert any(r.metadata.type == ChunkType.MEMORY for r in responses)
 

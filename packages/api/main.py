@@ -1,5 +1,7 @@
 import logging
 import sys
+from typing import Any
+from collections.abc import AsyncGenerator
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
@@ -7,6 +9,7 @@ import uvicorn
 
 from protos.generated.py import stt_pb2
 from api.transcription_servicer import TranscriptionServiceServicer
+from api.memory_persist_service import MemoryPersistService
 from api.dependency_container import Container
 
 # Constants
@@ -33,8 +36,9 @@ class WebSocketTranscriptionHandler:
 
     def __init__(self, container: Container):
         self.servicer = TranscriptionServiceServicer(container)
+        self.persist_servicer = MemoryPersistService(container)
 
-    async def handle_connection(self, websocket: WebSocket):
+    async def handle_connection(self, websocket: WebSocket, connection_type: str):
         """Handle a WebSocket connection."""
         await websocket.accept()
         connection_id = id(websocket)
@@ -43,7 +47,13 @@ class WebSocketTranscriptionHandler:
         logging.info(f"WebSocket client connected: {connection_id}")
 
         try:
-            await self._process_messages(websocket, connection_id)
+            if connection_type == "transcribe":
+                await self._process_transcription(websocket, connection_id)
+            elif connection_type == "memory":
+                await self._process_memory(websocket, connection_id)
+            else:
+                logging.error(f"Unknown connection type: {connection_type}")
+                await websocket.close(code=1003, reason="Unknown connection type")
         except WebSocketDisconnect:
             logging.info(f"WebSocket client disconnected: {connection_id}")
         except Exception as e:
@@ -51,34 +61,55 @@ class WebSocketTranscriptionHandler:
         finally:
             active_connections.pop(str(connection_id), None)
 
-    async def _process_messages(self, websocket: WebSocket, connection_id: int):
+    async def _message_generator(
+        self, websocket: WebSocket
+    ) -> AsyncGenerator[stt_pb2.MemoryChunk, Any]:
+        while True:
+            try:
+                # Receive message (could be binary protobuf or JSON)
+                data = await websocket.receive_bytes()
+                memory_chunk = stt_pb2.MemoryChunk()
+                memory_chunk.ParseFromString(data)
+                yield memory_chunk
+
+            except WebSocketDisconnect:
+                break
+            except Exception as e:
+                logging.error(f"Error processing WebSocket message: {e}")
+                break
+
+    async def _process_transcription(self, websocket: WebSocket, connection_id: int):
         """Process incoming messages from the WebSocket connection."""
 
         # Create a message generator that yields protobuf messages
-        async def message_generator():
-            while True:
-                try:
-                    # Receive message (could be binary protobuf or JSON)
-                    data = await websocket.receive_bytes()
-                    memory_chunk = stt_pb2.MemoryChunk()
-                    memory_chunk.ParseFromString(data)
-                    yield memory_chunk
+        message_generator = self._message_generator(websocket)
 
-                except WebSocketDisconnect:
-                    break
-                except Exception as e:
-                    logging.error(f"Error processing WebSocket message: {e}")
-                    break
-
-        # Process messages using the existing transcription servicer logic
+        # Process messages using the transcription servicer logic
         try:
             async for response_chunk in self.servicer.Transcribe(
-                message_generator(), None
+                message_generator, None
             ):
                 logging.debug(f">>>Sending response chunk: {response_chunk}")
                 await websocket.send_bytes(response_chunk.SerializeToString())
         except Exception as e:
             logging.error(f"Error in transcription processing: {e}")
+            await websocket.close(code=1011, reason=f"Server error: {str(e)}")
+
+    async def _process_memory(self, websocket: WebSocket, connection_id: int):
+        """Process incoming memory messages from the WebSocket connection."""
+
+        # Create a message generator that yields protobuf messages
+        message_generator = self._message_generator(websocket)
+
+        # Process messages using the memory store logic
+        try:
+            async for response in self.persist_servicer.StoreMemory(
+                message_generator, None
+            ):
+                logging.debug(f">>>Sending memory response: {response}")
+                await websocket.send_bytes(response.SerializeToString())
+        except Exception as e:
+            logging.error(f"Error in memory processing: {e}")
             await websocket.close(code=1011, reason=f"Server error: {str(e)}")
 
 
@@ -102,7 +133,17 @@ async def websocket_transcribe(websocket: WebSocket):
         await websocket.close(code=1011, reason="Server not initialized")
         return
 
-    await handler.handle_connection(websocket)
+    await handler.handle_connection(websocket, "transcribe")
+
+
+@app.websocket("/ws/memory")
+async def websocket_memory(websocket: WebSocket):
+    """WebSocket endpoint for saving memories."""
+    if handler is None:
+        await websocket.close(code=1011, reason="Server not initialized")
+        return
+
+    await handler.handle_connection(websocket, "memory")
 
 
 @app.get("/health")
