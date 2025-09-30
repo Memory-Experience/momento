@@ -54,7 +54,10 @@ const Chat: FC = () => {
         ) {
           setMessages((prev) => [
             ...prev,
-            { id: crypto.randomUUID(), text },
+            {
+              id: crypto.randomUUID(),
+              text,
+            },
             {
               id: message.metadata?.memoryId ?? crypto.randomUUID(),
               text: message.textData || "",
@@ -108,7 +111,10 @@ const Chat: FC = () => {
             // create new message pair (question + answer)
             return [
               ...prev,
-              { id: crypto.randomUUID(), text },
+              {
+                id: crypto.randomUUID(),
+                text,
+              },
               {
                 id: sessionId ?? crypto.randomUUID(),
                 text: message.textData ?? "",
@@ -141,53 +147,54 @@ const Chat: FC = () => {
   }, [mode, setMode, askQuestion, saveMemory]);
 
   return (
-    <div className="w-full h-full flex flex-col gap-2">
-      <div className="flex-1 overflow-y-auto">
-        <div className="text-gray-500 text-center">Messages section</div>
+    <div className="h-full grid grid-rows-[1fr_auto] gap-4">
+      <div className="overflow-y-auto min-h-0">
         {messages.map(({ id, text }) => (
           <div key={id} className="p-2 border-b">
             {text}
           </div>
         ))}
       </div>
-      <div className="flex-shrink-0">
-        <div className="w-full flex items-start gap-2">
-          <Textarea
-            minRows={1}
-            maxRows={4}
-            sx={{ width: "75%", margin: "0 auto" }}
-            placeholder="Type your memory/question..."
-            disabled={isConnected}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            endDecorator={
-              <div className="w-full flex gap-2">
-                <TranscribedRecorder onTranscription={handleTranscription} />
-                <Button
-                  sx={{ ml: "auto" }}
-                  variant="plain"
-                  color="primary"
-                  size="sm"
-                  startDecorator={<Help />}
-                  onClick={() => setMode("question")}
-                  disabled={!text.trim() || isConnected}
-                >
-                  Ask Question
-                </Button>
-                <Button
-                  variant="plain"
-                  color="danger"
-                  size="sm"
-                  startDecorator={<Save />}
-                  onClick={() => setMode("memory")}
-                  disabled={!text.trim() || isConnected}
-                >
-                  Save Memory
-                </Button>
-              </div>
-            }
-          />
-        </div>
+
+      <div className="w-full flex items-start gap-2">
+        <Textarea
+          minRows={1}
+          maxRows={4}
+          sx={{
+            width: "75%",
+            margin: "0 auto",
+          }}
+          placeholder="Type your memory/question..."
+          disabled={isConnected}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          endDecorator={
+            <div className="w-full flex gap-2">
+              <TranscribedRecorder onTranscription={handleTranscription} />
+              <Button
+                sx={{ ml: "auto" }}
+                variant="plain"
+                color="primary"
+                size="sm"
+                startDecorator={<Help />}
+                onClick={() => setMode("question")}
+                disabled={!text.trim() || isConnected}
+              >
+                Ask Question
+              </Button>
+              <Button
+                variant="plain"
+                color="danger"
+                size="sm"
+                startDecorator={<Save />}
+                onClick={() => setMode("memory")}
+                disabled={!text.trim() || isConnected}
+              >
+                Save Memory
+              </Button>
+            </div>
+          }
+        />
       </div>
     </div>
   );
