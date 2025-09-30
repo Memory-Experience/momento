@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useCallback, useEffect, useState } from "react";
+import { FC, useCallback, useEffect, useRef, useState } from "react";
 import { Button, Textarea } from "@mui/joy";
 import { Help, Save } from "@mui/icons-material";
 import TranscribedRecorder from "./controls/TranscribedRecorder";
@@ -18,6 +18,11 @@ const Chat: FC = () => {
   const { isConnected, connect, addEventListener, send } = useWebSocket(url);
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<{ id: string; text: string }[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const handleTranscription = (transcript: MemoryChunk) => {
     console.debug("Chat#handleTranscription", transcript);
@@ -133,6 +138,10 @@ const Chat: FC = () => {
   }, [addEventListener, connect, send, text]);
 
   useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
     if (!mode) {
       return;
     }
@@ -154,6 +163,7 @@ const Chat: FC = () => {
             {text}
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
 
       <div className="w-full flex items-start gap-2">
