@@ -7,7 +7,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import Chat from "@/components/Chat";
-import { ChunkType, MemoryChunk } from "protos/generated/ts/stt";
+import { ChunkMetadata, ChunkType, MemoryChunk } from "protos/generated/ts/stt";
 
 const states = {
   OPEN: WebSocket.OPEN.valueOf(),
@@ -59,6 +59,10 @@ beforeAll(() => {
   jest.useFakeTimers();
 });
 
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
 afterAll(() => {
   global.WebSocket = originalWebSocket;
 });
@@ -96,8 +100,8 @@ describe("Chat", () => {
     expect(storeButton).not.toBeDisabled();
   });
 
-  it("connects to WebSocket, disables further input and shows messages when storing memories", async () => {
-    jest.spyOn(crypto, "randomUUID").mockImplementation(() => "test-uuid");
+  it("connects to memory websocket, disables further input and shows messages when storing memories", async () => {
+    jest.spyOn(crypto, "randomUUID").mockImplementationOnce(() => "test-uuid");
 
     render(<Chat />);
 
@@ -165,6 +169,114 @@ describe("Chat", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Test memory")).toBeInTheDocument();
     expect(screen.getByText("Test memory")).toBeInstanceOf(HTMLDivElement);
+
+    expect(input).not.toBeDisabled();
+  });
+
+  it("connects to ask websocket, disables further input and shows messages when asking questions", async () => {
+    jest
+      .spyOn(crypto, "randomUUID")
+      .mockImplementationOnce(() => "test-qa-uuid");
+
+    render(<Chat />);
+
+    const input = screen.getByRole("textbox");
+    expect(input).toBeInTheDocument();
+    expect(input).not.toBeDisabled();
+
+    fireEvent.change(input, { target: { value: "What did I do?" } });
+
+    const askButton = screen.getByRole("button", { name: "Ask Question" });
+    expect(askButton).toBeInTheDocument();
+    expect(askButton).not.toBeDisabled();
+    expect(mockWebSocketConstructor).not.toHaveBeenCalled();
+
+    fireEvent.click(askButton);
+
+    expect(mockWebSocketConstructor).toHaveBeenCalledTimes(1);
+    expect(mockWebSocketConstructor).toHaveBeenCalledWith(
+      "ws://localhost:8080/ws/ask",
+    );
+    expect(mockWebSocket.send).not.toHaveBeenCalled();
+
+    // Simulate WebSocket open
+    act(() => {
+      triggerWebSocketEvent("open");
+    });
+
+    const questionMessage = MemoryChunk.encode({
+      textData: "What did I do?",
+      metadata: {
+        memoryId: "",
+        sessionId: "test-qa-uuid",
+        type: ChunkType.QUESTION,
+        isFinal: true,
+        score: 0,
+      },
+    }).finish();
+    expect(mockWebSocket.send).toHaveBeenCalledTimes(1);
+    expect(mockWebSocket.send).toHaveBeenCalledWith(questionMessage);
+    expect(mockWebSocket.close).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Save Memory" })).toBeDisabled();
+    expect(askButton).toBeDisabled();
+    expect(input).toBeDisabled();
+
+    const metadata: ChunkMetadata = {
+      sessionId: "test-qa-uuid",
+      memoryId: "",
+      type: ChunkType.ANSWER,
+      isFinal: false,
+      score: 0,
+    };
+    const responseMessages = [
+      MemoryChunk.encode({
+        textData: "<think>The user asks",
+        metadata: {
+          ...metadata,
+        },
+      }).finish(),
+      MemoryChunk.encode({
+        textData: " what he did",
+        metadata: {
+          ...metadata,
+        },
+      }).finish(),
+      MemoryChunk.encode({
+        textData: " so I shall answer",
+        metadata: {
+          ...metadata,
+        },
+      }).finish(),
+      MemoryChunk.encode({
+        textData: " honestly</think>You did",
+        metadata: {
+          ...metadata,
+        },
+      }).finish(),
+      MemoryChunk.encode({
+        textData: " absolutely nothing.",
+        metadata: {
+          ...metadata,
+          isFinal: true,
+          score: 0.96,
+        },
+      }).finish(),
+    ];
+    act(() => {
+      responseMessages.forEach((message) =>
+        triggerWebSocketEvent("message", message),
+      );
+    });
+
+    await waitFor(() => {
+      expect(mockWebSocket.close).toHaveBeenCalledTimes(1);
+    });
+    expect(input).toHaveValue("");
+
+    const expectedMessage =
+      "<think>The user asks what he did so I shall answer honestly</think>You did absolutely nothing.";
+    expect(screen.getByText(expectedMessage)).toBeInTheDocument();
+    expect(screen.getByText(expectedMessage)).toBeInstanceOf(HTMLDivElement);
 
     expect(input).not.toBeDisabled();
   });

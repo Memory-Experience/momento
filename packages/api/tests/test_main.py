@@ -73,6 +73,12 @@ def memory_servicer(container):
 
 
 @pytest.fixture
+def qa_servicer(container):
+    """Question answering service under test with DI'd container."""
+    return main.QuestionAnswerService(container)
+
+
+@pytest.fixture
 def websocket_handler(container):
     """WebSocket handler with mocked container."""
     return main.WebSocketTranscriptionHandler(container)
@@ -139,8 +145,10 @@ async def test_websocket_handler_init(container):
     handler = main.WebSocketTranscriptionHandler(container)
     assert handler.servicer is not None
     assert handler.persist_servicer is not None
+    assert handler.qa_servicer is not None
     assert isinstance(handler.servicer, main.TranscriptionServiceServicer)
     assert isinstance(handler.persist_servicer, main.MemoryPersistService)
+    assert isinstance(handler.qa_servicer, main.QuestionAnswerService)
 
 
 @pytest.mark.asyncio
@@ -310,17 +318,12 @@ async def test_websocket_message_processing_question(
     mock_websocket.send_bytes.side_effect = mock_send_bytes
 
     # Run the message processing
-    await websocket_handler._process_transcription(mock_websocket, id(mock_websocket))
+    await websocket_handler._process_question(mock_websocket, id(mock_websocket))
 
-    # Verify transcript responses were sent
-    transcript_messages = [
-        msg for msg in sent_messages if msg.metadata.type == ChunkType.TRANSCRIPT
-    ]
     answer_messages = [
         msg for msg in sent_messages if msg.metadata.type == ChunkType.ANSWER
     ]
 
-    assert len(transcript_messages) > 0  # Should have transcript echo
     assert len(answer_messages) > 0  # Should have answer responses
 
     # Verify RAG was called
@@ -387,7 +390,7 @@ async def test_transcribe_saves_memory(container, memory_servicer, collect_respo
 
 
 @pytest.mark.asyncio
-async def test_transcribe_text_input(container, servicer, collect_responses):
+async def test_transcribe_text_input(container, qa_servicer, collect_responses):
     """Test text input processing through servicer (legacy compatibility)."""
     # Answer payload from RAG
     mock_memory_req = MagicMock()
@@ -431,13 +434,9 @@ async def test_transcribe_text_input(container, servicer, collect_responses):
         yield text_chunk
         yield final_chunk
 
-    responses = await collect_responses(request_iterator(), servicer.Transcribe, None)
-
-    # First: echo transcript; second: final transcript marker
-    assert responses[0].text_data == "Hello, this is a test question."
-    assert responses[0].metadata.type == ChunkType.TRANSCRIPT
-    assert responses[1].metadata.type == ChunkType.TRANSCRIPT
-    assert responses[1].metadata.is_final is True
+    responses = await collect_responses(
+        request_iterator(), qa_servicer.AnswerQuestion, None
+    )
 
     # Then at least one ANSWER with expected text
     answer_responses = [r for r in responses if r.metadata.type == ChunkType.ANSWER]
