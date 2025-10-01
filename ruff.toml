@@ -1,4 +1,5 @@
-exclude = ["**/generated/py/*", "**/timeline_qa/**"]
+exclude = ["**/generated/py/*", "**/timeline_qa/**", "**/simul_whisper/**/*"]
+force-exclude=true
 
 # Set line length for both linting and formatting
 line-length = 88
