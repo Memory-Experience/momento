@@ -11,13 +11,17 @@ dependencies = [
     "pydub>=0.25.1",
     "transformers>=4.55.1",
     "torch>=2.8.0",
-    "numpy>=2.3.2",
+    "numpy<2.3",
     "faster-whisper>=1.2.0",
     "llama-cpp-python>=0.3.16",
     "huggingface-hub>=0.34.4",
     "qdrant-client>=1.15.1",
     "spacy>=3.8.7",
     "sentence-transformers>=5.1.1",
+    "torchaudio>=2.8.0",
+    "tiktoken>=0.11.0",
+    "triton>=2.0.0,<3",
+    "numba==0.61.2"
 ]
 
 [build-system]
