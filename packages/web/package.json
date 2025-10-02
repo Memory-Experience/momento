@@ -18,6 +18,7 @@
     "@mui/joy": "5.0.0-beta.52",
     "@mui/material": "^6.5.0",
     "next": "15.5.3",
+    "next-themes": "^0.4.6",
     "protos": "workspace:^",
     "react": "19.1.0",
     "react-dom": "19.1.0"
