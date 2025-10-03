@@ -8,6 +8,9 @@ import {
 } from "@testing-library/react";
 import Chat from "@/components/Chat";
 import { ChunkMetadata, ChunkType, MemoryChunk } from "protos/generated/ts/stt";
+import MessageList from "@/components/ui/MessageList";
+
+jest.mock("../../components/ui/MessageList", () => jest.fn(() => <></>));
 
 const states = {
   OPEN: WebSocket.OPEN.valueOf(),
@@ -47,6 +50,9 @@ const triggerWebSocketEvent = (eventType: string, data?: Uint8Array) => {
   }
 };
 
+let firstDate: Date | undefined;
+let secondDate: Date | undefined;
+
 let originalWebSocket: typeof WebSocket;
 beforeAll(() => {
   originalWebSocket = global.WebSocket;
@@ -57,6 +63,9 @@ beforeAll(() => {
     (global.WebSocket as unknown as Record<string, unknown>)[key] = value;
   }
   jest.useFakeTimers();
+
+  firstDate = new Date(Date.UTC(2025, 9, 2, 15, 25, 34));
+  secondDate = new Date(Date.UTC(2025, 9, 2, 15, 26, 45));
 });
 
 beforeEach(() => {
@@ -101,13 +110,22 @@ describe("Chat", () => {
   });
 
   it("connects to memory websocket, disables further input and shows messages when storing memories", async () => {
-    jest.spyOn(crypto, "randomUUID").mockImplementationOnce(() => "test-uuid");
+    jest
+      .spyOn(crypto, "randomUUID")
+      .mockImplementationOnce(() => "test-uuid")
+      .mockImplementationOnce(() => "test-uuid-usermessage");
+    jest
+      .spyOn(global, "Date")
+      .mockImplementationOnce(() => firstDate)
+      .mockImplementationOnce(() => secondDate);
 
     render(<Chat />);
 
     const input = screen.getByRole("textbox");
     expect(input).toBeInTheDocument();
     expect(input).not.toBeDisabled();
+    expect(MessageList).toHaveBeenCalledTimes(1);
+    expect(MessageList).toHaveBeenNthCalledWith(1, { messages: [] }, undefined);
 
     fireEvent.change(input, { target: { value: "Test memory" } });
 
@@ -164,25 +182,47 @@ describe("Chat", () => {
       expect(mockWebSocket.close).toHaveBeenCalledTimes(1);
     });
     expect(input).toHaveValue("");
-    expect(
-      screen.getByText("Test memory saved with ID: test-uuid"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Test memory")).toBeInTheDocument();
-    expect(screen.getByText("Test memory")).toBeInstanceOf(HTMLDivElement);
-
     expect(input).not.toBeDisabled();
+    expect(MessageList).toHaveBeenLastCalledWith(
+      {
+        messages: [
+          {
+            content: "Test memory",
+            id: "test-uuid-usermessage",
+            isFinal: true,
+            sender: "user",
+            timestamp: firstDate,
+          },
+          {
+            content: "Test memory saved with ID: test-uuid",
+            id: "test-uuid",
+            isFinal: true,
+            sender: "assistant",
+            timestamp: secondDate,
+          },
+        ],
+      },
+      undefined,
+    );
   });
 
   it("connects to ask websocket, disables further input and shows messages when asking questions", async () => {
     jest
       .spyOn(crypto, "randomUUID")
-      .mockImplementationOnce(() => "test-qa-uuid");
+      .mockImplementationOnce(() => "test-qa-uuid")
+      .mockImplementationOnce(() => "test-qa-uuid-usermessage");
+    jest
+      .spyOn(global, "Date")
+      .mockImplementationOnce(() => firstDate)
+      .mockImplementationOnce(() => secondDate);
 
     render(<Chat />);
 
     const input = screen.getByRole("textbox");
     expect(input).toBeInTheDocument();
     expect(input).not.toBeDisabled();
+    expect(MessageList).toHaveBeenCalledTimes(1);
+    expect(MessageList).toHaveBeenCalledWith({ messages: [] }, undefined);
 
     fireEvent.change(input, { target: { value: "What did I do?" } });
 
@@ -273,11 +313,28 @@ describe("Chat", () => {
     });
     expect(input).toHaveValue("");
 
-    const expectedMessage =
-      "<think>The user asks what he did so I shall answer honestly</think>You did absolutely nothing.";
-    expect(screen.getByText(expectedMessage)).toBeInTheDocument();
-    expect(screen.getByText(expectedMessage)).toBeInstanceOf(HTMLDivElement);
-
     expect(input).not.toBeDisabled();
+    expect(MessageList).toHaveBeenLastCalledWith(
+      {
+        messages: [
+          {
+            content: "What did I do?",
+            id: "test-qa-uuid-usermessage",
+            isFinal: true,
+            sender: "user",
+            timestamp: firstDate,
+          },
+          {
+            content:
+              "<think>The user asks what he did so I shall answer honestly</think>You did absolutely nothing.",
+            id: "test-qa-uuid",
+            isFinal: true,
+            sender: "assistant",
+            timestamp: secondDate,
+          },
+        ],
+      },
+      undefined,
+    );
   });
 });
