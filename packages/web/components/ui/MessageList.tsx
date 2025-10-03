@@ -42,7 +42,10 @@ const MessageList: FC<MessageListProps> = ({ messages }) => {
           }}
         >
           {messages.map((message) => (
-            <MessageComponent key={message.id} message={message} />
+            <MessageComponent
+              key={`${message.sender}_${message.id}`}
+              message={message}
+            />
           ))}
           <div ref={messagesEndRef} />
         </Box>
