@@ -60,7 +60,7 @@ afterAll(() => {
   global.WebSocket = originalWebSocket;
 });
 
-jest.mock("../../../components/controls/AudioRecorder", () => {
+jest.mock("./AudioRecorder", () => {
   return jest.fn(() => {
     const recordingContext = useContext(RecordingContext);
 
