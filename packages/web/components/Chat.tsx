@@ -1,6 +1,6 @@
 "use client";
 
-import { FC, useCallback, useEffect, useState } from "react";
+import { FC, useCallback, useEffect, useState, useRef } from "react";
 import { Button, Textarea } from "@mui/joy";
 import { Help, Save } from "@mui/icons-material";
 import TranscribedRecorder from "./controls/TranscribedRecorder";
@@ -8,6 +8,7 @@ import { ChunkType, MemoryChunk } from "protos/generated/ts/stt";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { Message } from "@/types/Message";
 import MessageList from "./ui/MessageList";
+import { reduceQuestionMessages } from "@/utils/message.reducers";
 
 const Chat: FC = () => {
   const [mode, setMode] = useState<"memory" | "question" | null>(null);
@@ -17,9 +18,16 @@ const Chat: FC = () => {
       : mode === "question"
         ? "ws://localhost:8080/ws/ask"
         : null;
-  const { isConnected, connect, addEventListener, send } = useWebSocket(url);
+  const { isConnected, connect, addEventListener, removeEventListener, send } =
+    useWebSocket(url);
   const [text, setText] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
+
+  // Track active listeners to prevent duplicates
+  const openListenerRef = useRef<((event: Event) => void) | null>(null);
+  const messageListenerRef = useRef<((event: MessageEvent) => void) | null>(
+    null,
+  );
 
   const handleTranscription = (transcript: MemoryChunk) => {
     console.debug("Chat#handleTranscription", transcript);
@@ -29,9 +37,17 @@ const Chat: FC = () => {
   };
 
   const saveMemory = useCallback(() => {
+    // Clean up existing listeners
+    if (openListenerRef.current) {
+      removeEventListener("open", openListenerRef.current);
+    }
+    if (messageListenerRef.current) {
+      removeEventListener("message", messageListenerRef.current);
+    }
+
     connect();
 
-    addEventListener("open", () => {
+    openListenerRef.current = () => {
       send(
         MemoryChunk.encode({
           textData: text,
@@ -44,9 +60,9 @@ const Chat: FC = () => {
           },
         }).finish(),
       );
-    });
+    };
 
-    addEventListener("message", async (e: MessageEvent) => {
+    messageListenerRef.current = async (e: MessageEvent) => {
       const data = e.data instanceof Blob ? await e.data.bytes() : e.data;
       if (data) {
         const message = MemoryChunk.decode(new Uint8Array(data));
@@ -76,67 +92,48 @@ const Chat: FC = () => {
       } else {
         console.warn("Chat: Received empty message", data);
       }
-    });
-  }, [addEventListener, connect, send, text]);
+    };
+
+    addEventListener("open", openListenerRef.current);
+    addEventListener("message", messageListenerRef.current);
+  }, [addEventListener, removeEventListener, connect, send, text]);
 
   const askQuestion = useCallback(() => {
+    // Clean up existing listeners
+    if (openListenerRef.current) {
+      removeEventListener("open", openListenerRef.current);
+    }
+    if (messageListenerRef.current) {
+      removeEventListener("message", messageListenerRef.current);
+    }
+
     connect();
 
-    addEventListener("open", () => {
-      send(
-        MemoryChunk.encode({
-          textData: text,
-          metadata: {
-            memoryId: "",
-            sessionId: crypto.randomUUID(),
-            type: ChunkType.QUESTION,
-            isFinal: true,
-            score: 0,
-          },
-        }).finish(),
-      );
-    });
+    openListenerRef.current = () => {
+      const sessionId = crypto.randomUUID();
+      const chunk: MemoryChunk = {
+        textData: text,
+        metadata: {
+          memoryId: "",
+          sessionId,
+          type: ChunkType.QUESTION,
+          isFinal: true,
+          score: 0,
+        },
+      };
 
-    addEventListener("message", async (e: MessageEvent) => {
+      send(MemoryChunk.encode(chunk).finish());
+
+      setMessages((prev) => reduceQuestionMessages(prev, chunk));
+    };
+
+    messageListenerRef.current = async (e: MessageEvent) => {
       const data = e.data instanceof Blob ? await e.data.bytes() : e.data;
       if (data) {
         const message = MemoryChunk.decode(new Uint8Array(data));
         console.debug("Chat: Received message", message);
         if (message.metadata?.type === ChunkType.ANSWER) {
-          setMessages((prev) => {
-            const sessionId = message.metadata?.sessionId;
-            const messageIx = prev.findIndex(({ id }) => id === sessionId);
-
-            if (messageIx >= 0) {
-              // update existing message
-              const post = [...prev];
-              post[messageIx] = {
-                ...post[messageIx],
-                isFinal:
-                  message.metadata?.isFinal ?? post[messageIx].isFinal ?? false,
-                content: post[messageIx].content + (message.textData ?? ""),
-              };
-              return post;
-            }
-            // create new message pair (question + answer)
-            return [
-              ...prev,
-              {
-                id: crypto.randomUUID(),
-                isFinal: true,
-                content: text,
-                timestamp: new Date(),
-                sender: "user",
-              },
-              {
-                id: sessionId ?? crypto.randomUUID(),
-                isFinal: message.metadata?.isFinal ?? false,
-                content: message.textData ?? "",
-                timestamp: new Date(),
-                sender: "assistant",
-              },
-            ];
-          });
+          setMessages((prev) => reduceQuestionMessages([...prev], message));
 
           if (message.metadata?.isFinal) {
             setText("");
@@ -145,8 +142,11 @@ const Chat: FC = () => {
       } else {
         console.warn("Chat: Received empty message", data);
       }
-    });
-  }, [addEventListener, connect, send, text]);
+    };
+
+    addEventListener("open", openListenerRef.current);
+    addEventListener("message", messageListenerRef.current);
+  }, [addEventListener, removeEventListener, connect, send, text, setMessages]);
 
   useEffect(() => {
     if (!mode) {
@@ -161,6 +161,17 @@ const Chat: FC = () => {
 
     setMode(null);
   }, [mode, setMode, askQuestion, saveMemory]);
+
+  useEffect(() => {
+    return () => {
+      if (openListenerRef.current) {
+        removeEventListener("open", openListenerRef.current);
+      }
+      if (messageListenerRef.current) {
+        removeEventListener("message", messageListenerRef.current);
+      }
+    };
+  }, [removeEventListener]);
 
   return (
     <div className="h-full grid grid-rows-[1fr_auto] gap-4">
