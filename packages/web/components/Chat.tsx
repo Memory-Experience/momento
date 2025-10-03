@@ -1,11 +1,13 @@
 "use client";
 
-import { FC, useCallback, useEffect, useRef, useState } from "react";
+import { FC, useCallback, useEffect, useState } from "react";
 import { Button, Textarea } from "@mui/joy";
 import { Help, Save } from "@mui/icons-material";
 import TranscribedRecorder from "./controls/TranscribedRecorder";
 import { ChunkType, MemoryChunk } from "protos/generated/ts/stt";
 import { useWebSocket } from "@/hooks/useWebSocket";
+import { Message } from "@/types/Message";
+import MessageList from "./ui/MessageList";
 
 const Chat: FC = () => {
   const [mode, setMode] = useState<"memory" | "question" | null>(null);
@@ -17,12 +19,7 @@ const Chat: FC = () => {
         : null;
   const { isConnected, connect, addEventListener, send } = useWebSocket(url);
   const [text, setText] = useState("");
-  const [messages, setMessages] = useState<{ id: string; text: string }[]>([]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+  const [messages, setMessages] = useState<Message[]>([]);
 
   const handleTranscription = (transcript: MemoryChunk) => {
     console.debug("Chat#handleTranscription", transcript);
@@ -61,11 +58,17 @@ const Chat: FC = () => {
             ...prev,
             {
               id: crypto.randomUUID(),
-              text,
+              isFinal: true,
+              content: text,
+              timestamp: new Date(),
+              sender: "user",
             },
             {
               id: message.metadata?.memoryId ?? crypto.randomUUID(),
-              text: message.textData || "",
+              isFinal: message.metadata?.isFinal ?? false,
+              content: message.textData || "",
+              timestamp: new Date(),
+              sender: "assistant",
             },
           ]);
           setText("");
@@ -109,7 +112,9 @@ const Chat: FC = () => {
               const post = [...prev];
               post[messageIx] = {
                 ...post[messageIx],
-                text: post[messageIx].text + (message.textData ?? ""),
+                isFinal:
+                  message.metadata?.isFinal ?? post[messageIx].isFinal ?? false,
+                content: post[messageIx].content + (message.textData ?? ""),
               };
               return post;
             }
@@ -118,11 +123,17 @@ const Chat: FC = () => {
               ...prev,
               {
                 id: crypto.randomUUID(),
-                text,
+                isFinal: true,
+                content: text,
+                timestamp: new Date(),
+                sender: "user",
               },
               {
                 id: sessionId ?? crypto.randomUUID(),
-                text: message.textData ?? "",
+                isFinal: message.metadata?.isFinal ?? false,
+                content: message.textData ?? "",
+                timestamp: new Date(),
+                sender: "assistant",
               },
             ];
           });
@@ -136,10 +147,6 @@ const Chat: FC = () => {
       }
     });
   }, [addEventListener, connect, send, text]);
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
 
   useEffect(() => {
     if (!mode) {
@@ -158,12 +165,7 @@ const Chat: FC = () => {
   return (
     <div className="h-full grid grid-rows-[1fr_auto] gap-4">
       <div className="overflow-y-auto min-h-0">
-        {messages.map(({ id, text }) => (
-          <div key={id} className="p-2 border-b">
-            {text}
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
+        <MessageList messages={messages} />
       </div>
 
       <div className="w-full flex items-start gap-2">
