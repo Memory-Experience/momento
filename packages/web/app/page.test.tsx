@@ -1,9 +1,9 @@
 import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
-import Page from "../../app/page";
-import Chat from "../../components/Chat";
+import Page from "./page";
+import Chat from "../components/Chat";
 
-jest.mock("../../components/Chat", () => {
+jest.mock("../components/Chat", () => {
   return jest.fn(() => <h1>Chat Component</h1>);
 });
 
