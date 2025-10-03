@@ -5,10 +5,8 @@ import { Message as MessageType } from "@/types/Message";
 import MessageEmptyState from "@/components/ui/MessageEmptyState";
 import Message from "@/components/ui/Message";
 
-jest.mock("../../../components/ui/MessageEmptyState", () =>
-  jest.fn(() => <></>),
-);
-jest.mock("../../../components/ui/Message", () => jest.fn(() => <></>));
+jest.mock("./MessageEmptyState", () => jest.fn(() => <></>));
+jest.mock("./Message", () => jest.fn(() => <></>));
 
 beforeEach(() => {
   jest.clearAllMocks();
