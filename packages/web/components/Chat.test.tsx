@@ -10,7 +10,7 @@ import Chat from "@/components/Chat";
 import { ChunkMetadata, ChunkType, MemoryChunk } from "protos/generated/ts/stt";
 import MessageList from "@/components/ui/MessageList";
 
-jest.mock("../../components/ui/MessageList", () => jest.fn(() => <></>));
+jest.mock("./ui/MessageList", () => jest.fn(() => <></>));
 
 const states = {
   OPEN: WebSocket.OPEN.valueOf(),
