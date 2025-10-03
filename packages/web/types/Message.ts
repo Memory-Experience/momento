@@ -6,4 +6,6 @@ export interface Message {
   timestamp: Date;
   sender: MessageSender;
   isFinal?: boolean;
+  isThinking?: boolean;
+  thinkingText?: string;
 }

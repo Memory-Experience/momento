@@ -118,6 +118,26 @@ export const useWebSocket = (url: string | null) => {
     return false;
   }, []);
 
+  const removeEventListener = useCallback<
+    <K extends keyof WebSocketEventMap>(
+      key: K,
+      listener: (this: WebSocket, ev: WebSocketEventMap[K]) => void,
+      options?: boolean | EventListenerOptions,
+    ) => boolean
+  >((type, listener, options) => {
+    if (socketRef.current) {
+      console.debug(
+        `Removing event listener of type "${type}" from WebSocket.`,
+      );
+      socketRef.current.removeEventListener(type, listener, options);
+      return true;
+    }
+    console.warn(
+      `WebSocket is not connected. Unable to remove event listener of type "${type}".`,
+    );
+    return false;
+  }, []);
+
   useEffect(() => {
     return () => {
       if (socketRef.current) {
@@ -127,5 +147,12 @@ export const useWebSocket = (url: string | null) => {
     };
   }, []);
 
-  return { isConnected, addEventListener, connect, disconnect, send };
+  return {
+    isConnected,
+    addEventListener,
+    removeEventListener,
+    connect,
+    disconnect,
+    send,
+  };
 };

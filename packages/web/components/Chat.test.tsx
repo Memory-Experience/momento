@@ -319,16 +319,18 @@ describe("Chat", () => {
         messages: [
           {
             content: "What did I do?",
-            id: "test-qa-uuid-usermessage",
+            id: "test-qa-uuid",
             isFinal: true,
             sender: "user",
             timestamp: firstDate,
           },
           {
-            content:
-              "<think>The user asks what he did so I shall answer honestly</think>You did absolutely nothing.",
+            content: "You did absolutely nothing.",
             id: "test-qa-uuid",
             isFinal: true,
+            isThinking: false,
+            thinkingText:
+              "The user asks what he did so I shall answer honestly",
             sender: "assistant",
             timestamp: secondDate,
           },
