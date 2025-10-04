@@ -35,7 +35,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # gRPC Server configuration
-LIMIT_DOCS = 1_000
+LIMIT_DOCS = 1_000_000
 
 
 async def baseline_configuration(dataset, dataset_dir) -> RAGEvaluationClient:
