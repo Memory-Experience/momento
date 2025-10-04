@@ -20,12 +20,17 @@ plugins:
             separate_signature: true
             members_order: source
             filters: ["!^_"]
+  - plantuml:
+      puml_url: https://www.plantuml.com/plantuml/
+      theme:
+        enabled: false
 markdown_extensions:
   - pymdownx.snippets:
       base_path: ../..
       check_paths: false
 nav:
   - Overview: index.md
+  - Readme: readme_link.md
   - Python Backend:
       - Readme: api/readme_link.md
       - Reference (PY): api/py.md
