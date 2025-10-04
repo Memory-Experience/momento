@@ -15,7 +15,7 @@ class MemoryPersistService:
         session_id = None
         memory_id = None
         audio_data = bytearray()
-        transcription = ""
+        transcription: list[str] = []
 
         async for chunk in request_iterator:
             logging.debug(f"<<<Received memory chunk: {chunk}")
@@ -29,7 +29,7 @@ class MemoryPersistService:
             if chunk.audio_data:
                 audio_data.extend(chunk.audio_data)
             if chunk.text_data:
-                transcription += chunk.text_data
+                transcription.append(chunk.text_data)
 
             # If this is the final chunk, process and save the memory
             if chunk.metadata and chunk.metadata.is_final:
@@ -40,7 +40,7 @@ class MemoryPersistService:
 
                 # Reset for next memory within the same connection
                 audio_data = bytearray()
-                transcription = ""
+                transcription = []
                 session_id = None
                 memory_id = None
 
