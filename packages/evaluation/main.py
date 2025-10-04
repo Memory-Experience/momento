@@ -6,7 +6,7 @@ from datetime import datetime
 from collections.abc import AsyncIterator
 
 from api.dependency_container import Container
-from api.transcription_servicer import TranscriptionServiceServicer
+from api.question_answer_service import QuestionAnswerService
 from api.persistence.persistence_service import PersistenceService
 from api.persistence.repositories.in_memory_repository import InMemoryRepository
 from api.rag.llm_rag_service import LLMRAGService
@@ -35,7 +35,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # gRPC Server configuration
-LIMIT_DOCS = 1000_000
+LIMIT_DOCS = 1_000
 
 
 async def baseline_configuration(dataset, dataset_dir) -> RAGEvaluationClient:
@@ -64,8 +64,8 @@ async def baseline_configuration(dataset, dataset_dir) -> RAGEvaluationClient:
         retrieval_limit=20,
     )
 
-    servicer = TranscriptionServiceServicer(container)
-    return RAGEvaluationClient(servicer, doc_to_memory, memory_to_doc)
+    question_anser_service = QuestionAnswerService(container)
+    return RAGEvaluationClient(question_anser_service, doc_to_memory, memory_to_doc)
 
 
 async def momento_configuration(
@@ -98,8 +98,8 @@ async def momento_configuration(
         retrieval_limit=20,
     )
 
-    servicer = TranscriptionServiceServicer(container)
-    return RAGEvaluationClient(servicer, doc_to_memory, memory_to_doc)
+    question_anser_service = QuestionAnswerService(container)
+    return RAGEvaluationClient(question_anser_service, doc_to_memory, memory_to_doc)
 
 
 async def dataset_configurations() -> AsyncIterator[
