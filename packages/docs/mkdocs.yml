@@ -51,6 +51,7 @@ nav:
   - Communication (Protobuf):
       - Readme: protos/readme_link.md
   - Web Frontend:
+      - Overview: web/index.md
       - Readme: web/readme_link.md
       - Reference (TS): web/ts/globals.md
   - Evaluation:
