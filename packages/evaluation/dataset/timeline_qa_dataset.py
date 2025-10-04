@@ -70,7 +70,7 @@ def _convert_timelineqa_to_dataframes(
     for doc_id, ev in event_index.items():
         qa_pairs = ev.get("atomic_qa_pairs") or []
         for idx, pair in enumerate(qa_pairs):
-            if not isinstance(pair, (list, tuple)) or len(pair) < 1:
+            if not isinstance(pair, list | tuple) or len(pair) < 1:
                 continue
             question = str(pair[0]).strip()
             answer = str(pair[1]).strip() if len(pair) > 1 else ""
