@@ -1,12 +1,12 @@
 site_name: Momento
 theme:
-  name: readthedocs
-  logo: assets/logo.png
+    name: readthedocs
+    logo: assets/logo.png
 extra_css:
-  - assets/style.css
+    - assets/style.css
 extra_javascript:
-  - https://polyfill.io/v3/polyfill.min.js?features=es6
-  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+    - https://polyfill.io/v3/polyfill.min.js?features=es6
+    - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 docs_dir: src
 site_dir: site
 plugins:
@@ -32,11 +32,11 @@ plugins:
       theme:
         enabled: false
 markdown_extensions:
-  - pymdownx.arithmatex:
-      generic: true
-  - pymdownx.snippets:
-      base_path: ../..
-      check_paths: false
+    - pymdownx.arithmatex:
+          generic: true
+    - pymdownx.snippets:
+          base_path: ../..
+          check_paths: false
 nav:
   - Overview: index.md
   - Readme: readme_link.md

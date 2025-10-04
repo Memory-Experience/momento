@@ -84,24 +84,24 @@ For the full definition see [`stt.proto`](https://github.com/Memory-Experience/m
 
 - **Purpose**: Live audio transcription
 - **Flow**:
-  - Send audio chunks → Receive transcribed text segments
-  - Used by `TranscribedRecorder` component
+    - Send audio chunks → Receive transcribed text segments
+    - Used by `TranscribedRecorder` component
 - **Message Types**: `ChunkType.TRANSCRIPT`
 
 #### 2. `/ws/memory` - Memory Storage
 
 - **Purpose**: Save memories (text/audio) to the system
 - **Flow**:
-  - Send memory data → Receive confirmation with memory ID
-  - Triggers vector indexing in backend
+    - Send memory data → Receive confirmation with memory ID
+    - Triggers vector indexing in backend
 - **Message Types**: `ChunkType.MEMORY`
 
 #### 3. `/ws/ask` - RAG Question Answering
 
 - **Purpose**: Query stored memories using natural language
 - **Flow**:
-  - Send question → Receive relevant memories → Receive generated answer
-  - Implements retrieval-augmented generation (RAG)
+    - Send question → Receive relevant memories → Receive generated answer
+    - Implements retrieval-augmented generation (RAG)
 - **Message Types**: `ChunkType.QUESTION` → `ChunkType.MEMORY`/`ChunkType.ANSWER`
 
 Websockets connections are implemented and managed using the custom `useWebSocket` hook.
@@ -120,14 +120,14 @@ Key features:
 ```typescript
 // 1. User types text and clicks "Save Memory"
 const memoryChunk: MemoryChunk = {
-  textData: "Had lunch at the park today",
-  metadata: {
-    memoryId: crypto.randomUUID(),
-    sessionId: "",
-    type: ChunkType.MEMORY,
-    isFinal: true,
-    score: 0,
-  },
+    textData: "Had lunch at the park today",
+    metadata: {
+        memoryId: crypto.randomUUID(),
+        sessionId: "",
+        type: ChunkType.MEMORY,
+        isFinal: true,
+        score: 0,
+    },
 };
 
 // 2. Send to /ws/memory endpoint
@@ -142,13 +142,13 @@ send(MemoryChunk.encode(memoryChunk).finish());
 ```typescript
 // 1. User asks question
 const questionChunk: MemoryChunk = {
-  textData: "What did I have for lunch?",
-  metadata: {
-    sessionId: crypto.randomUUID(),
-    type: ChunkType.QUESTION,
-    isFinal: true,
-    score: 0,
-  },
+    textData: "What did I have for lunch?",
+    metadata: {
+        sessionId: crypto.randomUUID(),
+        type: ChunkType.QUESTION,
+        isFinal: true,
+        score: 0,
+    },
 };
 
 // 2. Send to /ws/ask endpoint
