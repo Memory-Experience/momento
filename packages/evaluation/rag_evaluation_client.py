@@ -91,7 +91,9 @@ class RAGEvaluationClient:
 
             answer_chunks: list[str] = []
 
-            async for response in self.qa_service.AnswerQuestion(query_stream(), "context"):
+            async for response in self.qa_service.AnswerQuestion(
+                query_stream(), "context"
+            ):
                 if response.metadata.type == stt_pb2.ChunkType.MEMORY:
                     # Server sends retrieved memories (by *saved* memory_id)
                     mem_id = response.metadata.memory_id
