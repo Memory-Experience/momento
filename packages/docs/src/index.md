@@ -75,21 +75,25 @@ end note
 ## Key Features
 
 ### Audio & Text Input
+
 - Real-time speech-to-text transcription
 - Direct text input support
 - WebSocket-based streaming communication
 
 ### Memory Storage
+
 - Automatic text chunking and vector embedding generation
 - Semantic indexing in QDrant vector database
 - File-based persistence for audio and metadata
 
 ### Intelligent Retrieval
+
 - Natural language question processing
 - Semantic similarity search across stored memories
 - Context filtering by relevance thresholds
 
 ### AI-Powered Responses
+
 - RAG-based answer generation using Qwen3 LLM
 - Streaming response delivery
 - Context-aware answers based on retrieved memories
