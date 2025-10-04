@@ -4,6 +4,9 @@ theme:
   logo: assets/logo.png
 extra_css:
   - assets/style.css
+extra_javascript:
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 docs_dir: src
 site_dir: site
 plugins:
@@ -21,6 +24,8 @@ plugins:
             members_order: source
             filters: ["!^_"]
 markdown_extensions:
+  - pymdownx.arithmatex:
+      generic: true
   - pymdownx.snippets:
       base_path: ../..
       check_paths: false
@@ -35,5 +40,12 @@ nav:
       - Readme: web/readme_link.md
       - Reference (TS): web/ts/globals.md
   - Evaluation:
+      - Architecture:
+          - Overview: evaluation/architecture.md
+          - Data Loading: evaluation/data_loading.md
+          - Configuration: evaluation/configuration.md
+          - Baselines: evaluation/baselines.md
+          - Datasets: evaluation/datasets.md
+          - Metrics: evaluation/metrics.md
       - Readme: evaluation/readme_link.md
       - Reference (PY): evaluation/py.md
