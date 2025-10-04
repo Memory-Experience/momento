@@ -44,3 +44,8 @@ markers = [
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
 ]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=6.30.1",
+]
