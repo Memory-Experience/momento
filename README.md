@@ -1,4 +1,4 @@
-# UZH Master Project &middot; [![Build](https://github.com/Memory-Experience/momento/actions/workflows/build.yaml/badge.svg)](https://github.com/Memory-Experience/momento/actions/workflows/build.yaml)
+# UZH Master Project &middot; [![Build](https://github.com/Memory-Experience/momento/actions/workflows/build.yaml/badge.svg)](https://github.com/Memory-Experience/momento/actions/workflows/build.yaml) &middot; [![Pages](https://github.com/Memory-Experience/momento/actions/workflows/deploy.yaml/badge.svg)](https://memory-experience.github.io/momento/)
 
 A real-time speech-to-text transcription system built with gRPC, featuring a Python backend API and Next.js web frontend.
 
