@@ -116,8 +116,8 @@ describe("Chat", () => {
       .mockImplementationOnce(() => "test-uuid-usermessage");
     jest
       .spyOn(global, "Date")
-      .mockImplementationOnce(() => firstDate)
-      .mockImplementationOnce(() => secondDate);
+      .mockImplementationOnce(() => firstDate!)
+      .mockImplementationOnce(() => secondDate!);
 
     render(<Chat />);
 
@@ -213,8 +213,8 @@ describe("Chat", () => {
       .mockImplementationOnce(() => "test-qa-uuid-usermessage");
     jest
       .spyOn(global, "Date")
-      .mockImplementationOnce(() => firstDate)
-      .mockImplementationOnce(() => secondDate);
+      .mockImplementationOnce(() => firstDate!)
+      .mockImplementationOnce(() => secondDate!);
 
     render(<Chat />);
 
