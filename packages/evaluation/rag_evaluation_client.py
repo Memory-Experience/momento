@@ -8,7 +8,7 @@ import pandas as pd
 
 from protos.generated.py import stt_pb2
 
-from api.transcription_servicer import TranscriptionServiceServicer
+from api.question_answer_service import QuestionAnswerService
 from api.models.embedding.embedding_model_interface import EmbeddingModel
 from api.models.embedding.sbert_embedding import SBertEmbeddingModel
 
@@ -37,7 +37,7 @@ class RAGEvaluationClient:
 
     def __init__(
         self,
-        servicer: TranscriptionServiceServicer,
+        qa_service: QuestionAnswerService,
         doc_to_memory: dict[str, str],
         memory_to_doc: dict[str, str],
     ):
@@ -46,7 +46,7 @@ class RAGEvaluationClient:
         Args:
             server_address: gRPC server address (host:port)
         """
-        self.servicer = servicer
+        self.qa_service = qa_service
         self.doc_to_memory: dict[str, str] = doc_to_memory or {}
         self.memory_to_doc: dict[str, str] = memory_to_doc or {}
 
@@ -91,7 +91,9 @@ class RAGEvaluationClient:
 
             answer_chunks: list[str] = []
 
-            async for response in self.servicer.Transcribe(query_stream(), "context"):
+            async for response in self.qa_service.AnswerQuestion(
+                query_stream(), "context"
+            ):
                 if response.metadata.type == stt_pb2.ChunkType.MEMORY:
                     # Server sends retrieved memories (by *saved* memory_id)
                     mem_id = response.metadata.memory_id
