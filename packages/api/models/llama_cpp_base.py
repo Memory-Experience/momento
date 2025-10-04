@@ -85,7 +85,7 @@ class LlamaCppBase:
                 return
             buf = (
                 text
-                if isinstance(text, (bytes, bytearray))
+                if isinstance(text, bytes | bytearray)
                 else (ctypes.cast(text, ctypes.c_char_p).value or b"")
             )
             if EMBED_WARN in buf:
