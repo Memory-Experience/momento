@@ -54,7 +54,7 @@ class GenerationMetrics:
         """
         Compute exact match score between prediction and gold answers.
 
-        Parameters:
+        Args:
             pred (str): Predicted answer text
             gold_answers (list[str]): List of reference answer strings
 
@@ -73,7 +73,7 @@ class GenerationMetrics:
         """
         Compute token-level F1 score between prediction and gold answers.
 
-        Parameters:
+        Args:
             pred (str): Predicted answer text
             gold_answers (list[str]): List of reference answer strings
 
@@ -103,7 +103,7 @@ class GenerationMetrics:
         """
         Compute ROUGE-L F1 score using longest common subsequence.
 
-        Parameters:
+        Args:
             pred (str): Predicted answer text
             gold_answers (list[str]): List of reference answer strings
 
@@ -150,7 +150,7 @@ class GenerationMetrics:
         Provides a cheap topicality proxy by computing token-level F1
         between the answer and query text.
 
-        Parameters:
+        Args:
             answer (str): Generated answer text
             query (str): Original query text
 
@@ -219,7 +219,7 @@ class GenerationMetrics:
         Measures how well the answer is grounded in retrieved documents
         by computing coverage and density metrics.
 
-        Parameters:
+        Args:
             answer (str): Generated answer text
             retrieved_docs_ordered (list[str]): Ordered list of
                 retrieved doc IDs
@@ -286,7 +286,7 @@ class GenerationMetrics:
         """
         Compute SBERT cosine similarity between answer and gold answers.
 
-        Parameters:
+        Args:
             answer (str): Generated answer string
             gold_answers (list[str]): List of reference answers
             embedder (EmbeddingModel): Embedding model instance
@@ -342,7 +342,7 @@ class GenerationMetrics:
         Uses a cross-encoder (e.g., 'cross-encoder/ms-marco-MiniLM-L-6-v2')
         to score relevance between answer and gold answers.
 
-        Parameters:
+        Args:
             answer (str): Generated answer text
             gold_answers (list[str]): List of reference answer strings
             scorer (CrossEncoderScorer): Cross-encoder scorer instance

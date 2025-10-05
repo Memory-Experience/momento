@@ -31,7 +31,7 @@ class BM25DatasetLoader(DatasetLoader):
         """
         Create filled vector store using Lucene BM25 index.
 
-        Parameters:
+        Args:
             dataset (DataFrameDataset): Dataset to load documents from
             dataset_folder (str): Path to folder for Lucene index
                 persistence

@@ -41,9 +41,9 @@ class DatasetLoader:
         """
         Create a vector store service with local file-based Qdrant backend.
 
-        Parameters:
+        Args:
             embedding (EmbeddingModel): Embedding model for vector storage
-            dataset_folder: Path to folder for vector store persistence
+            dataset_folder (str): Path to folder for vector store persistence
 
         Returns:
             VectorStoreService: Configured vector store service instance
@@ -61,8 +61,9 @@ class DatasetLoader:
         If the mapping pickle files exist, loads and returns them.
         Otherwise, cleans the dataset folder by removing all files.
 
-        Parameters:
-            dataset_folder: Path to dataset folder containing vector store
+        Args:
+            dataset_folder (str): Path to dataset folder containing
+                vector store
 
         Returns:
             tuple: (doc_to_memory mapping dict, memory_to_doc mapping dict)
@@ -100,7 +101,7 @@ class DatasetLoader:
         creating bidirectional mappings between dataset document IDs
         and memory IDs. Persists mappings to pickle files for reuse.
 
-        Parameters:
+        Args:
             dataset (DataFrameDataset): Dataset to load documents from
             dataset_folder (str): Path to folder for vector store
                 persistence

@@ -43,7 +43,7 @@ class CrossEncoderScorer:
         """
         Score a batch of (text_a, text_b) pairs asynchronously.
 
-        Parameters:
+        Args:
             pairs (Sequence[tuple[str, str]]): Sequence of text pairs
                 to score
 
@@ -73,7 +73,7 @@ class CrossEncoderScorer:
         """
         Score text against multiple candidates and return best score.
 
-        Parameters:
+        Args:
             text (str): Input text to score
             candidates (Sequence[str]): Candidate texts to score against
             reduction (str): Reduction method: "max" or "mean"
