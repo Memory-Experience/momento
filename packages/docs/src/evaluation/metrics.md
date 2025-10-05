@@ -26,11 +26,14 @@ We report both metrics at K = 1, 3, 5, 10, and 20 to understand performance acro
 
 ### Mean Reciprocal Rank (MRR)
 
-MRR measures where the first relevant document appears:
+MRR measures the average of reciprocal ranks across all queries:
 
 $$
-\text{MRR} = \frac{1}{\text{rank of first relevant document}}
+\text{MRR} = \frac{1}{|Q|} \sum_{q \in Q} \frac{1}{\text{rank of first relevant document for } q}
 $$
+
+Where |Q| is the total number of queries. For a single query, the reciprocal rank is 1/rank of the first relevant document (or 0 if no relevant document is found).
+
 
 **Why this matters**: For question answering, finding at least one good answer quickly is often sufficient. MRR@K variants show this at different cutoffs.
 
@@ -46,7 +49,9 @@ $$
 \text{NDCG@K} = \frac{\text{DCG@K}}{\text{IDCG@K}}
 $$
 
-Where IDCG is the ideal DCG if documents were perfectly ranked.
+Where IDCG is the ideal DCG if documents were perfectly ranked, and relevance_i is 1 for relevant documents and 0 for non-relevant ones.
+
+**Implementation note**: This differs from the graded relevance variant using $\frac{2^{\text{rel}_i} - 1}{\log_2(i + 1)}$, which requires multi-level relevance judgments.
 
 **Why this matters**: NDCG rewards systems that rank highly-relevant documents higher, making it more nuanced than binary metrics. It's the standard metric for ranking evaluation.
 
@@ -76,7 +81,18 @@ Where:
 - $P_{\text{FA}}$ = probability of false alarms
 - $\beta$ = cost ratio (default: 40.0)
 
-**Implementation note**: Our AQWV implementation operates without a detection threshold, treating all retrieved documents as positive detections and all non-retrieved documents as negative.
+
+
+**Non-standard implementation**: Our AQWV implementation **does not use a detection threshold**, which is non-standard. We take this approach because:
+1. RAG systems typically return a fixed number of documents rather than making binary detection decisions
+2. It simplifies integration with existing retrieval pipelines that don't naturally produce confidence scores
+3. It focuses evaluation on ranking quality rather than threshold tuning
+
+In our retrieval setting:
+- $P_{\text{miss}}$ = fraction of relevant documents not retrieved in top-K
+- $P_{\text{FA}}$ = fraction of retrieved documents that are non-relevant
+
+This treats all retrieved documents as positive detections and all non-retrieved documents as negative detections.
 
 **Why we include this**: AQWV originates from the MATERIAL program for low-resource cross-language information retrieval. While uncommon in standard RAG evaluation, we include it to provide a more complete picture of system performance, particularly regarding the trade-off between finding relevant documents (minimizing misses) and avoiding irrelevant ones (minimizing false alarms). This metric was specifically requested to align with research directions in resource-constrained retrieval scenarios.
 
