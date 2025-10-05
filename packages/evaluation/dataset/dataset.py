@@ -18,7 +18,7 @@ class DataFrameDataset:
     ):
         """Initialize dataset with pandas DataFrames.
 
-        Parameters:
+        Args:
             docs_df (pd.DataFrame | None): DataFrame with columns
                 ['id', 'content']
             queries_df (pd.DataFrame | None): DataFrame with columns

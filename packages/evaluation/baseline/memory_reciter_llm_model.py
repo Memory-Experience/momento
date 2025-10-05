@@ -27,7 +27,7 @@ class MemoryReciterModel(LLMModel):
         no memories were found. This provides a simple baseline that
         doesn't use an LLM for generation.
 
-        Parameters:
+        Args:
             prompt (str): Text to return when no memory was found
             memory_context (MemoryContext): Memory context object
                 containing relevant memories from vector search

@@ -19,7 +19,7 @@ class RetrievalMetrics:
         """
         Calculate precision@k metric.
 
-        Parameters:
+        Args:
             retrieved_docs (list[str]): List of retrieved document IDs
                 in rank order
             relevant_docs (list[str]): List of relevant document IDs
@@ -51,7 +51,7 @@ class RetrievalMetrics:
         """
         Calculate recall@k metric.
 
-        Parameters:
+        Args:
             retrieved_docs (list[str]): List of retrieved document IDs
                 in rank order
             relevant_docs (list[str]): List of relevant document IDs
@@ -82,7 +82,7 @@ class RetrievalMetrics:
         """
         Calculate Mean Reciprocal Rank (MRR) metric.
 
-        Parameters:
+        Args:
             retrieved_docs (list[str]): List of retrieved document IDs
                 in rank order
             relevant_docs (list[str]): List of relevant document IDs
@@ -112,11 +112,11 @@ class RetrievalMetrics:
         """
         Calculate Normalized Discounted Cumulative Gain (NDCG) at rank k.
 
-        Parameters:
+        Args:
             retrieved_docs (list[str]): List of retrieved document IDs
                 in rank order
-            relevance_scores (dict[str, float]): Dictionary mapping doc_ids
-                to relevance scores
+            relevance_scores (dict[str, float]): Dictionary mapping
+                doc_ids to relevance scores
             k (int): Rank position to evaluate NDCG at
 
         Returns:
@@ -162,7 +162,7 @@ class RetrievalMetrics:
 
         Formula: AQWV = 1 - pMiss - β * pFA
 
-        Parameters:
+        Args:
             retrieved_docs (list[str]): List of retrieved document IDs
                 in rank order
             relevant_docs (list[str]): List of relevant document IDs
