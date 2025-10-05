@@ -33,15 +33,32 @@ active_connections: dict[str, WebSocket] = {}
 
 
 class WebSocketTranscriptionHandler:
-    """Handles WebSocket connections and message processing using protobuf messages."""
+    """
+    Handles WebSocket connections and message processing using protobuf messages.
+
+    Routes WebSocket connections to the appropriate service (transcription, memory
+    storage, or question answering) based on the connection type.
+    """
 
     def __init__(self, container: Container):
+        """
+        Initialize the WebSocket handler.
+
+        Args:
+            container: Dependency container with all required services
+        """
         self.servicer = TranscriptionServiceServicer(container)
         self.persist_servicer = MemoryPersistService(container)
         self.qa_servicer = QuestionAnswerService(container)
 
     async def handle_connection(self, websocket: WebSocket, connection_type: str):
-        """Handle a WebSocket connection."""
+        """
+        Handle a WebSocket connection of a specific type.
+
+        Args:
+            websocket: The WebSocket connection to handle
+            connection_type: Type of connection ('transcribe', 'memory', or 'ask')
+        """
         await websocket.accept()
         connection_id = id(websocket)
         active_connections[str(connection_id)] = websocket
@@ -83,7 +100,13 @@ class WebSocketTranscriptionHandler:
                 break
 
     async def _process_transcription(self, websocket: WebSocket, connection_id: int):
-        """Process incoming messages from the WebSocket connection."""
+        """
+        Process incoming audio/text for transcription.
+
+        Args:
+            websocket: The WebSocket connection
+            connection_id: Unique identifier for this connection
+        """
 
         # Create a message generator that yields protobuf messages
         message_generator = self._message_generator(websocket)
@@ -100,7 +123,13 @@ class WebSocketTranscriptionHandler:
             await websocket.close(code=1011, reason=f"Server error: {str(e)}")
 
     async def _process_memory(self, websocket: WebSocket, connection_id: int):
-        """Process incoming memory messages from the WebSocket connection."""
+        """
+        Process incoming memory storage requests.
+
+        Args:
+            websocket: The WebSocket connection
+            connection_id: Unique identifier for this connection
+        """
 
         # Create a message generator that yields protobuf messages
         message_generator = self._message_generator(websocket)
@@ -117,7 +146,13 @@ class WebSocketTranscriptionHandler:
             await websocket.close(code=1011, reason=f"Server error: {str(e)}")
 
     async def _process_question(self, websocket: WebSocket, connection_id: int):
-        """Process incoming ask messages from the WebSocket connection."""
+        """
+        Process incoming question answering requests.
+
+        Args:
+            websocket: The WebSocket connection
+            connection_id: Unique identifier for this connection
+        """
 
         # Create a message generator that yields protobuf messages
         message_generator = self._message_generator(websocket)

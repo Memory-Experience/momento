@@ -14,8 +14,12 @@ from api.models.llm.llm_model_interface import LLMModel, MemoryResponse
 
 class LlamaCppModel(LlamaCppBase, LLMModel):
     """
-    llama.cpp-backed model implementing the streaming generator API.
-    No singletons; each instance owns its Llama handle. DI supported via llama_factory.
+    Base LLM implementation using llama.cpp backend with streaming support.
+
+    Provides async streaming text generation with configurable chunk sizes and
+    memory context integration. Each instance owns its own llama.cpp handle
+    for thread-safe operation. Supports dependency injection via llama_factory
+    for testing.
     """
 
     def __init__(
@@ -45,9 +49,20 @@ class LlamaCppModel(LlamaCppBase, LLMModel):
         self, prompt: str, memory_context: MemoryContext | None
     ) -> list[dict[str, str]]:
         """
-        Build messages for the chat completion API using the provided prompt
-        and memory context. Subclasses must override this method to define
-        their own formatting.
+        Build messages for the chat completion API.
+
+        Subclasses must override this method to define their own formatting
+        strategy for incorporating memory context into the prompt.
+
+        Args:
+            prompt: The user's prompt or question
+            memory_context: Retrieved memories with relevance scores (optional)
+
+        Returns:
+            List of message dictionaries with 'role' and 'content' keys
+
+        Raises:
+            NotImplementedError: This method must be implemented by subclasses
         """
         raise NotImplementedError(
             "Subclasses must implement their own build_messages method"
@@ -61,11 +76,23 @@ class LlamaCppModel(LlamaCppBase, LLMModel):
         chunk_size_tokens: int = 1,
     ) -> AsyncIterator[MemoryResponse]:
         """
-        Generates responses in a streaming fashion,
-        yielding multiple MemoryResponse items.
-        The size of each chunk is controlled by chunk_size_tokens -
-        higher values will yield fewer, larger chunks
-        (reducing the streaming granularity).
+        Generate streaming text responses with memory context.
+
+        Produces an async stream of response chunks, with the final chunk marked
+        as is_final=True. The chunk_size_tokens parameter controls streaming
+        granularity - higher values produce fewer, larger chunks which reduces
+        UI update frequency but improves perceived smoothness.
+
+        Args:
+            prompt: The user's prompt (string or list of strings)
+            memory_context: Retrieved memories to use as context
+            chunk_size_tokens: Number of tokens per output chunk (default: 1)
+                              Higher values (e.g., 8-16) reduce character-by-character
+                              streaming for smoother output
+
+        Yields:
+            MemoryResponse: Response chunks with text, metadata, and token usage.
+                           The final chunk has is_final=True in metadata.
         """
         # Convert prompt from list to string if needed
         if isinstance(prompt, list):

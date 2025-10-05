@@ -10,10 +10,12 @@ from api.models.embedding.llama_cpp_embedding import LlamaCppEmbeddingModel
 
 class Qwen3EmbeddingModel(LlamaCppEmbeddingModel):
     """
-    Qwen3-Embedding-0.6B (GGUF) via llama.cpp.
+    Qwen3-Embedding-0.6B embedding model using llama.cpp backend.
 
-    Automatically downloads a preferred quantized file from HF and
-    instantiates a llama.cpp embedding model.
+    This model converts text into dense vector representations for semantic
+    similarity search. It automatically downloads a quantized GGUF version
+    from HuggingFace if no local model path is provided. Text is automatically
+    prefixed with "Instruct: " as per model requirements.
     """
 
     DEFAULT_HF_REPO_ID: str = "Qwen/Qwen3-Embedding-0.6B-GGUF"
@@ -65,6 +67,18 @@ class Qwen3EmbeddingModel(LlamaCppEmbeddingModel):
         super().__init__(cfg=cfg, llama_factory=llama_factory)
 
     async def embed_text(self, text: str) -> list[float]:
+        """
+        Embed text into a vector representation.
+
+        Automatically prepends "Instruct: " prefix as required by the Qwen3
+        embedding model architecture.
+
+        Args:
+            text: The text to embed
+
+        Returns:
+            Vector representation as a list of floats
+        """
         # Prepend "Instruct: " to the text
         text_with_prefix = f"Instruct: {text}"
         # Call the parent class's embed_text method
