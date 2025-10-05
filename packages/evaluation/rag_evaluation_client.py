@@ -50,7 +50,7 @@ class RAGEvaluationClient:
         """
         Initialize the evaluation client.
 
-        Parameters:
+        Args:
             qa_service (QuestionAnswerService): The question answering
                 service to evaluate
             doc_to_memory (dict[str, str]): Mapping from dataset document
@@ -70,7 +70,7 @@ class RAGEvaluationClient:
         """
         Process a single query through the QA system.
 
-        Parameters:
+        Args:
             query_id (str): Unique identifier for the query
             query_text (str): The question text
 
@@ -140,9 +140,9 @@ class RAGEvaluationClient:
         collection_size: int = -1,
     ) -> dict:
         """
-        Evaluate retrieval performance using standard Information Retrieval metrics.
+        Evaluate retrieval performance using standard IR metrics.
 
-        Parameters:
+        Args:
             retrieved_doc_ids (list[str]): Document IDs retrieved by the
                 system (in rank order)
             relevant_doc_ids (list[str]): Document IDs known to be

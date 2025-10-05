@@ -40,7 +40,7 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
         """
         Initialize Lucene-based vector store repository.
 
-        Parameters:
+        Args:
             index_dir (str | None): Directory for Lucene index storage.
                 If None, uses temporary directory
             k1 (float): BM25 k1 parameter (term frequency saturation)
@@ -98,7 +98,7 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
         """
         Add or overwrite a memory in the Lucene index and local registry.
 
-        Parameters:
+        Args:
             memory (MemoryRequest): Memory to index
         """
         # (Re)open indexer in append mode if it was closed
@@ -129,7 +129,7 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
         """
         Perform BM25 search via LuceneSearcher over the contents field.
 
-        Parameters:
+        Args:
             query (MemoryRequest): Query memory to search for
             limit (int): Maximum number of results to return
             filters (FilterArg | None): Optional filters to apply
@@ -185,7 +185,7 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
         Simple/robust delete approach that removes from registry
         and rebuilds the entire index.
 
-        Parameters:
+        Args:
             memory_id (UUID): ID of memory to delete
         """
         if memory_id in self._memories:
@@ -201,7 +201,7 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
         Paginate over in-memory registry. The second return value
         is a UUID cursor in the interface; here we return None.
 
-        Parameters:
+        Args:
             limit (int): Maximum number of memories to return
             offset (int): Number of memories to skip
             filters (FilterArg | None): Optional filters to apply
