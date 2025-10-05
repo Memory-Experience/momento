@@ -37,6 +37,17 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
         b: float = 0.75,
         overwrite: bool = False,
     ):
+        """
+        Initialize Lucene-based vector store repository.
+
+        Parameters:
+            index_dir (str | None): Directory for Lucene index storage.
+                If None, uses temporary directory
+            k1 (float): BM25 k1 parameter (term frequency saturation)
+            b (float): BM25 b parameter (length normalization)
+            overwrite (bool): Whether to overwrite existing index
+
+        """
         super().__init__(embedding_model=None, text_chunker=None)
         self._k1 = k1
         self._b = b
@@ -86,6 +97,9 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
     async def index_memory(self, memory: MemoryRequest) -> None:
         """
         Add or overwrite a memory in the Lucene index and local registry.
+
+        Parameters:
+            memory (MemoryRequest): Memory to index
         """
         # (Re)open indexer in append mode if it was closed
         # (e.g., after finalize or a previous search)
@@ -113,7 +127,15 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
         filters: FilterArg = None,
     ) -> MemoryContext:
         """
-        BM25 search via LuceneSearcher over the 'contents' field.
+        Perform BM25 search via LuceneSearcher over the contents field.
+
+        Parameters:
+            query (MemoryRequest): Query memory to search for
+            limit (int): Maximum number of results to return
+            filters (FilterArg | None): Optional filters to apply
+
+        Returns:
+            MemoryContext: Context with retrieved memories and scores
         """
         qtext = " ".join(query.text).strip()
         context = MemoryContext.create(query)
@@ -158,7 +180,13 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
 
     async def delete_memory(self, memory_id: UUID) -> None:
         """
-        Simple/robust delete: remove from registry and rebuild the index.
+        Delete memory from registry and rebuild the index.
+
+        Simple/robust delete approach that removes from registry
+        and rebuilds the entire index.
+
+        Parameters:
+            memory_id (UUID): ID of memory to delete
         """
         if memory_id in self._memories:
             del self._memories[memory_id]
@@ -168,8 +196,18 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
         self, limit: int = 100, offset: int = 0, filters: FilterArg = None
     ) -> tuple[list[MemoryRequest], UUID | None]:
         """
-        Offset-based pagination over in-memory registry. The second return
-        value is a UUID cursor in your interface; here we return None.
+        List memories with offset-based pagination.
+
+        Paginate over in-memory registry. The second return value
+        is a UUID cursor in the interface; here we return None.
+
+        Parameters:
+            limit (int): Maximum number of memories to return
+            offset (int): Number of memories to skip
+            filters (FilterArg | None): Optional filters to apply
+
+        Returns:
+            tuple: (list of memories, next cursor as UUID or None)
         """
         items = [m for m in self._memories.values() if self._passes_filters(m, filters)]
         page = items[offset : offset + limit]
@@ -180,8 +218,10 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
 
     async def finalize_index(self) -> None:
         """
-        Commit pending writes so a segments_N exists and searchers can open.
-        Call this at the end of ingestion (e.g., in your DatasetLoader).
+        Commit pending writes so segments file exists.
+
+        Call this at the end of ingestion (e.g., in your DatasetLoader)
+        to ensure the index is searchable.
         """
         await self._ensure_committed()
 
