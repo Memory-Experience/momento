@@ -10,6 +10,14 @@ from .cross_encoder_scorer import CrossEncoderScorer
 
 # Generation metrics
 class GenerationMetrics:
+    """
+    Collection of metrics for evaluating text generation quality.
+
+    Provides both answer correctness metrics (exact match, F1, ROUGE-L)
+    and generation quality metrics (relevance, faithfulness, similarity).
+    Includes methods for normalizing text and detecting hallucinations.
+    """
+
     _ARTICLES = {"a", "an", "the"}
     _PUNCT_TABLE = str.maketrans("", "", string.punctuation)
     _THINKING_TAG_PATTERN = r"<think>.*?</think>"
@@ -43,6 +51,16 @@ class GenerationMetrics:
     # Correctness vs gold answers
     @staticmethod
     def exact_match(pred: str, gold_answers: list[str]) -> float:
+        """
+        Compute exact match score between prediction and gold answers.
+
+        Args:
+            pred (str): Predicted answer text
+            gold_answers (list[str]): List of reference answer strings
+
+        Returns:
+            float: 1.0 if prediction matches any gold answer, else 0.0
+        """
         pred_norm = GenerationMetrics._normalize(pred)
         return (
             1.0
@@ -52,6 +70,16 @@ class GenerationMetrics:
 
     @staticmethod
     def f1(pred: str, gold_answers: list[str]) -> float:
+        """
+        Compute token-level F1 score between prediction and gold answers.
+
+        Args:
+            pred (str): Predicted answer text
+            gold_answers (list[str]): List of reference answer strings
+
+        Returns:
+            float: Maximum F1 score across all gold answers (0.0-1.0)
+        """
         if GenerationMetrics.empty_gold_answer_guard(gold_answers):
             return 0.0
 
@@ -72,6 +100,16 @@ class GenerationMetrics:
 
     @staticmethod
     def rouge_l_f1(pred: str, gold_answers: list[str]) -> float:
+        """
+        Compute ROUGE-L F1 score using longest common subsequence.
+
+        Args:
+            pred (str): Predicted answer text
+            gold_answers (list[str]): List of reference answer strings
+
+        Returns:
+            float: Maximum ROUGE-L F1 score across all gold answers
+        """
         if GenerationMetrics.empty_gold_answer_guard(gold_answers):
             return 0.0
 
@@ -106,6 +144,19 @@ class GenerationMetrics:
     # Answer relevance to query (proxy when no judge available)
     @staticmethod
     def answer_relevance_to_query(answer: str, query: str) -> float:
+        """
+        Compute answer relevance to query using token F1.
+
+        Provides a cheap topicality proxy by computing token-level F1
+        between the answer and query text.
+
+        Args:
+            answer (str): Generated answer text
+            query (str): Original query text
+
+        Returns:
+            float: Token F1 score between answer and query (0.0-1.0)
+        """
         # token F1 between query and answer (cheap topicality proxy)
         return GenerationMetrics.f1(answer, [query])
 
@@ -163,11 +214,25 @@ class GenerationMetrics:
         top_k_docs: int = 5,
     ) -> dict[str, float]:
         """
-        support_coverage: percent of unique content words in the answer
-            that appear in retrieved docs (top-K)
-        support_density: percent of all answer tokens that appear in
-            retrieved docs (precision-like)
-        hallucination_rate: 1 - support_density
+        Compute faithfulness signals for generated answer.
+
+        Measures how well the answer is grounded in retrieved documents
+        by computing coverage and density metrics.
+
+        Args:
+            answer (str): Generated answer text
+            retrieved_docs_ordered (list[str]): Ordered list of
+                retrieved doc IDs
+            retrieved_docs_map (dict[str, str]): Mapping from doc ID
+                to doc text
+            top_k_docs (int): Number of top documents to consider
+
+        Returns:
+            dict[str, float]: Dictionary with keys: support_coverage
+                (percent of unique content words in answer that appear
+                in retrieved docs), support_density (percent of all
+                answer tokens appearing in docs), hallucination_rate
+                (1 - support_density)
         """
         ans_toks = GenerationMetrics._tokens(answer)
         ans_content = GenerationMetrics._content_words(ans_toks)
@@ -219,20 +284,21 @@ class GenerationMetrics:
         reduction: str = "max",  # "max" or "mean"
     ) -> float:
         """
-        Compute SBERT cosine similarity between
-        the generated answer and the gold answers.
+        Compute SBERT cosine similarity between answer and gold answers.
 
         Args:
-            answer: Generated answer string.
-            gold_answers: List of reference answers.
-            embedder: An EmbeddingModel (e.g., SbertEmbeddingModel).
-            reduction: How to combine multiple similarities: "max" (default) or "mean".
+            answer (str): Generated answer string
+            gold_answers (list[str]): List of reference answers
+            embedder (EmbeddingModel): Embedding model instance
+                (e.g., SbertEmbeddingModel)
+            reduction (str): Reduction method for multiple similarities:
+                "max" (default) or "mean"
 
         Returns:
-            Cosine similarity in [-1.0, 1.0]. If embeddings were normalized,
-                it's in [-1, 1], and typically in [0, 1] for natural language pairs.
-            Note: If `gold_answers` is empty or contains only empty strings,
-                returns 0.0 to avoid misleading high similarity with empty answer.
+            float: Cosine similarity in [-1.0, 1.0]. If embeddings were
+                normalized, typically in [0, 1] for natural language.
+                Returns 0.0 if gold_answers is empty or contains only
+                empty strings.
         """
         if GenerationMetrics.empty_gold_answer_guard(gold_answers):
             return 0.0
@@ -271,10 +337,19 @@ class GenerationMetrics:
         reduction: str = "max",  # "max" or "mean"
     ) -> float:
         """
-        Score semantic similarity/relevance between `answer` and `gold_answers`
-        using a cross-encoder (e.g., 'cross-encoder/ms-marco-MiniLM-L-6-v2').
+        Score semantic similarity using cross-encoder model.
 
-        Returns a single float (max or mean across gold answers).
+        Uses a cross-encoder (e.g., 'cross-encoder/ms-marco-MiniLM-L-6-v2')
+        to score relevance between answer and gold answers.
+
+        Args:
+            answer (str): Generated answer text
+            gold_answers (list[str]): List of reference answer strings
+            scorer (CrossEncoderScorer): Cross-encoder scorer instance
+            reduction (str): Reduction method: "max" (default) or "mean"
+
+        Returns:
+            float: Single relevance score (max or mean across gold answers)
         """
         if GenerationMetrics.empty_gold_answer_guard(gold_answers):
             return 0.0

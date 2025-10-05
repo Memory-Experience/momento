@@ -2,7 +2,13 @@ import pandas as pd
 
 
 class DataFrameDataset:
-    """Dataset implementation using pandas DataFrames for evaluation tasks."""
+    """
+    Dataset implementation using pandas DataFrames for evaluation tasks.
+
+    This base class provides a common interface for managing evaluation
+    datasets with documents, queries, and relevance judgments (qrels)
+    stored in pandas DataFrames.
+    """
 
     def __init__(
         self,
@@ -13,9 +19,12 @@ class DataFrameDataset:
         """Initialize dataset with pandas DataFrames.
 
         Args:
-            docs_df: DataFrame with columns ['id', 'content']
-            queries_df: DataFrame with columns ['id', 'text']
-            qrels_df: DataFrame with columns ['query_id', 'doc_id', 'relevance']
+            docs_df (pd.DataFrame | None): DataFrame with columns
+                ['id', 'content']
+            queries_df (pd.DataFrame | None): DataFrame with columns
+                ['id', 'text']
+            qrels_df (pd.DataFrame | None): DataFrame with columns
+                ['query_id', 'doc_id', 'relevance']
         """
         self._validate_dataframes(docs_df, queries_df, qrels_df)
 
@@ -69,10 +78,12 @@ class DataFrameDataset:
         return getattr(self, "name", "DataFrameDataset")
 
     def get_sample_query(self) -> dict | None:
-        """Get a sample query with its relevant documents.
+        """
+        Get a sample query with its relevant documents.
 
         Returns:
-            Dictionary with query info and relevant documents, or None if unavailable
+            dict | None: Dictionary with query info and relevant documents,
+                or None if unavailable
         """
         if self.queries.empty or self.qrels.empty:
             return None
