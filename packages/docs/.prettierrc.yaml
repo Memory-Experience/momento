@@ -1,0 +1,4 @@
+# MkDocs requires 4 space indentation for nested lists
+tabWidth: 4
+useTabs: false
+proseWrap: preserve
