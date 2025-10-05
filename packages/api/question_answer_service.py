@@ -1,4 +1,5 @@
 import logging
+from collections.abc import AsyncIterator
 
 from protos.generated.py import stt_pb2
 
@@ -7,15 +8,50 @@ from .dependency_container import Container
 
 
 class QuestionAnswerService:
+    """
+    Service for answering questions using RAG (Retrieval-Augmented Generation).
+
+    This service handles question answering by:
+    1. Receiving streaming question input (audio or text)
+    2. Searching for relevant memories in the vector store
+    3. Filtering results by relevance threshold
+    4. Generating answers using an LLM with the retrieved context
+    5. Streaming the answer back to the client
+    """
+
     def __init__(self, dependencies: Container):
+        """
+        Initialize the question answer service.
+
+        Args:
+            dependencies: Container with all required service dependencies including
+                         vector_store, persistence, rag, and threshold_filter services
+        """
         self.vector_store_service = dependencies.vector_store
         self.persistence_service = dependencies.persistence
         self.rag_service = dependencies.rag
         self.retrieval_limit = dependencies.retrieval_limit
         self.threshold_filter_service = dependencies.threshold_filter
 
-    async def AnswerQuestion(self, request_iterator, context):
-        """gRPC method to answer questions from a stream of MemoryChunk messages."""
+    async def AnswerQuestion(
+        self, request_iterator, context
+    ) -> AsyncIterator[stt_pb2.MemoryChunk]:
+        """
+        Answer questions from a stream of MemoryChunk messages.
+
+        This gRPC method processes streaming question input, retrieves relevant
+        memories, and generates a streaming answer using RAG.
+
+        Parameters:
+            request_iterator (AsyncIterator[MemoryChunk]): Async iterator
+                yielding MemoryChunk protobuf messages
+            context (grpc.aio.ServicerContext): gRPC context for the
+                request
+
+        Yields:
+            protos.generated.py.stt_pb2.MemoryChunk: Stream of memory
+                context and answer chunks
+        """
         session_id = None
         memory_id = None
         audio_data = bytearray()
@@ -49,7 +85,18 @@ class QuestionAnswerService:
                 memory_id = None
 
     async def _process_question(self, audio_data, transcription, session_id, memory_id):
-        """Process a question, fetch context, and stream answer."""
+        """
+        Process a question, fetch context, and stream answer.
+
+        Args:
+            audio_data: Raw audio bytes (if question was spoken)
+            transcription: List of transcribed text segments forming the question
+            session_id: Session identifier for the client connection
+            memory_id: Question identifier from the client
+
+        Yields:
+            MemoryChunk: Stream of relevant memories followed by generated answer chunks
+        """
         full_transcription = " ".join(transcription)
         logging.info(f"Processing question: {full_transcription}")
 

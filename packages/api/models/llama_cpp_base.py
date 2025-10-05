@@ -41,9 +41,11 @@ def _default_threads() -> int:
 
 class LlamaCppBase:
     """
-    Base class for llama.cpp-backed models.
-    Handles model loading and configuration.
-    No singletons; each instance owns its Llama handle.
+    Base class for llama.cpp-backed models providing core loading and configuration.
+
+    Handles model initialization with automatic GPU offloading and CPU fallback.
+    Each instance owns its own Llama handle for thread-safe operation. Supports
+    dependency injection for testing via llama_factory parameter.
     """
 
     def __init__(
@@ -107,7 +109,13 @@ class LlamaCppBase:
 
     def _suggest_max_tokens(self) -> int:
         """
-        Suggest a reasonable maximum number of tokens to generate based on context size.
+        Suggest a reasonable maximum number of tokens to generate.
+
+        Returns approximately 1/3 of the context window size, with a
+        minimum of 256 tokens.
+
+        Returns:
+            Suggested maximum token count for generation
         """
         try:
             n_ctx = self._llm.n_ctx()

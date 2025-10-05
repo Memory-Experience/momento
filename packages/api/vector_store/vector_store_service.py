@@ -86,7 +86,6 @@ class VectorStoreService:
         Args:
             limit: Maximum number of memories to return
             offset: Lowest memory ID to start from (for pagination)
-            filters: Optional filters to apply
 
         Returns:
             List of Memory objects

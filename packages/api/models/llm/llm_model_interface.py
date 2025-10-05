@@ -6,7 +6,12 @@ from api.domain.memory_request import MemoryRequest
 
 
 class MemoryResponse:
-    """Represents a response from an LLM."""
+    """
+    Represents a response from an LLM model.
+
+    Encapsulates the generated text along with metadata about the generation
+    process, including token usage and model information.
+    """
 
     def __init__(
         self,
@@ -15,6 +20,15 @@ class MemoryResponse:
         tokens_used: int,
         metadata: dict = None,
     ):
+        """
+        Initialize a memory response.
+
+        Args:
+            response: The generated response as a MemoryRequest object
+            model_name: Name of the model that generated the response
+            tokens_used: Number of tokens consumed during generation
+            metadata: Additional metadata about the generation (optional)
+        """
         self.model_name = model_name
         self.tokens_used = tokens_used
         self.metadata = metadata or {}

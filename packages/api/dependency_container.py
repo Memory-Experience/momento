@@ -26,7 +26,12 @@ RETRIEVAL_LIMIT = 2
 
 @dataclass
 class Container:
-    """Single argument you pass to both FastAPI and gRPC servicer."""
+    """
+    Dependency injection container for the Momento application.
+
+    This container holds all the service dependencies needed by both FastAPI
+    and gRPC servicers, providing a single source of truth for service configuration.
+    """
 
     vector_store: VectorStoreService
     persistence: PersistenceService
@@ -45,6 +50,21 @@ class Container:
         recordings_dir: str = RECORDINGS_DIR,
         retrieval_limit: int = RETRIEVAL_LIMIT,
     ) -> "Container":
+        """
+        Create and initialize a Container instance with all required
+        dependencies.
+
+        Parameters:
+            sample_rate (int): Audio sample rate in Hz (default: 16000)
+            recordings_dir (str): Directory path for storing recordings
+                (default: "recordings")
+            retrieval_limit (int): Maximum number of memories to retrieve
+                in searches (default: 2)
+
+        Returns:
+            Container: Fully initialized container with all service
+                dependencies
+        """
         # Transcriber
         transcriber = FasterWhisperTranscriber()
         transcriber.initialize()

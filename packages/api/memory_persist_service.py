@@ -1,3 +1,5 @@
+from collections.abc import AsyncIterator
+
 from .domain.memory_request import MemoryRequest, MemoryType
 from protos.generated.py.stt_pb2 import MemoryChunk, ChunkMetadata, ChunkType
 from .dependency_container import Container
@@ -5,12 +7,45 @@ import logging
 
 
 class MemoryPersistService:
+    """
+    Service for persisting memories from streaming audio/text input.
+
+    This service handles the gRPC streaming protocol for memory storage,
+    accumulating chunks of audio and transcription data, then persisting
+    them to both the file system and vector store for later retrieval.
+    """
+
     def __init__(self, dependencies: Container):
+        """
+        Initialize the memory persist service.
+
+        Parameters:
+            dependencies: Container with vector_store and persistence
+                service dependencies
+        """
         self.vector_store_service = dependencies.vector_store
         self.persistence_service = dependencies.persistence
 
-    async def StoreMemory(self, request_iterator, context):
-        """gRPC method to store memory from a stream of MemoryChunk messages."""
+    async def StoreMemory(
+        self, request_iterator, context
+    ) -> AsyncIterator[MemoryChunk]:
+        """
+        Store memory from a stream of MemoryChunk messages.
+
+        This gRPC method processes streaming audio and text data, accumulating
+        chunks until a final marker is received, then persisting the complete
+        memory to storage and indexing it in the vector store.
+
+        Parameters:
+            request_iterator (AsyncIterator[MemoryChunk]): Async iterator
+                yielding MemoryChunk protobuf messages
+            context (grpc.aio.ServicerContext): gRPC context for the
+                request
+
+        Yields:
+            protos.generated.py.stt_pb2.MemoryChunk: Confirmation messages
+                with the saved memory ID
+        """
         # Local variables per connection - no shared state!
         session_id = None
         memory_id = None
@@ -47,7 +82,18 @@ class MemoryPersistService:
     async def _process_memory_saving(
         self, audio_data, transcription, session_id, memory_id
     ):
-        """Save a memory and send confirmation to client."""
+        """
+        Save a memory and send confirmation to client.
+
+        Args:
+            audio_data: Raw audio bytes to persist
+            transcription: List of transcribed text segments
+            session_id: Session identifier for the client connection
+            memory_id: Original memory identifier from the client (if provided)
+
+        Yields:
+            MemoryChunk: Confirmation message containing the saved memory's UUID
+        """
         if not audio_data and not transcription:
             return
 
