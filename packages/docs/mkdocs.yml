@@ -37,6 +37,11 @@ nav:
   - Overview: index.md
   - Readme: readme_link.md
   - Python Backend:
+      - Architecture:
+          - Overview: api/architecture.md
+          - WebSocket Endpoints: api/websocket_endpoints.md
+          - AI Models: api/models.md
+          - Core Services: api/services.md
       - Readme: api/readme_link.md
       - Reference (PY): api/py.md
   - Communication (Protobuf):
