@@ -12,6 +12,10 @@ site_dir: site
 plugins:
   - search
   - autorefs
+  - mkdocs-jupyter:
+      include_source: true
+      execute: false
+      allow_errors: false
   - mkdocstrings:
       handlers:
         python:
@@ -52,5 +56,8 @@ nav:
           - Baselines: evaluation/baselines.md
           - Datasets: evaluation/datasets.md
           - Metrics: evaluation/metrics.md
+      - Analysis:
+          - MS MARCO QnA: evaluation/analysis/ms_marco_qna_dev_10k.ipynb
+          - OpenLifelogQA: evaluation/analysis/openlifelog_qa_10k.ipynb
       - Readme: evaluation/readme_link.md
       - Reference (PY): evaluation/py.md
