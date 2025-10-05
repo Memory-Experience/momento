@@ -18,11 +18,11 @@ class Segment:
         """
         Initialize a transcription segment.
 
-        Parameters:
-            text: The transcribed text content
-            start: Start time of the segment in seconds
-            end: End time of the segment in seconds
-            no_speech_prob: Probability that the segment contains no
+        Args:
+            text (str): The transcribed text content
+            start (float): Start time of the segment in seconds
+            end (float): End time of the segment in seconds
+            no_speech_prob (float): Probability that the segment contains no
                 speech (default: 0.0)
         """
         self.text = text
@@ -57,8 +57,8 @@ class TranscriberInterface(ABC):
         Transcribe audio data.
 
         Args:
-            audio: Audio data as numpy array
-            language: Optional language code
+            audio (np.ndarray): Audio data as numpy array
+            language (str | None): Optional language code
 
         Returns:
             Tuple of (segments, info)

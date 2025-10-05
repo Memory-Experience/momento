@@ -21,7 +21,8 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
         Initialize the transcription servicer.
 
         Args:
-            container: Dependency container with transcriber and configuration
+            container (Container): Dependency container with transcriber
+                and configuration
         """
         self.transcriber = container.transcriber
         self.sample_rate = container.sample_rate
@@ -35,7 +36,7 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
         Accepts streaming audio or text input and returns transcription segments
         in real-time. Handles explicit final markers to signal completion.
 
-        Parameters:
+        Args:
             request_iterator (AsyncIterator[MemoryChunk]): Async iterator
                 yielding MemoryChunk messages with audio/text data
             context (grpc.aio.ServicerContext): gRPC context for the

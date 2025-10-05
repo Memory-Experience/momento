@@ -14,7 +14,7 @@ class TextChunker(ABC):
         Split a text into chunks according to the strategy.
 
         Args:
-            text: The text to split into chunks
+            text (str): The text to split into chunks
 
         Returns:
             A list of text chunks
@@ -38,7 +38,7 @@ class ChunkerConfig:
         """
         Initialize the chunker configuration.
 
-        Parameters:
+        Args:
             chunk_size (int): Maximum size of each chunk in characters or
                 tokens (default: 1000)
             chunk_overlap (int): Overlap between consecutive chunks in

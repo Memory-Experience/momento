@@ -22,7 +22,7 @@ class SBertEmbeddingModel(EmbeddingModel):
         """
         Initialize the Sentence-BERT embedding model.
 
-        Parameters:
+        Args:
             model_name (str): HuggingFace model identifier
                 (default: all-MiniLM-L6-v2)
             device (str | None): Device to run on
@@ -51,7 +51,7 @@ class SBertEmbeddingModel(EmbeddingModel):
         Runs the blocking model.encode in a synchronous manner while maintaining
         the async interface for consistency with other embedding models.
 
-        Parameters:
+        Args:
             text (str): Text to embed
 
         Returns:

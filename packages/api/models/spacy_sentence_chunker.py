@@ -34,7 +34,7 @@ class SpacySentenceChunker(TextChunker):
         """
         Initialize the spaCy sentence chunker.
 
-        Parameters:
+        Args:
             config (ChunkerConfig | None): Configuration (chunk_size used
                 as sentence length limit)
             model (str): spaCy model name (default: "en_core_web_sm")
@@ -71,7 +71,7 @@ class SpacySentenceChunker(TextChunker):
         """
         Split text into sentence-level chunks.
 
-        Parameters:
+        Args:
             text (str): Text to split into sentences
 
         Returns:
@@ -99,7 +99,7 @@ class SpacySentenceChunker(TextChunker):
 
         Uses 25% overlap to preserve coherence across window boundaries.
 
-        Parameters:
+        Args:
             span: spaCy Span object representing the sentence
             size (int): Maximum tokens per window
 

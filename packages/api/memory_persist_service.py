@@ -19,8 +19,8 @@ class MemoryPersistService:
         """
         Initialize the memory persist service.
 
-        Parameters:
-            dependencies: Container with vector_store and persistence
+        Args:
+            dependencies (Container): Container with vector_store and persistence
                 service dependencies
         """
         self.vector_store_service = dependencies.vector_store
@@ -36,7 +36,7 @@ class MemoryPersistService:
         chunks until a final marker is received, then persisting the complete
         memory to storage and indexing it in the vector store.
 
-        Parameters:
+        Args:
             request_iterator (AsyncIterator[MemoryChunk]): Async iterator
                 yielding MemoryChunk protobuf messages
             context (grpc.aio.ServicerContext): gRPC context for the
@@ -86,10 +86,10 @@ class MemoryPersistService:
         Save a memory and send confirmation to client.
 
         Args:
-            audio_data: Raw audio bytes to persist
-            transcription: List of transcribed text segments
-            session_id: Session identifier for the client connection
-            memory_id: Original memory identifier from the client (if provided)
+            audio_data (bytearray): Raw audio bytes to persist
+            transcription (list[str]): List of transcribed text segments
+            session_id (str): Session identifier for the client connection
+            memory_id (str): Original memory identifier from the client (if provided)
 
         Yields:
             MemoryChunk: Confirmation message containing the saved memory's UUID
