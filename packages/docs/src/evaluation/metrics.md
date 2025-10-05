@@ -34,7 +34,6 @@ $$
 
 Where |Q| is the total number of queries. For a single query, the reciprocal rank is 1/rank of the first relevant document (or 0 if no relevant document is found).
 
-
 **Why this matters**: For question answering, finding at least one good answer quickly is often sufficient. MRR@K variants show this at different cutoffs.
 
 ### Normalized Discounted Cumulative Gain (NDCG)
@@ -81,14 +80,14 @@ Where:
 - $P_{\text{FA}}$ = probability of false alarms
 - $\beta$ = cost ratio (default: 40.0)
 
-
-
 **Non-standard implementation**: Our AQWV implementation **does not use a detection threshold**, which is non-standard. We take this approach because:
+
 1. RAG systems typically return a fixed number of documents rather than making binary detection decisions
 2. It simplifies integration with existing retrieval pipelines that don't naturally produce confidence scores
 3. It focuses evaluation on ranking quality rather than threshold tuning
 
 In our retrieval setting:
+
 - $P_{\text{miss}}$ = fraction of relevant documents not retrieved in top-K
 - $P_{\text{FA}}$ = fraction of retrieved documents that are non-relevant
 
