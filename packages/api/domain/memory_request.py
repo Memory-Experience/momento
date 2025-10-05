@@ -8,18 +8,30 @@ from protos.generated.py import stt_pb2
 
 class MemoryType(Enum):
     """
-    Type of memory operation, aligned with SessionType in the proto definition.
+    Enumeration of memory operation types.
+
+    Defines the purpose of a memory request, aligned with ChunkType
+    in the protobuf definition.
+
+    Attributes:
+        MEMORY: For storing memories (memorization)
+        QUESTION: For retrieving memories (recall/query)
+        ANSWER: For LLM-generated answers to questions
     """
 
-    MEMORY = 0  # For storing memories (memorization)
-    QUESTION = 1  # For retrieving memories (recall)
-    ANSWER = 2  # Answer to a question
+    MEMORY = 0
+    QUESTION = 1
+    ANSWER = 2
 
 
 @dataclass
 class MemoryRequest:
     """
-    Domain model representing a recorded memory with audio and transcription.
+    Domain model representing a memory with audio and/or text content.
+
+    Encapsulates all data for a memory operation, including optional audio data,
+    transcribed or input text, timestamps, and the operation type. Used throughout
+    the system for storage, retrieval, and question answering.
     """
 
     id: UUID | None
@@ -37,7 +49,21 @@ class MemoryRequest:
         text: list[str] | None = None,
         memory_type: MemoryType = MemoryType.MEMORY,
     ) -> "MemoryRequest":
-        """Factory method to create a new Memory instance."""
+        """
+        Factory method to create a new MemoryRequest instance.
+
+        Automatically generates UUID and timestamp if not provided.
+
+        Parameters:
+            id (UUID | None): Unique identifier (auto-generated if None)
+            timestamp (datetime | None): Creation timestamp (current time if None)
+            audio_data (bytes | None): Raw audio bytes (optional)
+            text (list[str] | None): List of text segments (optional)
+            memory_type (MemoryType): Type of memory operation (default: MEMORY)
+
+        Returns:
+            MemoryRequest: New memory request instance
+        """
         return cls(
             id=id or uuid4(),
             timestamp=timestamp or datetime.now(),
@@ -52,13 +78,14 @@ class MemoryRequest:
         """
         Convert this memory request to a protobuf MemoryChunk message.
 
-        Args:
-            session_id: Session ID to include in metadata
-            chunk_type: Override the default chunk type mapping. If None, it will
-                be derived from memory_type.
+        Parameters:
+            session_id (str): Session ID to include in metadata
+            chunk_type (stt_pb2.ChunkType | None): Override the default
+                chunk type mapping. If None, it will be derived from
+                memory_type.
 
         Returns:
-            MemoryChunk protobuf message
+            stt_pb2.MemoryChunk: Protobuf message containing the memory data
         """
         # Map memory type to chunk type if not explicitly provided
         if chunk_type is None:
