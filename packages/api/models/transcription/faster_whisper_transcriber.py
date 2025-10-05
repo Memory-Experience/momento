@@ -23,11 +23,11 @@ class FasterWhisperTranscriber(TranscriberInterface):
         Initialize the FasterWhisperTranscriber.
 
         Args:
-            model_size_or_path: Model size or path to model
-            device: Device to use (cuda or cpu)
-            compute_type: Compute type for the model
-            vad_filter: Whether to use voice activity detection
-            vad_parameters: Parameters for VAD
+            model_size_or_path (str): Model size or path to model
+            device (str | None): Device to use (cuda or cpu)
+            compute_type (str | None): Compute type for the model
+            vad_filter (bool): Whether to use voice activity detection
+            vad_parameters (dict[str, Any] | None): Parameters for VAD
         """
         self.model_size_or_path = model_size_or_path
         self.vad_filter = vad_filter
@@ -90,8 +90,8 @@ class FasterWhisperTranscriber(TranscriberInterface):
         Transcribe audio data.
 
         Args:
-            audio: Audio data as numpy array (16000 Hz, mono)
-            language: Optional language code
+            audio (np.ndarray): Audio data as numpy array (16000 Hz, mono)
+            language (str | None): Optional language code
 
         Returns:
             Tuple of (segments, info)

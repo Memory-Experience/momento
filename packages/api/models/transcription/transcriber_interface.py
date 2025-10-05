@@ -5,11 +5,26 @@ import numpy as np
 
 
 class Segment:
-    """Class representing a transcription segment."""
+    """
+    Represents a single transcription segment with timing information.
+
+    Contains the transcribed text along with temporal boundaries and
+    confidence metrics.
+    """
 
     def __init__(
         self, text: str, start: float, end: float, no_speech_prob: float = 0.0
     ):
+        """
+        Initialize a transcription segment.
+
+        Args:
+            text (str): The transcribed text content
+            start (float): Start time of the segment in seconds
+            end (float): End time of the segment in seconds
+            no_speech_prob (float): Probability that the segment contains no
+                speech (default: 0.0)
+        """
         self.text = text
         self.start = start
         self.end = end
@@ -17,11 +32,21 @@ class Segment:
 
 
 class TranscriberInterface(ABC):
-    """Base interface for transcriber implementations."""
+    """
+    Abstract base interface for speech-to-text transcription implementations.
+
+    Defines the contract for transcriber classes that convert audio data
+    into text segments with timing information.
+    """
 
     @abstractmethod
     def initialize(self):
-        """Initialize the transcriber model."""
+        """
+        Initialize the transcriber model.
+
+        Loads necessary models and resources. Should be called before
+        the first transcription.
+        """
         pass
 
     @abstractmethod
@@ -32,8 +57,8 @@ class TranscriberInterface(ABC):
         Transcribe audio data.
 
         Args:
-            audio: Audio data as numpy array
-            language: Optional language code
+            audio (np.ndarray): Audio data as numpy array
+            language (str | None): Optional language code
 
         Returns:
             Tuple of (segments, info)
@@ -42,5 +67,10 @@ class TranscriberInterface(ABC):
 
     @abstractmethod
     def cleanup(self):
-        """Clean up resources."""
+        """
+        Clean up resources.
+
+        Releases any resources held by the transcriber, such as GPU memory
+        or model handles. Should be called when the transcriber is no longer needed.
+        """
         pass

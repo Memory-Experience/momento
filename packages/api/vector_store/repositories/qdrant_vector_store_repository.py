@@ -192,11 +192,12 @@ class QdrantVectorStoreRepository(VectorStoreRepository):
         search_chunks: bool = True,
     ) -> MemoryContext:
         """
-        Search for memories with content similar to the
-        query embedding using vector similarity.
+        Search for memories with content similar to the query embedding.
+
+        Uses vector similarity search with optional filtering.
 
         Args:
-            query_memory: The query memory to search with
+            query: The query memory to search with
             limit: Maximum number of results to return
             filters: Optional filters to apply
             search_chunks: Whether to search in chunks (True) or only full texts (False)
@@ -532,9 +533,9 @@ class InMemoryQdrantVectorStoreRepository(QdrantVectorStoreRepository):
         Initialize the Qdrant in-memory vector store repository.
 
         Args:
+            embedding_model: The embedding model to use for vectorizing text
+            text_chunker: The text chunker to use for splitting text into chunks
             collection_name: Name of the collection to store vectors
-            vector_size: Dimension of vectors
-                (should match your embedding model's output)
         """
 
         # Initialize in-memory Qdrant client
@@ -557,12 +558,13 @@ class LocalFileQdrantVectorStoreRepository(QdrantVectorStoreRepository):
         collection_name="memories",
     ):
         """
-        Initialize the Qdrant in-memory vector store repository.
+        Initialize the Qdrant file-based vector store repository.
 
         Args:
+            embedding_model: The embedding model to use for vectorizing text
+            text_chunker: The text chunker to use for splitting text into chunks
+            database_path: Path to the local database file
             collection_name: Name of the collection to store vectors
-            vector_size: Dimension of vectors
-                (should match your embedding model's output)
         """
 
         # Initialize in-memory Qdrant client

@@ -6,8 +6,11 @@ from api.domain.memory_request import MemoryRequest
 @dataclass
 class MemoryContext:
     """
-    Container for multiple memories with their similarity scores that
-    can be used as context for LLM processing.
+    Container for multiple memories with their similarity scores.
+
+    Holds retrieved memories along with their relevance scores and matched text
+    snippets, providing context for LLM-based question answering. Supports
+    filtering, sorting, and retrieval of top-k memories by relevance.
     """
 
     # Dictionary of memories by ID
@@ -27,7 +30,14 @@ class MemoryContext:
     ) -> None:
         """
         Add a memory with its similarity score to this context.
-        If the memory has no ID, it will be added to a list of memories without IDs.
+
+        Args:
+            memory: The memory object to add
+            score: Relevance/similarity score (typically 0.0 to 1.0)
+            matched_text: The text snippet that matched the query
+
+        Raises:
+            ValueError: If the memory has no ID
         """
         if not memory.id:
             raise ValueError("Memory must have an ID to be added to MemoryContext")
@@ -37,15 +47,33 @@ class MemoryContext:
         self.matched_texts[memory.id] = matched_text
 
     def get_memory_objects(self) -> list[MemoryRequest]:
-        """Get just the memory objects without scores."""
+        """
+        Get just the memory objects without scores.
+
+        Returns:
+            List of MemoryRequest objects
+        """
         return list(self.memories.values())
 
     def get_memory_by_id(self, memory_id: str) -> MemoryRequest | None:
-        """Get a specific memory by its ID."""
+        """
+        Get a specific memory by its ID.
+
+        Args:
+            memory_id: The UUID of the memory to retrieve
+
+        Returns:
+            The MemoryRequest if found, None otherwise
+        """
         return self.memories.get(memory_id)
 
     def get_memories_with_scores(self) -> list[tuple]:
-        """Get all memories with their scores as a list of tuples."""
+        """
+        Get all memories with their scores as tuples.
+
+        Returns:
+            List of (memory, matched_text, score) tuples
+        """
         return [
             (self.memories[memory_id], self.matched_texts[memory_id], score)
             for memory_id, score in self.scores.items()

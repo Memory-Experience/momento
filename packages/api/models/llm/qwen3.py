@@ -11,8 +11,12 @@ from api.domain.memory_context import MemoryContext
 
 class Qwen3(LlamaCppModel):
     """
-    Qwen3-1.7B-Instruct (GGUF) using llama.cpp. Automatically downloads
-        a quantized version from HF.
+    Qwen3-1.7B-Instruct LLM model using llama.cpp backend.
+
+    This model is optimized for RAG-based question answering with memory context.
+    It automatically downloads a quantized GGUF version from HuggingFace if no
+    local model path is provided. The model is configured with a specialized
+    system prompt for memory-based question answering with source citations.
     """
 
     DEFAULT_PREFERRED_QUANTS: Sequence[str] = ("Q4_K_M", "Q4_K_S", "Q5_K_M", "Q8_0")
@@ -122,7 +126,16 @@ Only use memory JSONs that appear after this point and outside of <examples>
 
     # -------- Custom prompt building for Qwen3 --------
     def _format_memories(self, top: Iterable[tuple], max_chars: int = 1200) -> str:
-        """Format memories as a JSON-like structure for better LLM comprehension."""
+        """
+        Format memories as JSON-like structures for better LLM comprehension.
+
+        Args:
+            top: Iterable of (memory, matched_text, score) tuples
+            max_chars: Maximum characters per memory snippet (default: 1200)
+
+        Returns:
+            Formatted string containing memory objects in JSON-like format
+        """
         memories = []
         for mem, matched_text, score in top:
             snippet = (matched_text or "").strip()
@@ -142,9 +155,18 @@ Only use memory JSONs that appear after this point and outside of <examples>
         self, prompt: str, memory_context: MemoryContext | None
     ) -> list[dict[str, str]]:
         """
-        Build messages for the chat completion API using the provided prompt
-        and memory context. Format the context in a way that's easier for
-        small models to understand.
+        Build messages for the chat completion API with memory context.
+
+        Formats the context as JSON-like memory structures that are easier for
+        small models to parse and understand, improving answer accuracy and
+        source attribution.
+
+        Args:
+            prompt: The user's question or prompt
+            memory_context: Retrieved memories with relevance scores (optional)
+
+        Returns:
+            List of message dictionaries with roles and content for the chat API
         """
         messages: list[dict[str, str]] = [
             {"role": "system", "content": self.system_prompt}

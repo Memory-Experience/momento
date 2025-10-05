@@ -26,7 +26,13 @@ logger = logging.getLogger(__name__)
 
 
 class RAGEvaluationClient:
-    """Client for evaluating RAG system performance using gRPC."""
+    """
+    Client for evaluating RAG (Retrieval-Augmented Generation) system performance.
+
+    Provides comprehensive evaluation of both retrieval quality (precision, recall,
+    MRR, NDCG, etc.) and generation quality (F1, ROUGE, semantic similarity, etc.).
+    Interfaces with the question answering service to evaluate end-to-end performance.
+    """
 
     _NO_GOLD_ANSWER_NO_VALUE = [
         "f1",
@@ -41,10 +47,16 @@ class RAGEvaluationClient:
         doc_to_memory: dict[str, str],
         memory_to_doc: dict[str, str],
     ):
-        """Initialize the evaluation client.
+        """
+        Initialize the evaluation client.
 
-        Args:
-            server_address: gRPC server address (host:port)
+        Parameters:
+            qa_service (QuestionAnswerService): The question answering
+                service to evaluate
+            doc_to_memory (dict[str, str]): Mapping from dataset document
+                IDs to memory IDs
+            memory_to_doc (dict[str, str]): Mapping from memory IDs to
+                dataset document IDs
         """
         self.qa_service = qa_service
         self.doc_to_memory: dict[str, str] = doc_to_memory or {}
@@ -55,6 +67,16 @@ class RAGEvaluationClient:
         query_id: str,
         query_text: str,
     ) -> tuple[dict, list[str], str, float]:
+        """
+        Process a single query through the QA system.
+
+        Parameters:
+            query_id (str): Unique identifier for the query
+            query_text (str): The question text
+
+        Returns:
+            tuple: (retrieved_docs_dict, retrieved_doc_ids, full_answer, response_time)
+        """
         session_id = str(uuid.uuid4())
         retrieved_docs: dict[str, str] = {}
         retrieved_doc_ids_ordered: list[str] = []
@@ -117,17 +139,22 @@ class RAGEvaluationClient:
         relevance_scores: dict[str, float] | None = None,
         collection_size: int = -1,
     ) -> dict:
-        """Evaluate retrieval performance using standard IR metrics.
+        """
+        Evaluate retrieval performance using standard Information Retrieval metrics.
 
-        Args:
-            retrieved_doc_ids: List of document IDs retrieved by the system
-                (in rank order)
-            relevant_doc_ids: List of document IDs known to be relevant
-            relevance_scores: Optional mapping of doc_id to relevance score
-            collection_size: Total size of document collection for AQWV
+        Parameters:
+            retrieved_doc_ids (list[str]): Document IDs retrieved by the
+                system (in rank order)
+            relevant_doc_ids (list[str]): Document IDs known to be
+                relevant (ground truth)
+            relevance_scores (dict[str, float] | None): Optional mapping
+                of doc_id to relevance score
+            collection_size (int): Total size of document collection for
+                AQWV calculation
 
         Returns:
-            Dictionary of retrieval metrics
+            dict: Dictionary containing metrics like precision, recall,
+                F1, MRR, NDCG, etc.
         """
         if not relevant_doc_ids:
             return {
@@ -340,7 +367,6 @@ class RAGEvaluationClient:
 
         Args:
             dataset: Dataset to use for evaluation
-            max_docs: Maximum number of documents to stream
             max_queries: Maximum number of queries to evaluate
 
         Returns:
