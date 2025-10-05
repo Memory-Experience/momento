@@ -28,9 +28,26 @@ logger = logging.getLogger(__name__)
 
 
 class DatasetLoader:
+    """
+    Load datasets and create filled vector store services with mappings.
+
+    This class handles dataset ingestion into vector stores, including
+    persistence of document-to-memory mappings for evaluation purposes.
+    """
+
     def _create_vector_store_service(
         embedding: EmbeddingModel, dataset_folder
     ) -> VectorStoreService:
+        """
+        Create a vector store service with local file-based Qdrant backend.
+
+        Parameters:
+            embedding (EmbeddingModel): Embedding model for vector storage
+            dataset_folder: Path to folder for vector store persistence
+
+        Returns:
+            VectorStoreService: Configured vector store service instance
+        """
         text_chunker = DummyTextChunker()
         vector_store_repo: VectorStoreRepository = LocalFileQdrantVectorStoreRepository(
             embedding, text_chunker, dataset_folder
@@ -38,6 +55,18 @@ class DatasetLoader:
         return VectorStoreService(vector_store_repo)
 
     def _clean_if_incomplete(dataset_folder) -> tuple[dict[str, str], dict[str, str]]:
+        """
+        Clean incomplete vector store or load existing mappings.
+
+        If the mapping pickle files exist, loads and returns them.
+        Otherwise, cleans the dataset folder by removing all files.
+
+        Parameters:
+            dataset_folder: Path to dataset folder containing vector store
+
+        Returns:
+            tuple: (doc_to_memory mapping dict, memory_to_doc mapping dict)
+        """
         doc_to_memory_path = os.path.join(dataset_folder, "doc_to_memory.pkl")
         memory_to_doc_path = os.path.join(dataset_folder, "memory_to_doc.pkl")
 
@@ -64,6 +93,23 @@ class DatasetLoader:
         dataset_folder: str,
         embedding: EmbeddingModel,
     ) -> tuple[VectorStoreService, dict[str, str], dict[str, str]]:
+        """
+        Load dataset and create filled vector store service with mappings.
+
+        Indexes all documents from the dataset into the vector store,
+        creating bidirectional mappings between dataset document IDs
+        and memory IDs. Persists mappings to pickle files for reuse.
+
+        Parameters:
+            dataset (DataFrameDataset): Dataset to load documents from
+            dataset_folder (str): Path to folder for vector store
+                persistence
+            embedding (EmbeddingModel): Embedding model for vectorization
+
+        Returns:
+            tuple: (vector_store_service, doc_to_memory mapping,
+                memory_to_doc mapping)
+        """
         doc_to_memory, memory_to_doc = cls._clean_if_incomplete(dataset_folder)
         vector_store_service = cls._create_vector_store_service(
             embedding, dataset_folder

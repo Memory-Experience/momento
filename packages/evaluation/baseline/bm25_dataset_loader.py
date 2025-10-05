@@ -16,10 +16,30 @@ logger = logging.getLogger(__name__)
 
 
 class BM25DatasetLoader(DatasetLoader):
+    """
+    Dataset loader that uses BM25 (Lucene) for retrieval.
+
+    This loader creates a Lucene-based vector store repository
+    instead of embedding-based retrieval, providing a BM25 baseline
+    for evaluation comparisons.
+    """
+
     @classmethod
     async def create_filled_vector_store_service(
         cls, dataset: DataFrameDataset, dataset_folder: str
     ) -> tuple[VectorStoreService, dict[str, str], dict[str, str]]:
+        """
+        Create filled vector store using Lucene BM25 index.
+
+        Parameters:
+            dataset (DataFrameDataset): Dataset to load documents from
+            dataset_folder (str): Path to folder for Lucene index
+                persistence
+
+        Returns:
+            tuple: (vector_store_service, doc_to_memory mapping,
+                memory_to_doc mapping)
+        """
         doc_to_memory, memory_to_doc = cls._clean_if_incomplete(dataset_folder)
 
         vector_store_repo = LuceneVectorStoreRepository(index_dir=dataset_folder)
