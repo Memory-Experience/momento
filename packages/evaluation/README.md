@@ -16,6 +16,19 @@ pnpm run start
 uv run main.py
 ```
 
+### Running the jupyter notebook
+
+Here we show how to create a jupyter kernel in uv. For further information see the official uv documentation on [using uv with Jupyter](https://docs.astral.sh/uv/guides/integration/jupyter/#using-jupyter-within-a-project).
+
+```bash
+uv sync --dev
+
+uv run ipython kernel install --user --env VIRTUAL_ENV $(pwd)/.venv --name=momento
+
+# If you want to start a jupyter server instead of using it directly in vscode
+uv run --with jupyter jupyter lab
+```
+
 ## Development
 
 ### Managing Dependencies
