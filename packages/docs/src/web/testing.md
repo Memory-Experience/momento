@@ -142,50 +142,6 @@ expect(MessageList).toHaveBeenCalledWith(
 );
 ```
 
-## Test Coverage
-
-### Configuration
-
-Coverage is collected using the v8 provider (configured in `jest.config.ts`):
-
-```typescript
-collectCoverage: true,
-coverageProvider: "v8",
-collectCoverageFrom: [
-  "**/*.{js,jsx,ts,tsx}",
-  "!**/node_modules/**",
-  "!**/*.d.ts",
-  "!*.config.{ts,js,cjs,mjs}",
-  "!**/.next/**",
-  "!**/coverage/**",
-  "!**/types/*.ts",
-  "!public-api.ts",
-],
-coverageDirectory: "coverage",
-```
-
-This configuration:
-
-- Includes all source files (`.js`, `.jsx`, `.ts`, `.tsx`)
-- Excludes build artifacts, configs, and type definitions
-- Outputs coverage to `coverage/` directory
-
-Coverage reports are generated in multiple formats:
-
-- **Terminal**: Summary statistics
-- **HTML**: `coverage/lcov-report/index.html` (interactive browser view)
-- **LCOV**: `coverage/lcov.info` (CI/CD integration)
-
-### Development
-
-Run tests in watch mode during development:
-
-```bash
-pnpm run test:watch
-```
-
-This starts Jest in watch mode, re-running tests when files change.
-
 ## Testing Best Practices
 
 ### 1. User-Centric Queries
