@@ -1,56 +1,67 @@
-"use client";
+import RecordingContext from "@/context/RecordingContext";
+import { MicNone, StopCircle } from "@mui/icons-material";
+import { Button, Typography } from "@mui/joy";
+import { FC, useCallback, useContext, useEffect, useRef } from "react";
 
-import { cn } from "@/utils";
-import { Mic } from "lucide-react";
-import { Button } from "../ui/button";
-import { useCallback, useState, useEffect, useRef } from "react";
-import { toast } from "sonner";
-
-interface AudioRecorderProps {
-  buttonText: string;
-  buttonIcon?: React.ReactNode;
-  onAudioData: (audioData: Uint8Array) => Promise<void>;
-  onStartRecording?: () => void;
-  className?: string;
-  isRecordingActive?: boolean;
-  disabled?: boolean;
-}
-
-export default function AudioRecorder({
-  buttonText,
-  buttonIcon = <Mic className="mr-2 h-4 w-4" />,
-  onAudioData,
-  onStartRecording,
-  className,
-  isRecordingActive = false,
-  disabled = false,
-}: AudioRecorderProps) {
-  const [isInternalRecording, setIsInternalRecording] = useState(false);
+const AudioRecorder: FC = () => {
+  const recordingContext = useContext(RecordingContext);
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const recorderNodeRef = useRef<AudioWorkletNode | null>(null);
   const audioChunkCountRef = useRef(0);
-  const audioDataCallbackRef = useRef(onAudioData);
 
-  // Update the ref when the prop changes
+  if (!recordingContext) {
+    throw new Error("AudioRecorder must be used within a RecordingContext");
+  }
+
+  const {
+    isRecording,
+    setIsRecording,
+    onStartRecording,
+    onAudioData,
+    onStopRecording,
+  } = recordingContext;
+
+  const handleAudioData = useCallback(
+    async (audioData: Uint8Array) => {
+      console.debug("AudioRecorder: handleAudioData", isRecording);
+      audioChunkCountRef.current++;
+
+      if (audioChunkCountRef.current % 10 === 0) {
+        console.log(
+          `AudioRecorder: Received ${audioChunkCountRef.current} audio chunks`,
+        );
+      }
+
+      if (isRecording) {
+        await onAudioData?.(audioData);
+      }
+    },
+    [isRecording, onAudioData],
+  );
+
   useEffect(() => {
-    audioDataCallbackRef.current = onAudioData;
-  }, [onAudioData]);
-
-  // Update the handleAudioData to use the ref
-  const handleAudioData = useCallback(async (pcmBytes: Uint8Array) => {
-    if (pcmBytes.byteLength < 10) return;
-
-    audioChunkCountRef.current++;
-    if (audioChunkCountRef.current % 10 === 0) {
-      console.log(
-        `AudioRecorder: Received ${audioChunkCountRef.current} audio chunks`,
-      );
+    if (recorderNodeRef.current) {
+      recorderNodeRef.current.port.onmessage = (event: MessageEvent) => {
+        if (event.data?.type) {
+          console.debug(
+            `AudioRecorder: Received message type: ${event.data.type}`,
+          );
+          return; // Skip debug/level messages
+        }
+        const pcmBytes = event.data;
+        if (pcmBytes instanceof Uint8Array && pcmBytes.byteLength > 0) {
+          handleAudioData(new Uint8Array(pcmBytes));
+        } else {
+          console.warn(
+            "AudioRecorder: Received invalid audio data",
+            typeof pcmBytes,
+            pcmBytes,
+          );
+        }
+      };
     }
-
-    // Always use the latest callback via the ref
-    await audioDataCallbackRef.current(pcmBytes);
-  }, []);
+  }, [handleAudioData, recorderNodeRef]);
 
   // Start recording
   const startAudioRecording = useCallback(async (): Promise<boolean> => {
@@ -80,7 +91,7 @@ export default function AudioRecorder({
       await audioCtx.audioWorklet.addModule(
         "/worklets/audio-recorder.worklet.js",
       );
-      console.log("AudioRecorder: Audio worklet module loaded");
+      console.debug("AudioRecorder: Audio worklet module loaded");
 
       // Create recorder node with specified options
       const recorderNode = new AudioWorkletNode(
@@ -98,26 +109,6 @@ export default function AudioRecorder({
       );
 
       recorderNodeRef.current = recorderNode;
-
-      // Handle messages from audio worklet processor
-      recorderNode.port.onmessage = (event: MessageEvent) => {
-        if (event.data?.type) {
-          console.log(
-            `AudioRecorder: Received message type: ${event.data.type}`,
-          );
-          return; // Skip debug/level messages
-        }
-        const pcmBytes = event.data;
-        if (pcmBytes instanceof Uint8Array && pcmBytes.byteLength > 0) {
-          handleAudioData(new Uint8Array(pcmBytes));
-        } else {
-          console.warn(
-            "AudioRecorder: Received invalid audio data",
-            typeof pcmBytes,
-            pcmBytes,
-          );
-        }
-      };
 
       // Initialize audio worklet
       recorderNode.port.postMessage({
@@ -142,10 +133,34 @@ export default function AudioRecorder({
       console.error("Error starting audio recording:", error);
       return false;
     }
-  }, [handleAudioData]);
+  }, []);
 
-  // Stop recording
-  const stopAudioRecording = useCallback(() => {
+  const startRecording = useCallback(async () => {
+    // Start audio recording
+    const success = await startAudioRecording();
+    if (success) {
+      try {
+        await onStartRecording?.();
+        setIsRecording(true);
+      } catch (error) {
+        console.error("Error starting recording:", error);
+        // toast.error("Failed to start recording session.");
+      }
+    } else {
+      console.error(
+        "Failed to start recording. Please check microphone permissions.",
+      );
+      // toast.error(
+      //   "Failed to start recording. Please check microphone permissions.",
+      // );
+    }
+  }, [onStartRecording, setIsRecording, startAudioRecording]);
+
+  const stopRecording = useCallback(async () => {
+    console.debug("AudioRecorder#stopRecording", isRecording);
+    if (!isRecording) return;
+    console.log("AudioRecorder: Stopping recording...");
+
     // Clean up audio resources
     if (recorderNodeRef.current) {
       try {
@@ -161,73 +176,46 @@ export default function AudioRecorder({
       audioCtxRef.current.close().catch(console.error);
       audioCtxRef.current = null;
     }
-  }, []);
 
-  // Start recording
-  const startRecording = useCallback(async () => {
-    // Start audio recording
-    const success = await startAudioRecording();
-    if (success) {
-      setIsInternalRecording(true);
-      if (onStartRecording) {
-        onStartRecording();
-      }
-    } else {
-      toast.error(
-        "Failed to start recording. Please check microphone permissions.",
-      );
-    }
-  }, [startAudioRecording, onStartRecording]);
-
-  // Sync with external isRecordingActive state
-  useEffect(() => {
-    if (!isInternalRecording && isRecordingActive) {
-      // Parent wants to start recording
-      startAudioRecording();
-      setIsInternalRecording(true);
-    } else if (isInternalRecording && !isRecordingActive) {
-      // Parent wants to stop recording
-      stopAudioRecording();
-      setIsInternalRecording(false);
-    }
-  }, [
-    isRecordingActive,
-    isInternalRecording,
-    startAudioRecording,
-    stopAudioRecording,
-  ]);
+    await onStopRecording?.();
+    setIsRecording(false);
+  }, [isRecording, setIsRecording, onStopRecording]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (recorderNodeRef.current) {
-        try {
-          recorderNodeRef.current.disconnect();
-          recorderNodeRef.current.port.postMessage({ command: "stop" });
-        } catch (error) {
-          console.error("Error cleaning up recorder node:", error);
-        }
-      }
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(console.error);
+      if (isRecording) {
+        stopRecording().catch(console.error);
       }
     };
-  }, []);
+  }, [isRecording, stopRecording]);
+
+  useEffect(() => {
+    // Listening for external isRecording changes from context => stopRecording
+    if (!isRecording) {
+      stopRecording();
+    }
+  }, [isRecording, stopRecording]);
 
   return (
-    <div className={cn(className)}>
-      <Button
-        onClick={startRecording}
-        className={cn(
-          "rounded-full",
-          isRecordingActive && "bg-red-300 hover:bg-red-600 animate-pulse",
-        )}
-        size="lg"
-        disabled={disabled || isRecordingActive || isInternalRecording}
-      >
-        {buttonIcon}
-        {buttonText}
-      </Button>
-    </div>
+    <Button
+      variant="plain"
+      color="neutral"
+      size="sm"
+      startDecorator={
+        isRecording ? (
+          <Typography color="danger">
+            <StopCircle />
+          </Typography>
+        ) : (
+          <MicNone />
+        )
+      }
+      onClick={isRecording ? stopRecording : startRecording}
+    >
+      {isRecording ? "Stop" : "Dictate"}
+    </Button>
   );
-}
+};
+
+export default AudioRecorder;

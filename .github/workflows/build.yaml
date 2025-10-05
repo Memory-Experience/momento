@@ -52,8 +52,5 @@ jobs:
       - name: Build project
         run: pnpm run build
 
-      - name: Run API tests
-        run: pnpm --filter ./packages/api test:ci
-
-      - name: Run Evaluation tests
-        run: pnpm --filter ./packages/evaluation test:ci
+      - name: Run tests
+        run: pnpm run test:ci
