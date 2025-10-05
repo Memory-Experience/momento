@@ -10,27 +10,27 @@ extra_javascript:
 docs_dir: src
 site_dir: site
 plugins:
-  - search
-  - autorefs
-  - mkdocs-jupyter:
-      include_source: true
-      execute: false
-      allow_errors: false
-  - mkdocstrings:
-      handlers:
-        python:
-          paths:
-            - ..
-          options:
-            show_submodules: true
-            docstring_style: google
-            separate_signature: true
-            members_order: source
-            filters: ["!^_"]
-  - plantuml:
-      puml_url: https://www.plantuml.com/plantuml/
-      theme:
-        enabled: false
+    - search
+    - autorefs
+    - mkdocs-jupyter:
+          include_source: true
+          execute: false
+          allow_errors: false
+    - mkdocstrings:
+          handlers:
+              python:
+                  paths:
+                      - ..
+                  options:
+                      show_submodules: true
+                      docstring_style: google
+                      separate_signature: true
+                      members_order: source
+                      filters: ["!^_"]
+    - plantuml:
+          puml_url: https://www.plantuml.com/plantuml/
+          theme:
+              enabled: false
 markdown_extensions:
     - pymdownx.arithmatex:
           generic: true
@@ -38,32 +38,35 @@ markdown_extensions:
           base_path: ../..
           check_paths: false
 nav:
-  - Overview: index.md
-  - Readme: readme_link.md
-  - Python Backend:
-      - Architecture:
-          - Overview: api/architecture.md
-          - WebSocket Endpoints: api/websocket_endpoints.md
-          - AI Models: api/models.md
-          - Core Services: api/services.md
-      - Readme: api/readme_link.md
-      - Reference (PY): api/py.md
-  - Communication (Protobuf):
-      - Readme: protos/readme_link.md
-  - Web Frontend:
-      - Overview: web/index.md
-      - Readme: web/readme_link.md
-      - Reference (TS): web/ts/globals.md
-  - Evaluation:
-      - Architecture:
-          - Overview: evaluation/architecture.md
-          - Data Loading: evaluation/data_loading.md
-          - Configuration: evaluation/configuration.md
-          - Baselines: evaluation/baselines.md
-          - Datasets: evaluation/datasets.md
-          - Metrics: evaluation/metrics.md
-      - Analysis:
-          - MS MARCO QnA: evaluation/analysis/ms_marco_qna_dev_10k.ipynb
-          - OpenLifelogQA: evaluation/analysis/openlifelog_qa_10k.ipynb
-      - Readme: evaluation/readme_link.md
-      - Reference (PY): evaluation/py.md
+    - Overview: index.md
+    - Readme: readme_link.md
+    - Python Backend:
+          - Architecture:
+                - Overview: api/architecture.md
+                - WebSocket Endpoints: api/websocket_endpoints.md
+                - AI Models: api/models.md
+                - Core Services: api/services.md
+                - Readme: api/readme_link.md
+                - Reference (PY): api/py.md
+    - Communication (Protobuf):
+          - Readme: protos/readme_link.md
+    - Web Frontend:
+          - Architecture:
+                - Overview: web/architecture.md
+                - Communication: web/communication.md
+                - Testing: web/testing.md
+                - Readme: web/readme_link.md
+                - Reference (TS): web/ts/globals.md
+    - Evaluation:
+          - Architecture:
+                - Overview: evaluation/architecture.md
+                - Data Loading: evaluation/data_loading.md
+                - Configuration: evaluation/configuration.md
+                - Baselines: evaluation/baselines.md
+                - Datasets: evaluation/datasets.md
+                - Metrics: evaluation/metrics.md
+          - Analysis:
+                - MS MARCO QnA: evaluation/analysis/ms_marco_qna_dev_10k.ipynb
+                - OpenLifelogQA: evaluation/analysis/openlifelog_qa_10k.ipynb
+          - Readme: evaluation/readme_link.md
+          - Reference (PY): evaluation/py.md
