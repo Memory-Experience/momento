@@ -20,8 +20,9 @@ dependencies = [
     "sentence-transformers>=5.1.1",
     "torchaudio>=2.8.0",
     "tiktoken>=0.11.0",
-    "triton>=2.0.0,<3",
-    "numba==0.61.2"
+    "numba==0.61.2",
+    # Platform-specific dependencies
+    "triton>=3.4.0; platform_system=='Linux'",
 ]
 
 [build-system]
