@@ -27,7 +27,7 @@ class InMemoryRepository(Repository):
         """
         Save a memory to in-memory storage.
 
-        Parameters:
+        Args:
             memory (MemoryRequest): The memory to save
 
         Returns:
@@ -44,7 +44,7 @@ class InMemoryRepository(Repository):
         """
         Find a memory by its URI.
 
-        Parameters:
+        Args:
             uri (str): Memory URI in format "in_memory://{uuid}"
 
         Returns:
