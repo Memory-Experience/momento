@@ -42,6 +42,13 @@ class CrossEncoderScorer:
     async def score_pairs(self, pairs: Sequence[tuple[str, str]]) -> list[float]:
         """
         Score a batch of (text_a, text_b) pairs asynchronously.
+
+        Args:
+            pairs (Sequence[tuple[str, str]]): Sequence of text pairs
+                to score
+
+        Returns:
+            list[float]: List of relevance scores for each pair
         """
 
         def _predict_sync() -> np.ndarray:
@@ -63,6 +70,17 @@ class CrossEncoderScorer:
         candidates: Sequence[str],
         reduction: str = "max",  # "max" or "mean"
     ) -> float:
+        """
+        Score text against multiple candidates and return best score.
+
+        Args:
+            text (str): Input text to score
+            candidates (Sequence[str]): Candidate texts to score against
+            reduction (str): Reduction method: "max" or "mean"
+
+        Returns:
+            float: Best relevance score (max or mean of all candidates)
+        """
         if not candidates:
             return 0.0
         pairs = [(text, c or "") for c in candidates]

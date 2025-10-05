@@ -16,15 +16,17 @@ class RetrievalMetrics:
         relevant_docs: list[str],
         k: int,
     ) -> float:
-        """Calculate precision@k.
+        """
+        Calculate precision@k metric.
 
         Args:
-            retrieved_docs: List of retrieved document IDs in rank order
-            relevant_docs: List of relevant document IDs
-            k: Rank position to evaluate precision at
+            retrieved_docs (list[str]): List of retrieved document IDs
+                in rank order
+            relevant_docs (list[str]): List of relevant document IDs
+            k (int): Rank position to evaluate precision at
 
         Returns:
-            Precision@k score
+            float: Precision@k score (0.0-1.0)
         """
         if not retrieved_docs or k <= 0:
             return 0.0
@@ -46,15 +48,17 @@ class RetrievalMetrics:
         relevant_docs: list[str],
         k: int,
     ) -> float:
-        """Calculate recall@k.
+        """
+        Calculate recall@k metric.
 
         Args:
-            retrieved_docs: List of retrieved document IDs in rank order
-            relevant_docs: List of relevant document IDs
-            k: Rank position to evaluate recall at
+            retrieved_docs (list[str]): List of retrieved document IDs
+                in rank order
+            relevant_docs (list[str]): List of relevant document IDs
+            k (int): Rank position to evaluate recall at
 
         Returns:
-            Recall@k score
+            float: Recall@k score (0.0-1.0)
         """
         if not retrieved_docs or not relevant_docs or k <= 0:
             return 0.0
@@ -75,14 +79,16 @@ class RetrievalMetrics:
         retrieved_docs: list[str],
         relevant_docs: list[str],
     ) -> float:
-        """Calculate Mean Reciprocal Rank (MRR).
+        """
+        Calculate Mean Reciprocal Rank (MRR) metric.
 
         Args:
-            retrieved_docs: List of retrieved document IDs in rank order
-            relevant_docs: List of relevant document IDs
+            retrieved_docs (list[str]): List of retrieved document IDs
+                in rank order
+            relevant_docs (list[str]): List of relevant document IDs
 
         Returns:
-            MRR score
+            float: MRR score (0.0-1.0)
         """
         if not retrieved_docs or not relevant_docs:
             return 0.0
@@ -103,15 +109,18 @@ class RetrievalMetrics:
         relevance_scores: dict[str, float],
         k: int,
     ) -> float:
-        """Calculate Normalized Discounted Cumulative Gain (NDCG) at rank k.
+        """
+        Calculate Normalized Discounted Cumulative Gain (NDCG) at rank k.
 
         Args:
-            retrieved_docs: List of retrieved document IDs in rank order
-            relevance_scores: Dictionary mapping doc_ids to relevance scores
-            k: Rank position to evaluate NDCG at
+            retrieved_docs (list[str]): List of retrieved document IDs
+                in rank order
+            relevance_scores (dict[str, float]): Dictionary mapping
+                doc_ids to relevance scores
+            k (int): Rank position to evaluate NDCG at
 
         Returns:
-            NDCG@k score
+            float: NDCG@k score (0.0-1.0)
         """
         if not retrieved_docs or not relevance_scores or k <= 0:
             return 0.0
@@ -148,18 +157,24 @@ class RetrievalMetrics:
         beta: float = 40.0,
         collection_size: int = -1,
     ) -> float:
-        """Calculate Average Query Weighted Value (AQWV).
+        """
+        Calculate Average Query Weighted Value (AQWV) metric.
 
-        AQWV = 1 - pMiss - β * pFA
+        Formula: AQWV = 1 - pMiss - β * pFA
 
         Args:
-            retrieved_docs: List of retrieved document IDs in rank order
-            relevant_docs: List of relevant document IDs
-            beta: Weight factor for false alarms (default: 40.0 from MATERIAL)
-            collection_size: Total size of document collection
+            retrieved_docs (list[str]): List of retrieved document IDs
+                in rank order
+            relevant_docs (list[str]): List of relevant document IDs
+            beta (float): Weight factor for false alarms
+                (default: 40.0 from MATERIAL)
+            collection_size (int): Total size of document collection
 
         Returns:
-            AQWV score
+            float: AQWV score
+
+        Raises:
+            ValueError: If collection_size is not positive
         """
 
         if collection_size <= 0:
