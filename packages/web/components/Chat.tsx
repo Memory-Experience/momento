@@ -1,242 +1,226 @@
 "use client";
 
-import { useState, useRef, useEffect, ReactNode, useCallback } from "react";
-import { ChatContext } from "@/context/ChatContext";
-import Messages from "./Messages";
-import MemoryRecorder from "./controls/MemoryRecorder";
-import QuestionRecorder from "./controls/QuestionRecorder";
-import { cn } from "@/utils";
-import { toast } from "sonner";
-import BackendService from "@/services/BackendService";
-import RecordingIndicator from "./RecordingIndicator";
-import ConnectionIndicator from "./ConnectionIndicator";
+import { FC, useCallback, useEffect, useState, useRef } from "react";
+import { Button, Textarea } from "@mui/joy";
+import { Help, Save } from "@mui/icons-material";
+import TranscribedRecorder from "./controls/TranscribedRecorder";
+import { ChunkType, MemoryChunk } from "protos/generated/ts/stt";
+import { useWebSocket } from "@/hooks/useWebSocket";
+import { Message } from "@/types/Message";
+import MessageList from "./ui/MessageList";
+import { reduceQuestionMessages } from "@/utils/message.reducers";
 
-export default function Chat() {
-  const [mode, setMode] = useState<"memory" | "question" | undefined>(
-    undefined,
+const Chat: FC = () => {
+  const [mode, setMode] = useState<"memory" | "question" | null>(null);
+  const url =
+    mode === "memory"
+      ? "ws://localhost:8080/ws/memory"
+      : mode === "question"
+        ? "ws://localhost:8080/ws/ask"
+        : null;
+  const { isConnected, connect, addEventListener, removeEventListener, send } =
+    useWebSocket(url);
+  const [text, setText] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  // Track active listeners to prevent duplicates
+  const openListenerRef = useRef<((event: Event) => void) | null>(null);
+  const messageListenerRef = useRef<((event: MessageEvent) => void) | null>(
+    null,
   );
-  const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [messages, setMessages] = useState<ReactNode[]>([]);
-  const [transcriptionService] = useState(() => new BackendService());
-  const [isConnected, setIsConnected] = useState(false);
-  const [isCheckingConnection, setIsCheckingConnection] = useState(true);
 
-  const messagesContainerRef = useRef<HTMLDivElement>(null);
-
-  // Set up connection management
-  useEffect(() => {
-    // Register error handler
-    transcriptionService.registerErrorHandler((message) => {
-      toast.error(message);
+  const handleTranscription = (transcript: MemoryChunk) => {
+    console.debug("Chat#handleTranscription", transcript);
+    setText((prevText) => {
+      return prevText + (transcript.textData || "");
     });
-
-    // Register connection status handler
-    transcriptionService.registerConnectionStatusHandler((connected) => {
-      setIsConnected(connected);
-    });
-
-    // Initialize the service and check connection
-    const checkConnection = async () => {
-      setIsCheckingConnection(true);
-      try {
-        const isAvailable = await transcriptionService.initialize();
-        setIsConnected(isAvailable);
-      } catch (error) {
-        console.warn(error);
-        setIsConnected(false);
-      } finally {
-        setIsCheckingConnection(false);
-      }
-    };
-
-    checkConnection();
-
-    return () => {
-      // Cleanup on unmount
-      transcriptionService.reset();
-    };
-  }, [transcriptionService]);
-
-  // Handle memory mode events
-  const handleMemoryStart = useCallback(() => {
-    console.log("Chat: Memory start triggered");
-    setMessages([]);
-    setMode("memory");
-    setIsRecording(true);
-  }, []);
-
-  const handleMemoryEnd = useCallback(() => {
-    console.log("Chat: Memory end triggered");
-    setIsRecording(false);
-    setMode(undefined);
-  }, []);
-
-  // Handle question mode events
-  const handleQuestionStart = useCallback(() => {
-    console.log("Chat: Question start triggered");
-    setMessages([]);
-    setMode("question");
-    setIsRecording(true);
-  }, []);
-
-  const handleQuestionEnd = useCallback(() => {
-    console.log("Chat: Question end triggered");
-    setIsRecording(false);
-    setIsProcessing(false);
-  }, []);
-
-  const handleProcessingStart = () => {
-    setIsProcessing(true);
   };
 
-  // Handle answer received
-  const handleAnswerReceived = () => {
-    setIsProcessing(false);
-    setMode(undefined);
-  };
-
-  // Add a message to the messages list
-  const handleAddMessage = (message: ReactNode) => {
-    setMessages((prev) => [...prev, message]);
-  };
-
-  // Handle session error
-  const handleSessionError = (errorMessage?: string) => {
-    if (errorMessage) {
-      toast.error(errorMessage);
+  const saveMemory = useCallback(() => {
+    // Clean up existing listeners
+    if (openListenerRef.current) {
+      removeEventListener("open", openListenerRef.current);
     }
-  };
+    if (messageListenerRef.current) {
+      removeEventListener("message", messageListenerRef.current);
+    }
 
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      console.log("Page is about to unload, cleaning up transcription service");
+    connect();
 
-      if (transcriptionService.hasActiveSession()) {
-        // This will ensure EventSource is properly closed before the page refreshes
-        transcriptionService.closeEventSourceConnection();
+    openListenerRef.current = () => {
+      send(
+        MemoryChunk.encode({
+          textData: text,
+          metadata: {
+            memoryId: crypto.randomUUID(),
+            sessionId: "",
+            type: ChunkType.MEMORY,
+            isFinal: true,
+            score: 0,
+          },
+        }).finish(),
+      );
+    };
+
+    messageListenerRef.current = async (e: MessageEvent) => {
+      const data = e.data instanceof Blob ? await e.data.bytes() : e.data;
+      if (data) {
+        const message = MemoryChunk.decode(new Uint8Array(data));
+        if (
+          message.metadata?.type === ChunkType.MEMORY &&
+          message.metadata?.isFinal
+        ) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: crypto.randomUUID(),
+              isFinal: true,
+              content: text,
+              timestamp: new Date(),
+              sender: "user",
+            },
+            {
+              id: message.metadata?.memoryId ?? crypto.randomUUID(),
+              isFinal: message.metadata?.isFinal ?? false,
+              content: message.textData || "",
+              timestamp: new Date(),
+              sender: "assistant",
+            },
+          ]);
+          setText("");
+        }
+      } else {
+        console.warn("Chat: Received empty message", data);
       }
     };
 
-    // Add the event listener
-    window.addEventListener("beforeunload", handleBeforeUnload);
+    addEventListener("open", openListenerRef.current);
+    addEventListener("message", messageListenerRef.current);
+  }, [addEventListener, removeEventListener, connect, send, text]);
 
-    // Clean up on component unmount
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
+  const askQuestion = useCallback(() => {
+    // Clean up existing listeners
+    if (openListenerRef.current) {
+      removeEventListener("open", openListenerRef.current);
+    }
+    if (messageListenerRef.current) {
+      removeEventListener("message", messageListenerRef.current);
+    }
+
+    connect();
+
+    openListenerRef.current = () => {
+      const sessionId = crypto.randomUUID();
+      const chunk: MemoryChunk = {
+        textData: text,
+        metadata: {
+          memoryId: "",
+          sessionId,
+          type: ChunkType.QUESTION,
+          isFinal: true,
+          score: 0,
+        },
+      };
+
+      send(MemoryChunk.encode(chunk).finish());
+
+      setMessages((prev) => reduceQuestionMessages(prev, chunk));
     };
-  }, [transcriptionService]);
+
+    messageListenerRef.current = async (e: MessageEvent) => {
+      const data = e.data instanceof Blob ? await e.data.bytes() : e.data;
+      if (data) {
+        const message = MemoryChunk.decode(new Uint8Array(data));
+        console.debug("Chat: Received message", message);
+        if (message.metadata?.type === ChunkType.ANSWER) {
+          setMessages((prev) => reduceQuestionMessages([...prev], message));
+
+          if (message.metadata?.isFinal) {
+            setText("");
+          }
+        }
+      } else {
+        console.warn("Chat: Received empty message", data);
+      }
+    };
+
+    addEventListener("open", openListenerRef.current);
+    addEventListener("message", messageListenerRef.current);
+  }, [addEventListener, removeEventListener, connect, send, text, setMessages]);
+
+  useEffect(() => {
+    if (!mode) {
+      return;
+    }
+
+    if (mode === "memory") {
+      saveMemory();
+    } else if (mode === "question") {
+      askQuestion();
+    }
+
+    setMode(null);
+  }, [mode, setMode, askQuestion, saveMemory]);
+
+  useEffect(() => {
+    return () => {
+      if (openListenerRef.current) {
+        removeEventListener("open", openListenerRef.current);
+      }
+      if (messageListenerRef.current) {
+        removeEventListener("message", messageListenerRef.current);
+      }
+    };
+  }, [removeEventListener]);
 
   return (
-    <ChatContext.Provider
-      value={{
-        mode,
-        setMode,
-        isRecording,
-        setIsRecording,
-        isProcessing,
-        setIsProcessing,
-        messages,
-        setMessages,
-      }}
-    >
-      <div className="flex flex-col h-full">
-        <div className="fixed bottom-4 right-4 z-40">
-          <ConnectionIndicator
-            isConnected={isConnected}
-            isChecking={isCheckingConnection}
-          />
-        </div>
-
-        <Messages ref={messagesContainerRef} messages={messages} mode={mode} />
-
-        {/* Background gradient that extends to the bottom */}
-        <div className="fixed bottom-0 left-0 right-0 w-full h-64 bg-gradient-to-t from-card via-card/90 to-transparent z-10"></div>
-
-        {/* Fixed position control area */}
-        <div className="fixed bottom-32 left-0 right-0 w-full p-4 pb-8 flex flex-col items-center justify-center gap-4 z-20">
-          {/* Recording indicator */}
-          {isRecording && (
-            <RecordingIndicator
-              isRecording={isRecording}
-              onStopRecording={() => {
-                if (mode === "memory") {
-                  handleMemoryEnd();
-                } else if (mode === "question") {
-                  handleQuestionEnd();
-                }
-              }}
-            />
-          )}
-
-          {/* Processing indicator */}
-          {!isRecording && isProcessing && (
-            <div
-              className={cn(
-                "p-4 bg-card border border-border/50 rounded-full",
-                "flex items-center gap-2 max-w-md mx-auto",
-              )}
-            >
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-              <span className="text-sm text-muted-foreground">
-                Processing your question...
-              </span>
-            </div>
-          )}
-
-          {/* Backend unavailable warning */}
-          {!isConnected &&
-            !isRecording &&
-            !isProcessing &&
-            !isCheckingConnection && (
-              <div
-                className={cn(
-                  "p-4 bg-red-100 border border-red-300 rounded-lg text-red-800",
-                  "flex items-center gap-2 max-w-md mx-auto",
-                )}
-              >
-                <span>
-                  Backend service unavailable. Please try again later.
-                </span>
-              </div>
-            )}
-
-          {/* Recording buttons container */}
-          <div
-            className={cn(
-              "max-w-md mx-auto",
-              "flex flex-row items-center justify-center gap-4",
-              "z-30",
-            )}
-          >
-            <div className="flex-1">
-              <MemoryRecorder
-                onMemoryStart={handleMemoryStart}
-                onMemoryEnd={handleMemoryEnd}
-                onAddMessage={handleAddMessage}
-                onSessionError={handleSessionError}
-                transcriptionService={transcriptionService}
-                isRecording={isRecording && mode === "memory"}
-                isDisabled={isRecording || isProcessing}
-              />
-            </div>
-
-            <div className="flex-1">
-              <QuestionRecorder
-                onQuestionStart={handleQuestionStart}
-                onQuestionEnd={handleQuestionEnd}
-                onProcessingStart={handleProcessingStart}
-                onAddMessage={handleAddMessage}
-                onAnswerReceived={handleAnswerReceived}
-                onSessionError={handleSessionError}
-                transcriptionService={transcriptionService}
-                isRecording={isRecording && mode === "question"}
-                isDisabled={isRecording || isProcessing}
-              />
-            </div>
-          </div>
-        </div>
+    <div className="h-full grid grid-rows-[1fr_auto] gap-4">
+      <div className="overflow-y-auto min-h-0">
+        <MessageList messages={messages} />
       </div>
-    </ChatContext.Provider>
+
+      <div className="w-full flex items-start gap-2">
+        <Textarea
+          minRows={1}
+          maxRows={4}
+          sx={{
+            width: "75%",
+            margin: "0 auto",
+          }}
+          placeholder="Type your memory/question..."
+          disabled={isConnected}
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          endDecorator={
+            <div className="w-full flex gap-2">
+              <TranscribedRecorder onTranscription={handleTranscription} />
+              <Button
+                sx={{ ml: "auto" }}
+                variant="plain"
+                color="primary"
+                size="sm"
+                startDecorator={<Help />}
+                onClick={() => setMode("question")}
+                disabled={!text.trim() || isConnected}
+              >
+                Ask Question
+              </Button>
+              <Button
+                variant="plain"
+                color="danger"
+                size="sm"
+                startDecorator={<Save />}
+                onClick={() => setMode("memory")}
+                disabled={!text.trim() || isConnected}
+              >
+                Save Memory
+              </Button>
+            </div>
+          }
+        />
+      </div>
+    </div>
   );
-}
+};
+
+export default Chat;

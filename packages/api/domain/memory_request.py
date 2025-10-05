@@ -31,10 +31,10 @@ class MemoryRequest:
     @classmethod
     def create(
         cls,
-        id=None,
-        timestamp: datetime = None,
-        audio_data: bytes = None,
-        text: list[str] = None,
+        id: UUID | None = None,
+        timestamp: datetime | None = None,
+        audio_data: bytes | None = None,
+        text: list[str] | None = None,
         memory_type: MemoryType = MemoryType.MEMORY,
     ) -> "MemoryRequest":
         """Factory method to create a new Memory instance."""
