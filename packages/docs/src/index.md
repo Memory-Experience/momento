@@ -84,7 +84,7 @@ end note
 
 - Automatic text chunking and vector embedding generation
 - Semantic indexing in QDrant vector database
-- File-based persistence for audio and metadata
+- File-based persistence of metadata
 
 ### Intelligent Retrieval
 
