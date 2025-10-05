@@ -11,6 +11,7 @@ dev = [
     "mkdocs-autoapi>=0.4.1",
     "mkdocs-autorefs>=1.4.3",
     "mkdocs-puml>=2.3.0",
+    "mkdocs-jupyter>=0.25.1",
     "mkdocstrings[python]>=0.30.0",
     "pymdown-extensions>=10.16.1",
 ]
