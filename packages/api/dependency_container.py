@@ -54,7 +54,7 @@ class Container:
         Create and initialize a Container instance with all required
         dependencies.
 
-        Parameters:
+        Args:
             sample_rate (int): Audio sample rate in Hz (default: 16000)
             recordings_dir (str): Directory path for storing recordings
                 (default: "recordings")

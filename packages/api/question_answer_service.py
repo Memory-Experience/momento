@@ -24,8 +24,9 @@ class QuestionAnswerService:
         Initialize the question answer service.
 
         Args:
-            dependencies: Container with all required service dependencies including
-                         vector_store, persistence, rag, and threshold_filter services
+            dependencies (Container): Container with all required service
+                dependencies including vector_store, persistence, rag, and
+                threshold_filter services
         """
         self.vector_store_service = dependencies.vector_store
         self.persistence_service = dependencies.persistence
@@ -42,7 +43,7 @@ class QuestionAnswerService:
         This gRPC method processes streaming question input, retrieves relevant
         memories, and generates a streaming answer using RAG.
 
-        Parameters:
+        Args:
             request_iterator (AsyncIterator[MemoryChunk]): Async iterator
                 yielding MemoryChunk protobuf messages
             context (grpc.aio.ServicerContext): gRPC context for the
@@ -89,10 +90,11 @@ class QuestionAnswerService:
         Process a question, fetch context, and stream answer.
 
         Args:
-            audio_data: Raw audio bytes (if question was spoken)
-            transcription: List of transcribed text segments forming the question
-            session_id: Session identifier for the client connection
-            memory_id: Question identifier from the client
+            audio_data (bytearray): Raw audio bytes (if question was spoken)
+            transcription (list[str]): List of transcribed text segments
+                forming the question
+            session_id (str): Session identifier for the client connection
+            memory_id (str): Question identifier from the client
 
         Yields:
             MemoryChunk: Stream of relevant memories followed by generated answer chunks

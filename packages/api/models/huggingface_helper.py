@@ -29,9 +29,9 @@ class HuggingFaceHelper:
         Initialize with optional dependency injection for testing.
 
         Args:
-            hf_hub_download_fn: Function to download files from HF,
+            hf_hub_download_fn (Callable | None): Function to download files from HF,
                 defaults to huggingface_hub.hf_hub_download
-            list_repo_files_fn: Function to list repo files,
+            list_repo_files_fn (Callable | None): Function to list repo files,
                 defaults to huggingface_hub.list_repo_files
         """
         self._hf_hub_download = hf_hub_download_fn or hf_hub_download
@@ -53,13 +53,13 @@ class HuggingFaceHelper:
         the best available quantization based on the preferred_quants
         list.
 
-        Parameters:
-            model_path: Path to a local model file (optional)
-            hf_repo_id: HuggingFace repository ID to download from
+        Args:
+            model_path (str | None): Path to a local model file (optional)
+            hf_repo_id (str | None): HuggingFace repository ID to download from
                 (required if no model_path)
-            download_dir: Directory to download models to
+            download_dir (str): Directory to download models to
                 (default: "models/llm")
-            preferred_quants: Quantization levels to prefer, in order of
+            preferred_quants (Sequence[str]): Quantization levels to prefer, in order of
                 preference (e.g., ["Q4_K_M", "Q4_K_S", "Q5_K_M"])
 
         Returns:

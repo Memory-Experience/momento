@@ -12,16 +12,16 @@ class MemoryType(Enum):
 
     Defines the purpose of a memory request, aligned with ChunkType
     in the protobuf definition.
-
-    Attributes:
-        MEMORY: For storing memories (memorization)
-        QUESTION: For retrieving memories (recall/query)
-        ANSWER: For LLM-generated answers to questions
     """
 
     MEMORY = 0
+    """For storing memories (memorization)."""
+
     QUESTION = 1
+    """For retrieving memories (recall/query)."""
+
     ANSWER = 2
+    """For LLM-generated answers to questions."""
 
 
 @dataclass
@@ -54,7 +54,7 @@ class MemoryRequest:
 
         Automatically generates UUID and timestamp if not provided.
 
-        Parameters:
+        Args:
             id (UUID | None): Unique identifier (auto-generated if None)
             timestamp (datetime | None): Creation timestamp (current time if None)
             audio_data (bytes | None): Raw audio bytes (optional)
@@ -78,7 +78,7 @@ class MemoryRequest:
         """
         Convert this memory request to a protobuf MemoryChunk message.
 
-        Parameters:
+        Args:
             session_id (str): Session ID to include in metadata
             chunk_type (stt_pb2.ChunkType | None): Override the default
                 chunk type mapping. If None, it will be derived from
