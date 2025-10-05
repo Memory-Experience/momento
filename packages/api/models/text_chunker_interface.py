@@ -14,7 +14,7 @@ class TextChunker(ABC):
         Split a text into chunks according to the strategy.
 
         Args:
-            text: The text to split into chunks
+            text (str): The text to split into chunks
 
         Returns:
             A list of text chunks
@@ -23,7 +23,11 @@ class TextChunker(ABC):
 
 
 class ChunkerConfig:
-    """Configuration options for text chunkers."""
+    """
+    Configuration options for text chunkers.
+
+    Controls chunking behavior including chunk size, overlap, and separators.
+    """
 
     def __init__(
         self,
@@ -35,9 +39,12 @@ class ChunkerConfig:
         Initialize the chunker configuration.
 
         Args:
-            chunk_size: Maximum size of each chunk (characters or tokens)
-            chunk_overlap: Overlap between consecutive chunks
-            separator: Optional specific separator to use for chunking
+            chunk_size (int): Maximum size of each chunk in characters or
+                tokens (default: 1000)
+            chunk_overlap (int): Overlap between consecutive chunks in
+                characters or tokens (default: 200)
+            separator (str | None): Optional specific separator to use
+                for chunking
         """
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap

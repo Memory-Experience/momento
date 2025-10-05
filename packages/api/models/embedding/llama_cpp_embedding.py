@@ -9,8 +9,11 @@ from api.models.embedding.embedding_model_interface import EmbeddingModel
 
 class LlamaCppEmbeddingModel(LlamaCppBase, EmbeddingModel):
     """
-    llama.cpp-backed embedding base that relies on LlamaCppBase for loading.
-    Simply set cfg.embedding=True when constructing.
+    Base embedding model implementation using llama.cpp backend.
+
+    Converts text to dense vector representations for semantic search.
+    Automatically detects embedding dimension from the model. Requires
+    cfg.embedding=True to be set in the configuration.
     """
 
     def __init__(
@@ -21,6 +24,15 @@ class LlamaCppEmbeddingModel(LlamaCppBase, EmbeddingModel):
 
     # ---- EmbeddingModel API ----
     def get_vector_size(self) -> int:
+        """
+        Get the dimension of embedding vectors produced by this model.
+
+        Automatically detects the dimension by querying the model or probing
+        with an empty string. The result is cached for subsequent calls.
+
+        Returns:
+            The embedding vector dimension (e.g., 512, 768, 1024)
+        """
         if self._vector_size is not None:
             return self._vector_size
 
@@ -44,6 +56,19 @@ class LlamaCppEmbeddingModel(LlamaCppBase, EmbeddingModel):
             return 0
 
     async def embed_text(self, text: str | list[str]) -> list[float]:
+        """
+        Embed text into a vector representation.
+
+        Runs the embedding computation in a thread pool to avoid blocking
+        the async event loop.
+
+        Args:
+            text: Text to embed (string or list of strings)
+
+        Returns:
+            Embedding vector as a list of floats
+        """
+
         def _compute() -> list[float]:
             out = self._llm.create_embedding(input=text)
             vec = out["data"][0]["embedding"]

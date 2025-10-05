@@ -1,5 +1,6 @@
 import logging
 import grpc
+from collections.abc import AsyncIterator
 
 import numpy as np
 
@@ -8,14 +9,43 @@ from api.dependency_container import Container
 
 
 class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
-    """Provides methods that implement functionality of transcription service."""
+    """
+    gRPC servicer for real-time audio transcription.
+
+    Provides bidirectional streaming transcription, accepting audio chunks
+    and returning transcript segments as they become available.
+    """
 
     def __init__(self, container: Container):
+        """
+        Initialize the transcription servicer.
+
+        Args:
+            container (Container): Dependency container with transcriber
+                and configuration
+        """
         self.transcriber = container.transcriber
         self.sample_rate = container.sample_rate
 
-    async def Transcribe(self, request_iterator, context):
-        """Bidirectional streaming RPC for audio transcription."""
+    async def Transcribe(
+        self, request_iterator, context
+    ) -> AsyncIterator[stt_pb2.MemoryChunk]:
+        """
+        Bidirectional streaming RPC for audio transcription.
+
+        Accepts streaming audio or text input and returns transcription segments
+        in real-time. Handles explicit final markers to signal completion.
+
+        Args:
+            request_iterator (AsyncIterator[MemoryChunk]): Async iterator
+                yielding MemoryChunk messages with audio/text data
+            context (grpc.aio.ServicerContext): gRPC context for the
+                request
+
+        Yields:
+            protos.generated.py.stt_pb2.MemoryChunk: Transcription
+                segments as they become available
+        """
         logging.info("Client connected.")
 
         # State tracking

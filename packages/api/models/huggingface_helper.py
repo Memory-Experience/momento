@@ -10,7 +10,11 @@ from huggingface_hub import hf_hub_download, list_repo_files
 
 class HuggingFaceHelper:
     """
-    Helper for HuggingFace operations, including resolving GGUF model paths.
+    Helper utility for HuggingFace model operations.
+
+    Handles automatic downloading and resolution of GGUF model files from
+    HuggingFace repositories, with intelligent quantization selection based
+    on preferences. Supports dependency injection for testing.
     """
 
     DEFAULT_PREFERRED_QUANTS: Sequence[str] = ("Q4_K_M", "Q4_K_S", "Q5_K_M", "Q8_0")
@@ -25,9 +29,9 @@ class HuggingFaceHelper:
         Initialize with optional dependency injection for testing.
 
         Args:
-            hf_hub_download_fn: Function to download files from HF,
+            hf_hub_download_fn (Callable | None): Function to download files from HF,
                 defaults to huggingface_hub.hf_hub_download
-            list_repo_files_fn: Function to list repo files,
+            list_repo_files_fn (Callable | None): Function to list repo files,
                 defaults to huggingface_hub.list_repo_files
         """
         self._hf_hub_download = hf_hub_download_fn or hf_hub_download
@@ -42,17 +46,29 @@ class HuggingFaceHelper:
         preferred_quants: Sequence[str] = DEFAULT_PREFERRED_QUANTS,
     ) -> str:
         """
-        Ensures a GGUF model is available locally, either by using the provided path
-        or downloading from HuggingFace.
+        Ensure a GGUF model is available locally.
+
+        If a local path is provided, validates it exists. Otherwise,
+        downloads the model from HuggingFace, intelligently selecting
+        the best available quantization based on the preferred_quants
+        list.
 
         Args:
-            model_path: Path to a local model file
-            hf_repo_id: HuggingFace repository ID to download from
-            download_dir: Directory to download models to
-            preferred_quants: Quantization levels to prefer, in order
+            model_path (str | None): Path to a local model file (optional)
+            hf_repo_id (str | None): HuggingFace repository ID to download from
+                (required if no model_path)
+            download_dir (str): Directory to download models to
+                (default: "models/llm")
+            preferred_quants (Sequence[str]): Quantization levels to prefer, in order of
+                preference (e.g., ["Q4_K_M", "Q4_K_S", "Q5_K_M"])
 
         Returns:
-            Path to the local model file
+            Absolute path to the local model file
+
+        Raises:
+            FileNotFoundError: If model_path doesn't exist or no GGUF
+                files found in repo
+            ValueError: If neither model_path nor hf_repo_id is provided
         """
         if model_path:
             p = Path(model_path).expanduser()
