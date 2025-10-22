@@ -29,6 +29,25 @@ uv run ipython kernel install --user --env VIRTUAL_ENV $(pwd)/.venv --name=momen
 uv run --with jupyter jupyter lab
 ```
 
+### Loading Result Files
+
+Large JSON result files in `evaluation/runs` are stored using [Git LFS](https://git-lfs.com/) (Large File Storage) due to GitHub's 100MB file size limit.
+
+**Install Git LFS:**
+
+- **macOS**: `brew install git-lfs`
+- **Ubuntu/Debian**: `sudo apt-get install git-lfs`
+- **Windows**: Download from [git-lfs.com](https://git-lfs.com/)
+
+After installation, initialize Git LFS and pull the files:
+
+```bash
+git lfs install
+git lfs pull
+```
+
+The JSON files in `evaluation/runs` will then be available for analysis.
+
 ## Development
 
 ### Managing Dependencies
