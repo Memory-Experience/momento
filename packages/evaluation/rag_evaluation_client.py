@@ -5,6 +5,7 @@ from typing import Any
 from tqdm import tqdm
 
 import pandas as pd
+import torch
 
 from protos.generated.py import stt_pb2
 
@@ -61,6 +62,9 @@ class RAGEvaluationClient:
         self.qa_service = qa_service
         self.doc_to_memory: dict[str, str] = doc_to_memory or {}
         self.memory_to_doc: dict[str, str] = memory_to_doc or {}
+        self.cross_encoder_model = CrossEncoderScorer(normalize="sigmoid", device="cuda" if torch.cuda.is_available() else "cpu")
+        self.sbert_model: EmbeddingModel = SBertEmbeddingModel(device="cuda" if torch.cuda.is_available() else "cpu")
+
 
     async def process_query(
         self,
@@ -335,14 +339,12 @@ class RAGEvaluationClient:
             top_k_docs=top_k_docs_for_faithfulness,
         )
 
-        sbert_model: EmbeddingModel = SBertEmbeddingModel()
         sbert_similarity = await GenerationMetrics.sbert_similarity(
-            answer, gold_answers, sbert_model
+            answer, gold_answers, self.sbert_model
         )
 
-        cross_encoder_model = CrossEncoderScorer(normalize="sigmoid")
         cross_encoder_similarity = await GenerationMetrics.cross_encoder_similarity(
-            answer, gold_answers, cross_encoder_model
+            answer, gold_answers, self.cross_encoder_model
         )
 
         return {
