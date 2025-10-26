@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 
 from .persistence.persistence_service import PersistenceService
@@ -19,7 +20,7 @@ from .models.transcription.faster_whisper_transcriber import FasterWhisperTransc
 from .models.transcription.transcriber_interface import TranscriberInterface
 
 
-RECORDINGS_DIR = "recordings"
+RECORDINGS_DIR = os.path.abspath("recordings")
 SAMPLE_RATE = 16000
 RETRIEVAL_LIMIT = 2
 
