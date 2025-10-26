@@ -84,10 +84,8 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
             self._commit_and_close_indexer()
         finally:
             if self._searcher is not None:
-                try:
+                with contextlib.suppress(Exception):
                     self._searcher.close()
-                except Exception:
-                    pass
                 self._searcher = None
 
     def __del__(self):
@@ -128,14 +126,17 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
         self._memories[memory.id] = memory
         logging.debug(f"[Lucene] Indexed memory {memory.id}")
 
-    async def index_memories_batch(self, memories: list[MemoryRequest], qdrant_batch_size: int = 512) -> None:
+    async def index_memories_batch(
+        self, memories: list[MemoryRequest], qdrant_batch_size: int = 512
+    ) -> None:
         """
         Index multiple memories in batch.
-        Note: qdrant_batch_size parameter is kept for interface compatibility but not used in Lucene implementation.
+        Note: qdrant_batch_size parameter is kept for interface
+            compatibility but not used in Lucene implementation.
         """
         for memory in memories:
             await self.index_memory(memory)
-        
+
         logging.debug(f"[Lucene] Batch indexed {len(memories)} memories")
 
     async def get_memory(self, memory_id: UUID) -> MemoryRequest | None:
@@ -165,7 +166,7 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
 
         await self._ensure_committed()
         searcher = self._get_searcher()
-        
+
         # Over-retrieve to allow Python-side filters; then trim to 'limit'
         k = max(limit * 4, limit)
         hits = searcher.search(qtext, k=k)

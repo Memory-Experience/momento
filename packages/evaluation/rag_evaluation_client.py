@@ -62,9 +62,12 @@ class RAGEvaluationClient:
         self.qa_service = qa_service
         self.doc_to_memory: dict[str, str] = doc_to_memory or {}
         self.memory_to_doc: dict[str, str] = memory_to_doc or {}
-        self.cross_encoder_model = CrossEncoderScorer(normalize="sigmoid", device="cuda" if torch.cuda.is_available() else "cpu")
-        self.sbert_model: EmbeddingModel = SBertEmbeddingModel(device="cuda" if torch.cuda.is_available() else "cpu")
-
+        self.cross_encoder_model = CrossEncoderScorer(
+            normalize="sigmoid", device="cuda" if torch.cuda.is_available() else "cpu"
+        )
+        self.sbert_model: EmbeddingModel = SBertEmbeddingModel(
+            device="cuda" if torch.cuda.is_available() else "cpu"
+        )
 
     async def process_query(
         self,

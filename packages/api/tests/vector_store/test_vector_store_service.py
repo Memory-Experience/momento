@@ -113,20 +113,23 @@ async def test_list_memories_calls_repository(vector_store_service, mock_reposit
 async def test_index_memories_batch_calls_repository(
     vector_store_service, mock_repository
 ):
-    """Test that index_memories_batch calls the repository's index_memories_batch method."""
+    """Test that index_memories_batch calls the
+    repository's index_memories_batch method."""
     # Create test memories
     memories = [
         MemoryRequest.create(id="mem-1", text=["Test 1"]),
         MemoryRequest.create(id="mem-2", text=["Test 2"]),
         MemoryRequest.create(id="mem-3", text=["Test 3"]),
     ]
-    
+
     # Set up mock
     mock_repository.index_memories_batch = AsyncMock()
-    
+
     # Call the service method
     batch_size = 512
-    await vector_store_service.index_memories_batch(memories, qdrant_batch_size=batch_size)
+    await vector_store_service.index_memories_batch(
+        memories, qdrant_batch_size=batch_size
+    )
 
     # Assert the repository method was called with the correct arguments
     mock_repository.index_memories_batch.assert_called_once_with(
@@ -135,13 +138,11 @@ async def test_index_memories_batch_calls_repository(
 
 
 @pytest.mark.asyncio
-async def test_index_memories_batch_empty_list(
-    vector_store_service, mock_repository
-):
+async def test_index_memories_batch_empty_list(vector_store_service, mock_repository):
     """Test that index_memories_batch handles empty list correctly."""
     # Set up mock
     mock_repository.index_memories_batch = AsyncMock()
-    
+
     # Call with empty list
     await vector_store_service.index_memories_batch([], qdrant_batch_size=512)
 

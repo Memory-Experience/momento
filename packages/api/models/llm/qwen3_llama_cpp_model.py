@@ -48,7 +48,7 @@ class Qwen3LlamaCppModel(LlamaCppModel, LLMModelBase):
         # Use default preferred quants if none provided
         if preferred_quants is None:
             preferred_quants = self.DEFAULT_PREFERRED_QUANTS
-        
+
         resolver = model_resolver or HuggingFaceHelper()
         resolved = resolver.ensure_local_model(
             model_path=model_path,
@@ -67,7 +67,7 @@ class Qwen3LlamaCppModel(LlamaCppModel, LLMModelBase):
             use_mlock=use_mlock,
             allow_gpu_fallback=allow_gpu_fallback,
         )
-        
+
         # Initialize LlamaCppModel
         LlamaCppModel.__init__(
             self,
@@ -80,11 +80,10 @@ class Qwen3LlamaCppModel(LlamaCppModel, LLMModelBase):
             top_k_memories=top_k_memories,
             chunk_size_tokens=chunk_size_tokens,
         )
-        
+
         # Initialize LLMModelBase
         LLMModelBase.__init__(
             self,
             system_prompt=system_prompt,
             top_k_memories=top_k_memories,
         )
-

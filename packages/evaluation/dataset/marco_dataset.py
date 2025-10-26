@@ -62,7 +62,7 @@ def _convert_ms_marco_to_dataframes(ms_marco_dataset, limit: int = 1000):
                 answer = query.answers
             except AttributeError:
                 answer = None
-            
+
             queries_data.append({
                 "id": query.query_id,
                 "text": query.text,
