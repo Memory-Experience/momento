@@ -41,6 +41,22 @@ class VectorStoreService:
         await self.repository.index_memory(memory)
         logging.info(f"Indexed memory {memory.id}")
 
+    async def index_memories_batch(self, memories: list[MemoryRequest], qdrant_batch_size: int) -> None:
+        """
+        Index multiple memories in the vector store in batch.
+        The repository is responsible for converting text to embeddings
+        and handling any chunking.
+
+        Args:
+            memories: List of memories to index
+            qdrant_batch_size: The batch size to use when inserting into Qdrant
+        """
+        if not memories:
+            return
+
+        await self.repository.index_memories_batch(memories, qdrant_batch_size=qdrant_batch_size)
+        logging.info(f"Indexed batch of {len(memories)} memories")
+
     async def search(
         self,
         query: MemoryRequest,
