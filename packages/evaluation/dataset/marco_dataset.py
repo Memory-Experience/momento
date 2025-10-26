@@ -45,6 +45,10 @@ def _convert_ms_marco_to_dataframes(ms_marco_dataset, limit: int = 1000):
         docs_data.append({"id": doc.doc_id, "content": doc.text})
         found_doc_ids.add(doc.doc_id)
 
+        # Stop if we found all needed documents
+        if len(found_doc_ids) >= limit:
+            break
+
     docs_df = pd.DataFrame(docs_data)
     print(f"  Found {len(docs_df)} out of {len(needed_doc_ids)} needed documents")
 

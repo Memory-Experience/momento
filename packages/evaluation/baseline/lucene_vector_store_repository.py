@@ -128,6 +128,16 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
         self._memories[memory.id] = memory
         logging.debug(f"[Lucene] Indexed memory {memory.id}")
 
+    async def index_memories_batch(self, memories: list[MemoryRequest], qdrant_batch_size: int = 512) -> None:
+        """
+        Index multiple memories in batch.
+        Note: qdrant_batch_size parameter is kept for interface compatibility but not used in Lucene implementation.
+        """
+        for memory in memories:
+            await self.index_memory(memory)
+        
+        logging.debug(f"[Lucene] Batch indexed {len(memories)} memories")
+
     async def get_memory(self, memory_id: UUID) -> MemoryRequest | None:
         return self._memories.get(memory_id)
 
