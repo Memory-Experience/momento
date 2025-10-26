@@ -4,3 +4,9 @@ pnpm-lock.yaml
 *.sqlite
 *.pt
 **/site/**
+*.onnx
+*.bin
+*.safetensors
+*.h5
+*.pkl
+*.msgpack

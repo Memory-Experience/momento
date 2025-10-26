@@ -1,5 +1,6 @@
 from api.models.transcription.transcriber_interface import TranscriberInterface
 
+
 class DummyTranscriber(TranscriberInterface):
     """A dummy transcriber that returns a fixed transcription."""
 

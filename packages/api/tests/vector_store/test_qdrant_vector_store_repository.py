@@ -402,7 +402,7 @@ async def test_index_memories_batch_empty_list(embedding_model, text_chunker):
     # Verify repository is still functional
     test_memory = MemoryRequest.create(text=["Test"], memory_type=MemoryType.MEMORY)
     await repo.index_memory(test_memory)
-    
+
     retrieved = await repo.get_memory(test_memory.id)
     assert retrieved is not None
 

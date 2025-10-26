@@ -1,5 +1,6 @@
 import asyncio
-from typing import Any, AsyncIterator, Optional
+from typing import Any
+from collections.abc import AsyncIterator
 
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStreamer
@@ -7,6 +8,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TextIteratorStream
 from .llm_model_interface import LLMModelBase, MemoryResponse
 from ...domain.memory_context import MemoryContext
 from ...domain.memory_request import MemoryRequest
+
 
 class Qwen3TransformersModel(LLMModelBase):
     """
@@ -26,11 +28,11 @@ class Qwen3TransformersModel(LLMModelBase):
         top_p: float = 0.9,
         do_sample: bool = True,
         top_k_memories: int = 5,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
         # device/dtype (simple defaults)
         device_map: Any = "auto",
-        torch_dtype: Any = torch.bfloat16,  # switch to torch.float16 if your GPU needs it
-        chunk_size_tokens: int = 16,        # ~how many tokens per streamed chunk
+        torch_dtype: Any = torch.bfloat16,  # switch to torch.float16 if issues
+        chunk_size_tokens: int = 16,  # ~how many tokens per streamed chunk
     ) -> None:
         # Initialize LLMModelBase
         LLMModelBase.__init__(
@@ -45,6 +47,7 @@ class Qwen3TransformersModel(LLMModelBase):
         if model_path:
             # Validate local path exists
             from pathlib import Path
+
             p = Path(model_path).expanduser()
             if not p.exists():
                 raise FileNotFoundError(f"Model path not found: {p}")
@@ -123,6 +126,7 @@ class Qwen3TransformersModel(LLMModelBase):
         buf, buf_tok = [], 0
 
         try:
+
             async def _aiter():
                 while True:
                     tok = await loop.run_in_executor(None, next, streamer, None)
@@ -132,9 +136,7 @@ class Qwen3TransformersModel(LLMModelBase):
 
             async for piece in _aiter():
                 buf.append(piece)
-                buf_tok += len(
-                    self.tokenizer.encode(piece, add_special_tokens=False)
-                )
+                buf_tok += len(self.tokenizer.encode(piece, add_special_tokens=False))
                 if buf_tok >= target:
                     text = "".join(buf)
                     yield MemoryResponse(

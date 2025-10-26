@@ -36,7 +36,8 @@ class DatasetLoader:
     """
 
     def _create_vector_store_service(
-        embedding: EmbeddingModel, dataset_folder: str,
+        embedding: EmbeddingModel,
+        dataset_folder: str,
     ) -> VectorStoreService:
         """
         Create a vector store service with local file-based Qdrant backend.
@@ -50,13 +51,13 @@ class DatasetLoader:
         """
         text_chunker = DummyTextChunker()
         vector_store_repo: VectorStoreRepository = ServerQdrantVectorStoreRepository(
-            embedding, text_chunker,
-            collection_name=dataset_folder.replace("/", "_")
+            embedding, text_chunker, collection_name=dataset_folder.replace("/", "_")
         )
         return VectorStoreService(vector_store_repo)
 
-        
-    def _clean_if_incomplete(dataset_folder: str) -> tuple[dict[str, str], dict[str, str], bool]:
+    def _clean_if_incomplete(
+        dataset_folder: str,
+    ) -> tuple[dict[str, str], dict[str, str], bool]:
         """
         Clean incomplete vector store or load existing mappings.
 
@@ -80,21 +81,33 @@ class DatasetLoader:
             with open(memory_to_doc_path, "rb") as f:
                 memory_to_doc = pickle.load(f)
             return doc_to_memory, memory_to_doc, True
-        
-        doc_to_memory_unfinished_path = os.path.join(dataset_folder, "doc_to_memory_unfinished.pkl")
-        memory_to_doc_unfinished_path = os.path.join(dataset_folder, "memory_to_doc_unfinished.pkl")
-        if os.path.exists(doc_to_memory_unfinished_path) or os.path.exists(memory_to_doc_unfinished_path):
+
+        doc_to_memory_unfinished_path = os.path.join(
+            dataset_folder, "doc_to_memory_unfinished.pkl"
+        )
+        memory_to_doc_unfinished_path = os.path.join(
+            dataset_folder, "memory_to_doc_unfinished.pkl"
+        )
+        if os.path.exists(doc_to_memory_unfinished_path) or os.path.exists(
+            memory_to_doc_unfinished_path
+        ):
             with open(doc_to_memory_unfinished_path, "rb") as f:
                 try:
                     doc_to_memory = pickle.load(f)
                 except Exception as e:
                     logger.error(f"Error loading unfinished doc_to_memory.pkl: {e}")
                     doc_to_memory = {}
-                logger.info(f"Loaded {len(doc_to_memory)} entries from unfinished doc_to_memory.pkl")
+                logger.info(
+                    f"Loaded {len(doc_to_memory)} entries"
+                    " from unfinished doc_to_memory.pkl"
+                )
             with open(memory_to_doc_unfinished_path, "rb") as f:
                 try:
                     memory_to_doc = pickle.load(f)
-                    logger.info(f"Loaded {len(memory_to_doc)} entries from unfinished memory_to_doc.pkl")
+                    logger.info(
+                        f"Loaded {len(memory_to_doc)} entries"
+                        " from unfinished memory_to_doc.pkl"
+                    )
                 except Exception as e:
                     logger.error(f"Error loading unfinished memory_to_doc.pkl: {e}")
                     memory_to_doc = {}
@@ -110,7 +123,7 @@ class DatasetLoader:
                     saved_memory_id: dataset_doc_id
                     for dataset_doc_id, saved_memory_id in doc_to_memory.items()
                 }
-            if len(doc_to_memory) == len(memory_to_doc):            
+            if len(doc_to_memory) == len(memory_to_doc):
                 logger.info("Reconstructed mappings are consistent.")
                 return doc_to_memory, memory_to_doc, False
 
@@ -130,7 +143,7 @@ class DatasetLoader:
         dataset_folder: str,
         embedding: EmbeddingModel,
         batch_size: int = 1024,  # Process 1024 documents at a time
-        db_batch_size: int = 512, 
+        db_batch_size: int = 512,
     ) -> tuple[VectorStoreService, dict[str, str], dict[str, str]]:
         """
         Load dataset and create filled vector store service with mappings.
@@ -149,7 +162,9 @@ class DatasetLoader:
             tuple: (vector_store_service, doc_to_memory mapping,
                 memory_to_doc mapping)
         """
-        doc_to_memory, memory_to_doc, complete = cls._clean_if_incomplete(dataset_folder)
+        doc_to_memory, memory_to_doc, complete = cls._clean_if_incomplete(
+            dataset_folder
+        )
         vector_store_service = cls._create_vector_store_service(
             embedding, dataset_folder
         )
@@ -166,27 +181,29 @@ class DatasetLoader:
 
         # Process in batches
         for i in tqdm(range(0, len(docs_list), batch_size), desc="Indexing batches"):
-            batch = docs_list[i:i + batch_size]
-            
+            batch = docs_list[i : i + batch_size]
+
             # Create MemoryRequest objects for this batch
             batch_memories = []
             batch_mappings = []
-            
+
             for doc in batch:
                 current_passage = MemoryRequest.create(text=[str(doc[1])])
                 batch_memories.append(current_passage)
-                
+
                 dataset_doc_id = str(doc[0])
-                
-                if dataset_doc_id in doc_to_memory.keys():
+
+                if dataset_doc_id in doc_to_memory:
                     logger.info(f"Document {dataset_doc_id} already indexed. Skipping.")
                     continue
 
                 batch_mappings.append((dataset_doc_id, current_passage.id))
-            
+
             try:
                 # Batch index all memories at once
-                await vector_store_service.index_memories_batch(batch_memories, qdrant_batch_size=db_batch_size)
+                await vector_store_service.index_memories_batch(
+                    batch_memories, qdrant_batch_size=db_batch_size
+                )
 
                 # Update mappings
                 for dataset_doc_id, saved_memory_id in batch_mappings:
@@ -196,12 +213,16 @@ class DatasetLoader:
                 logger.error(f"Error indexing batch: {e}")
 
                 os.makedirs(dataset_folder, exist_ok=True)
-                with open(os.path.join(dataset_folder, "doc_to_memory_unfinished.pkl"), "wb") as f:
+                with open(
+                    os.path.join(dataset_folder, "doc_to_memory_unfinished.pkl"), "wb"
+                ) as f:
                     pickle.dump(doc_to_memory, f)
 
-                with open(os.path.join(dataset_folder, "memory_to_doc_unfinished.pkl"), "wb") as f:
+                with open(
+                    os.path.join(dataset_folder, "memory_to_doc_unfinished.pkl"), "wb"
+                ) as f:
                     pickle.dump(memory_to_doc, f)
-            
+
             gc.collect()
 
         os.makedirs(dataset_folder, exist_ok=True)

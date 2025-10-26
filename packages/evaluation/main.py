@@ -8,7 +8,6 @@ import multiprocessing as mp
 from datetime import datetime
 from collections.abc import AsyncIterator
 
-from typing import AsyncIterator
 import torch
 
 from api.dependency_container import Container
@@ -76,14 +75,22 @@ async def baseline_configuration(dataset, dataset_dir) -> RAGEvaluationClient:
 
 
 async def momento_configuration(
-    dataset, dataset_dir, embedding: EmbeddingModel, batch_size: int = 128, db_batch_size: int = 256
+    dataset,
+    dataset_dir,
+    embedding: EmbeddingModel,
+    batch_size: int = 128,
+    db_batch_size: int = 256,
 ) -> RAGEvaluationClient:
     (
         vector_store_service,
         doc_to_memory,
         memory_to_doc,
     ) = await DatasetLoader.create_filled_vector_store_service(
-        dataset, dataset_dir, embedding, batch_size=batch_size, db_batch_size=db_batch_size
+        dataset,
+        dataset_dir,
+        embedding,
+        batch_size=batch_size,
+        db_batch_size=db_batch_size,
     )
 
     transcriber = DummyTranscriber()
@@ -110,18 +117,22 @@ async def momento_configuration(
 
 async def dataset_configurations() -> AsyncIterator[
     tuple[str, dataset.DataFrameDataset, RAGEvaluationClient]
-]:   
+]:
     qwen3_embedding_06B = SBertEmbeddingModel(
         model_name="Qwen/Qwen3-Embedding-0.6B",
+        device="cuda" if torch.cuda.is_available() else "cpu",
+    )
+    sbert_embedding = SBertEmbeddingModel(
         device="cuda" if torch.cuda.is_available() else "cpu"
     )
-    sbert_embedding = SBertEmbeddingModel(device="cuda" if torch.cuda.is_available() else "cpu")
-    
+
     ####################
     # MS-Marco Passage #
     ####################
 
-    ms_marco_dev = MSMarcoDataset(limit=LIMIT_DOCS, dataset_name="msmarco-passage/dev/small")
+    ms_marco_dev = MSMarcoDataset(
+        limit=LIMIT_DOCS, dataset_name="msmarco-passage/dev/small"
+    )
 
     dataset_dir = "runs/ms_marco_passage_dev_baseline"
     yield (
@@ -134,16 +145,20 @@ async def dataset_configurations() -> AsyncIterator[
     yield (
         dataset_dir,
         ms_marco_dev,
-        await momento_configuration(ms_marco_dev, dataset_dir, qwen3_embedding_06B, BATCH_SIZE),
+        await momento_configuration(
+            ms_marco_dev, dataset_dir, qwen3_embedding_06B, BATCH_SIZE
+        ),
     )
 
     dataset_dir = "runs/ms_marco_passage_dev_sbert"
     yield (
         dataset_dir,
         ms_marco_dev,
-        await momento_configuration(ms_marco_dev, dataset_dir, sbert_embedding, BATCH_SIZE),
+        await momento_configuration(
+            ms_marco_dev, dataset_dir, sbert_embedding, BATCH_SIZE
+        ),
     )
-    
+
     ################
     # MS-Marco QNA #
     ################
@@ -161,14 +176,18 @@ async def dataset_configurations() -> AsyncIterator[
     yield (
         dataset_dir,
         ms_marco_qna,
-        await momento_configuration(ms_marco_qna, dataset_dir, qwen3_embedding_06B, BATCH_SIZE, DB_BATCH_SIZE),
+        await momento_configuration(
+            ms_marco_qna, dataset_dir, qwen3_embedding_06B, BATCH_SIZE, DB_BATCH_SIZE
+        ),
     )
 
     dataset_dir = "runs/ms_marco_qna_full_dev_sbert"
     yield (
         dataset_dir,
         ms_marco_qna,
-        await momento_configuration(ms_marco_qna, dataset_dir, sbert_embedding, BATCH_SIZE, DB_BATCH_SIZE),
+        await momento_configuration(
+            ms_marco_qna, dataset_dir, sbert_embedding, BATCH_SIZE, DB_BATCH_SIZE
+        ),
     )
 
     #################
@@ -176,7 +195,7 @@ async def dataset_configurations() -> AsyncIterator[
     #################
 
     openlifelog_qa = OpenLifelogQADataset()
-    
+
     dataset_dir = "runs/openlifelog_qa_baseline"
     yield (
         dataset_dir,
@@ -188,14 +207,18 @@ async def dataset_configurations() -> AsyncIterator[
     yield (
         dataset_dir,
         openlifelog_qa,
-        await momento_configuration(openlifelog_qa, dataset_dir, qwen3_embedding_06B, BATCH_SIZE, DB_BATCH_SIZE),
+        await momento_configuration(
+            openlifelog_qa, dataset_dir, qwen3_embedding_06B, BATCH_SIZE, DB_BATCH_SIZE
+        ),
     )
 
     dataset_dir = "runs/openlifelog_qa_sbert"
     yield (
         dataset_dir,
         openlifelog_qa,
-        await momento_configuration(openlifelog_qa, dataset_dir, sbert_embedding, BATCH_SIZE, DB_BATCH_SIZE),
+        await momento_configuration(
+            openlifelog_qa, dataset_dir, sbert_embedding, BATCH_SIZE, DB_BATCH_SIZE
+        ),
     )
 
     ##############
@@ -203,7 +226,7 @@ async def dataset_configurations() -> AsyncIterator[
     ##############
 
     timeline_qa_sparse = TimelineQADataset.generate(category=0)
-    
+
     # Baseline configurations
     dataset_dir = "runs/timeline_qa_sparse_baseline"
     yield (
@@ -236,7 +259,13 @@ async def dataset_configurations() -> AsyncIterator[
     yield (
         dataset_dir,
         timeline_qa_sparse,
-        await momento_configuration(timeline_qa_sparse, dataset_dir, qwen3_embedding_06B, BATCH_SIZE, DB_BATCH_SIZE),
+        await momento_configuration(
+            timeline_qa_sparse,
+            dataset_dir,
+            qwen3_embedding_06B,
+            BATCH_SIZE,
+            DB_BATCH_SIZE,
+        ),
     )
 
     dataset_dir = "runs/timeline_qa_medium_qwen3_0.6B"
@@ -244,7 +273,13 @@ async def dataset_configurations() -> AsyncIterator[
     yield (
         dataset_dir,
         timeline_qa_medium,
-        await momento_configuration(timeline_qa_medium, dataset_dir, qwen3_embedding_06B, BATCH_SIZE, DB_BATCH_SIZE),
+        await momento_configuration(
+            timeline_qa_medium,
+            dataset_dir,
+            qwen3_embedding_06B,
+            BATCH_SIZE,
+            DB_BATCH_SIZE,
+        ),
     )
 
     # SBert configurations
@@ -253,7 +288,9 @@ async def dataset_configurations() -> AsyncIterator[
     yield (
         dataset_dir,
         timeline_qa_sparse,
-        await momento_configuration(timeline_qa_sparse, dataset_dir, sbert_embedding, BATCH_SIZE, DB_BATCH_SIZE),
+        await momento_configuration(
+            timeline_qa_sparse, dataset_dir, sbert_embedding, BATCH_SIZE, DB_BATCH_SIZE
+        ),
     )
 
     dataset_dir = "runs/timeline_qa_medium_sbert"
@@ -261,7 +298,9 @@ async def dataset_configurations() -> AsyncIterator[
     yield (
         dataset_dir,
         timeline_qa_medium,
-        await momento_configuration(timeline_qa_medium, dataset_dir, sbert_embedding, BATCH_SIZE, DB_BATCH_SIZE),
+        await momento_configuration(
+            timeline_qa_medium, dataset_dir, sbert_embedding, BATCH_SIZE, DB_BATCH_SIZE
+        ),
     )
 
     # Too big of a dataset
@@ -270,7 +309,13 @@ async def dataset_configurations() -> AsyncIterator[
     yield (
         dataset_dir,
         timeline_qa_dense,
-        await momento_configuration(timeline_qa_dense, dataset_dir, qwen3_embedding_06B, BATCH_SIZE, DB_BATCH_SIZE),
+        await momento_configuration(
+            timeline_qa_dense,
+            dataset_dir,
+            qwen3_embedding_06B,
+            BATCH_SIZE,
+            DB_BATCH_SIZE,
+        ),
     )
 
     # Too big of a dataset
@@ -279,7 +324,9 @@ async def dataset_configurations() -> AsyncIterator[
     yield (
         dataset_dir,
         timeline_qa_dense,
-        await momento_configuration(timeline_qa_dense, dataset_dir, sbert_embedding, BATCH_SIZE, DB_BATCH_SIZE),
+        await momento_configuration(
+            timeline_qa_dense, dataset_dir, sbert_embedding, BATCH_SIZE, DB_BATCH_SIZE
+        ),
     )
 
 
@@ -346,5 +393,3 @@ async def main():
 if __name__ == "__main__":
     mp.set_start_method("spawn", force=True)
     asyncio.run(main())
-
-

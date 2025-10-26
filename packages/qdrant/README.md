@@ -25,6 +25,7 @@ pnpm run start
 ```
 
 The Qdrant server will start with:
+
 - Storage bound to `./storage`
 - Snapshots bound to `./snapshots`
 - Configuration from `./config/qdrant.yaml`
@@ -32,6 +33,7 @@ The Qdrant server will start with:
 - CPU cores 0-3 (configurable via `taskset`)
 
 The server runs on the default Qdrant ports:
+
 - HTTP API: `http://localhost:6333`
 - gRPC API: `localhost:6334`
 
@@ -80,6 +82,7 @@ packages/qdrant/
 ### Data Persistence
 
 All data is stored in the following directories (excluded from git):
+
 - `storage/` - Vector collections and indices
 - `snapshots/` - Database backups
 - `logs/` - Runtime logs
