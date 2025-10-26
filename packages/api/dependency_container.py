@@ -83,7 +83,7 @@ class Container:
         rag_service = LLMRAGService(llm_model=llm_model)
 
         # Threshold filter service
-        threshold_filter_service = ThresholdFilterService(relevance_threshold=0.7)
+        threshold_filter_service = ThresholdFilterService(relevance_threshold=0.0)
 
         # Persistence (fix swapped args)
         repository = FileRepository(
