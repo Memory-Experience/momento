@@ -80,6 +80,16 @@ class VectorStoreRepository(ABC):
         pass
 
     @abstractmethod
+    async def index_memories_batch(self, memories: list[MemoryRequest], qdrant_batch_size: int = 512) -> None:
+        """
+        Index multiple memories in batch for better performance.
+        
+        Args:
+            memories: List of memories to index
+        """
+        pass
+
+    @abstractmethod
     async def get_memory(self, memory_id: UUID) -> MemoryRequest | None:
         """
         Get a memory by its ID.
