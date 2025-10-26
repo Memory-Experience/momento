@@ -3,20 +3,17 @@ name = "api"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = "==3.11.*"
 dependencies = [
     "protos",
     "pydub>=0.25.1",
     "transformers>=4.55.1",
-    "torch>=2.8.0",
     "numpy<2.3",
     "faster-whisper>=1.2.0",
-    "llama-cpp-python>=0.3.16",
     "huggingface-hub>=0.34.4",
     "qdrant-client>=1.15.1",
     "spacy>=3.8.7",
     "sentence-transformers>=5.1.1",
-    "torchaudio>=2.8.0",
     "tiktoken>=0.11.0",
     "numba==0.61.2",
     "fastapi[standard]>=0.117.1",
@@ -33,7 +30,7 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 # Install top-level module "main.py" as an importable module
 py-modules = ["main"]
-packages = ["api", "api.domain", "api.models", "api.vector_store"]
+packages = ["api", "api.domain", "api.rag", "api.models", "api.models.embedding", "api.models.embedding.qwen3", "api.models.llm", "api.models.llm.qwen3", "api.models.transcription", "api.vector_store", "api.vector_store.repositories", "api.persistence", "api.persistence.repositories"]
 
 [tool.setuptools.package-dir]
 api = "."
