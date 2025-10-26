@@ -4,9 +4,9 @@ import pytest
 from fastapi.testclient import TestClient
 from fastapi import WebSocketDisconnect
 
-import api.main as main
-from api.domain.memory_context import MemoryContext
-from api.dependency_container import RETRIEVAL_LIMIT
+from .. import main
+from ..domain.memory_context import MemoryContext
+from ..dependency_container import RETRIEVAL_LIMIT
 from protos.generated.py.stt_pb2 import ChunkMetadata, ChunkType, MemoryChunk
 
 

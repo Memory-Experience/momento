@@ -3,7 +3,7 @@ from __future__ import annotations
 import spacy
 from spacy.language import Language
 
-from api.models.text_chunker_interface import ChunkerConfig, TextChunker
+from .text_chunker_interface import ChunkerConfig, TextChunker
 
 
 class SpacySentenceChunker(TextChunker):

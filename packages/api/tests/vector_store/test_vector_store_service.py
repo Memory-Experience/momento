@@ -2,9 +2,9 @@ from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
-from api.domain.memory_context import MemoryContext
-from api.domain.memory_request import MemoryRequest
-from api.vector_store.vector_store_service import VectorStoreService
+from ...domain.memory_context import MemoryContext
+from ...domain.memory_request import MemoryRequest
+from ...vector_store.vector_store_service import VectorStoreService
 
 
 @pytest.fixture

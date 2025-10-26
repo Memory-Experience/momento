@@ -4,7 +4,7 @@
   "private": true,
   "description": "",
   "scripts": {
-    "start": "uv run main.py",
+    "start": "cd .. && uv run -m api.main",
     "test": "uv run -m pytest tests -v",
     "test:ci": "uv run -m pytest -q"
   },

@@ -11,13 +11,13 @@ from qdrant_client.http.models import (
     Range,
 )
 
-from api.models.embedding.embedding_model_interface import EmbeddingModel
-from api.models.text_chunker_interface import TextChunker
+from ...models.embedding.embedding_model_interface import EmbeddingModel
+from ...models.text_chunker_interface import TextChunker
 
-from api.domain.memory_context import MemoryContext
-from api.domain.memory_request import MemoryRequest, MemoryType
+from ...domain.memory_context import MemoryContext
+from ...domain.memory_request import MemoryRequest, MemoryType
 
-from api.vector_store.repositories.vector_store_repository_interface import (
+from .vector_store_repository_interface import (
     FilterArg,
     FilterCondition,
     FilterGroup,

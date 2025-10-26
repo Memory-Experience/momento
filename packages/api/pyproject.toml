@@ -19,6 +19,7 @@ dependencies = [
     "fastapi[standard]>=0.117.1",
     "uvicorn[standard]>=0.36.0",
     "websockets>=15.0.1",
+    "llama-cpp-python>=0.3.16",
     # Platform-specific dependencies
     "triton>=3.4.0; platform_system=='Linux'",
 ]

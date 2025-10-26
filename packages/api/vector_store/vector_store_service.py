@@ -1,8 +1,8 @@
 import logging
 from uuid import UUID
 
-from api.domain.memory_context import MemoryContext
-from api.domain.memory_request import MemoryRequest
+from ..domain.memory_context import MemoryContext
+from ..domain.memory_request import MemoryRequest
 
 from .repositories.vector_store_repository_interface import (
     VectorStoreRepository,
