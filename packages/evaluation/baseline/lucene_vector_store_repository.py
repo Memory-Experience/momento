@@ -70,6 +70,8 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
 
         self._memories: OrderedDict[UUID, MemoryRequest] = OrderedDict()
 
+        self._searcher: LuceneSearcher | None = None  # lazy init on first search
+
         logging.info(
             f"LuceneVectorStoreRepository ready at {self._index_dir} "
             f"(BM25 k1={self._k1}, b={self._b}, append={has_segments})"
@@ -77,20 +79,29 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
 
     # ---------------- Context manager & destructor ----------------
 
-    def __enter__(self):
-        return self
-
     def __exit__(self, exc_type, exc, tb):
         try:
             self._commit_and_close_indexer()
         finally:
-            # Nothing else to release; LuceneSearcher is created on demand per search
-            pass
+            if self._searcher is not None:
+                try:
+                    self._searcher.close()
+                except Exception:
+                    pass
+                self._searcher = None
 
     def __del__(self):
-        # Be defensive: finalize writes if user forgot to call finalize_index()
         with contextlib.suppress(Exception):
             self._commit_and_close_indexer()
+            if self._searcher is not None:
+                self._searcher.close()
+                self._searcher = None
+
+    def _get_searcher(self) -> LuceneSearcher:
+        if self._searcher is None:
+            self._searcher = LuceneSearcher(self._index_dir)
+            self._searcher.set_bm25(k1=self._k1, b=self._b)
+        return self._searcher
 
     # ---------------- Core API ----------------
 
@@ -142,13 +153,9 @@ class LuceneVectorStoreRepository(VectorStoreRepository):
         if not qtext:
             return context
 
-        # Ensure any pending writes are committed so segments_* exist
         await self._ensure_committed()
-
-        # Create a fresh searcher (cheap; ensures it sees latest commits)
-        searcher = LuceneSearcher(self._index_dir)
-        searcher.set_bm25(k1=self._k1, b=self._b)
-
+        searcher = self._get_searcher()
+        
         # Over-retrieve to allow Python-side filters; then trim to 'limit'
         k = max(limit * 4, limit)
         hits = searcher.search(qtext, k=k)
