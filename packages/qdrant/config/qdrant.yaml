@@ -1,0 +1,14 @@
+log_level: INFO
+telemetry_disabled: true
+
+storage:
+  storage_path: "/qdrant/storage"
+  snapshots_path: "/qdrant/snapshots"
+  on_disk_payload: true
+  wal:
+    wal_capacity_mb: 32
+    wal_segments_ahead: 0
+
+optimizers:
+  # keep background merges off during ingest to avoid RAM spikes
+  max_optimization_threads: 0
