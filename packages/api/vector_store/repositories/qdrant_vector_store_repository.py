@@ -691,3 +691,30 @@ class LocalFileQdrantVectorStoreRepository(QdrantVectorStoreRepository):
             text_chunker=text_chunker,
             collection_name=collection_name,
         )
+
+class ServerQdrantVectorStoreRepository(QdrantVectorStoreRepository):
+    def __init__(
+        self,
+        embedding_model: EmbeddingModel,
+        text_chunker: TextChunker,
+        url: str = "http://localhost:6333",
+        collection_name="memories",
+    ):
+        """
+        Initialize the Qdrant in-memory vector store repository.
+
+        Args:
+            collection_name: Name of the collection to store vectors
+            vector_size: Dimension of vectors
+                (should match your embedding model's output)
+        """
+
+        # Initialize in-memory Qdrant client
+        client = QdrantClient(url=url)
+
+        super().__init__(
+            client=client,
+            embedding_model=embedding_model,
+            text_chunker=text_chunker,
+            collection_name=collection_name,
+        )
