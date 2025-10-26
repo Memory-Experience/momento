@@ -391,3 +391,9 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+
+*.sif
+*.tar
+requirements.all.txt
+requirements.thirdparty.txt
+wheelhouse/*
