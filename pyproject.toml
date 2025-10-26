@@ -3,24 +3,17 @@ name = "uzh-masterproject"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = "==3.11.*"
 dependencies = [
     "api",
     "evaluation",
     "protos",
 ]
 
-[tool.uv.sources]
-protos = { workspace = true }
-api = { workspace = true }
-evaluation = { workspace = true }
-torch = [
-  { index = "pytorch-cpu" },
-]
 
 [tool.uv.workspace]
 members = ["packages/*"]
-exclude = ["packages/web"]
+exclude = ["packages/web", "packages/qdrant"]
 
 [dependency-groups]
 dev = [
@@ -31,9 +24,18 @@ dev = [
 ]
 
 [[tool.uv.index]]
-name = "pytorch-cpu"
-url = "https://download.pytorch.org/whl/cpu"
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
 explicit = true
+
+[tool.uv.sources]
+protos = { workspace = true }
+api = { workspace = true }
+evaluation = { workspace = true }
+torch = { index = "pytorch-cu124" }
+torchvision = { index = "pytorch-cu124" }
+torchaudio = { index = "pytorch-cu124" }
+
 
 [tool.pytest.ini_options]
 pythonpath = ["packages/api"]
