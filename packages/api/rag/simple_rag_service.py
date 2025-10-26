@@ -1,8 +1,8 @@
 import logging
 from datetime import datetime
 
-from api.domain.memory_context import MemoryContext
-from api.domain.memory_request import MemoryRequest, MemoryType
+from ..domain.memory_context import MemoryContext
+from ..domain.memory_request import MemoryRequest, MemoryType
 
 
 class SimpleRAGService:

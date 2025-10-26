@@ -1,6 +1,6 @@
 from sentence_transformers import SentenceTransformer
 
-from api.models.embedding.embedding_model_interface import EmbeddingModel
+from .embedding_model_interface import EmbeddingModel
 
 
 class SBertEmbeddingModel(EmbeddingModel):
@@ -15,7 +15,7 @@ class SBertEmbeddingModel(EmbeddingModel):
 
     def __init__(
         self,
-        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
+        model_name: str = "./sbert/all-MiniLM-L6-v2",
         device: str | None = None,  # e.g. "cuda", "mps", or "cpu"
         normalize_embeddings: bool = True,
     ) -> None:
@@ -65,3 +65,29 @@ class SBertEmbeddingModel(EmbeddingModel):
         )
 
         return emb.astype(float).tolist()
+
+    async def embed_texts_batch(self, texts: list[str], batch_size: int = 32) -> list[list[float]]:
+        """
+        Asynchronously compute sentence embeddings for multiple texts in batch.
+        This is much more efficient than calling embed_text multiple times.
+        
+        Args:
+            texts: List of texts to embed
+            
+        Returns:
+            List of embeddings, one per input text
+        """
+        if not texts:
+            return []
+        
+        # SentenceTransformer.encode handles batching natively
+        embeddings = self._model.encode(
+            texts,
+            convert_to_numpy=True,
+            normalize_embeddings=self._normalize,
+            show_progress_bar=False,
+            batch_size=batch_size,
+        )
+        
+        # Convert to list of lists
+        return [emb.astype(float).tolist() for emb in embeddings]
