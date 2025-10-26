@@ -40,7 +40,7 @@ class BM25DatasetLoader(DatasetLoader):
             tuple: (vector_store_service, doc_to_memory mapping,
                 memory_to_doc mapping)
         """
-        doc_to_memory, memory_to_doc = cls._clean_if_incomplete(dataset_folder)
+        doc_to_memory, memory_to_doc, _ = cls._clean_if_incomplete(dataset_folder)
 
         vector_store_repo = LuceneVectorStoreRepository(index_dir=dataset_folder)
         vector_store_service = VectorStoreService(vector_store_repo)
