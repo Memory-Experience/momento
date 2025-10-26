@@ -15,7 +15,7 @@ class SBertEmbeddingModel(EmbeddingModel):
 
     def __init__(
         self,
-        model_name: str = "./sbert/all-MiniLM-L6-v2",
+        model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
         device: str | None = None,  # e.g. "cuda", "mps", or "cpu"
         normalize_embeddings: bool = True,
     ) -> None:

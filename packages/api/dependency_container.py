@@ -13,7 +13,7 @@ from .vector_store.repositories.vector_store_repository_interface import (
 from .vector_store.vector_store_service import VectorStoreService
 
 from .models.spacy_sentence_chunker import SpacySentenceChunker
-from .models.llm.qwen3 import Qwen3
+from .models.llm.qwen3_llama_cpp_model import Qwen3LlamaCppModel
 from .models.embedding.qwen3_embedding import Qwen3EmbeddingModel
 from .models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
 from .models.transcription.transcriber_interface import TranscriberInterface
@@ -78,7 +78,7 @@ class Container:
         vector_store_service = VectorStoreService(vector_store_repo)
 
         # LLM + RAG
-        llm_model = Qwen3()
+        llm_model = Qwen3LlamaCppModel()
         rag_service = LLMRAGService(llm_model=llm_model)
 
         # Threshold filter service
