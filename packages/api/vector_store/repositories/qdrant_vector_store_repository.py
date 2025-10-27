@@ -1,7 +1,6 @@
 import logging
 from uuid import UUID, uuid4
 
-from pyproj import err
 
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
@@ -241,7 +240,7 @@ class QdrantVectorStoreRepository(VectorStoreRepository):
             if i % qdrant_batch_size == 0 and i > 0:
                 # Batch upsert to Qdrant
                 # make a small try catch loop to handle potential upsert errors
-                retries = 5
+                retries = 5  # Set to -1 for evaluation runs for unlimited retries
                 while points:
                     try:
                         self.client.upsert(
@@ -251,6 +250,7 @@ class QdrantVectorStoreRepository(VectorStoreRepository):
                     except Exception as e:
                         logging.warning(f"Error upserting to Qdrant: {e}")
 
+                        retries -= 1
                         if retries == 0:
                             logging.error(
                                 "Max retries reached. Some points may not be indexed."
@@ -258,7 +258,7 @@ class QdrantVectorStoreRepository(VectorStoreRepository):
                             raise RuntimeError(
                                 "Failed to upsert points to"
                                 " Qdrant after multiple attempts."
-                            ) from err
+                            ) from e
 
         # Batch upsert to Qdrant
         if points:
