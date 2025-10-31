@@ -3,7 +3,7 @@ name = "evaluation"
 version = "0.1.0"
 description = "Evaluation suite for RAG: datasets, metrics, and pipelines"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = "==3.11.*"
 dependencies = [
     "api",
     "grpcio>=1.71.2",
@@ -12,9 +12,10 @@ dependencies = [
     "pandas>=2.3.2",
     "pyyaml>=6.0.2",
     "pytest>=8.0.0",
-    "pyserini>=1.2.0",
     "matplotlib>=3.10.6",
     "seaborn>=0.13.2",
+    "pyserini==1.2.0",
+    "tqdm>=4.67.1",
 ]
 
 
@@ -25,10 +26,18 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools]
 # Install top-level module "main.py" as an importable module
 py-modules = ["main", "dataset_loader", "rag_evaluation_client"]
-packages = ["evaluation", "evaluation.dataset"]
+packages = ["evaluation", "evaluation.dataset", "evaluation.dataset.timeline_qa", "evaluation.dataset.open_lifelog_qa", "evaluation.metrics", "evaluation.baseline"]
+include-package-data = true
 
 [tool.setuptools.package-dir]
 evaluation = "."
+
+[tool.setuptools.package-data]
+# package -> files/globs relative to package dir
+yourpkg = [
+    "dataset/open_lifelog_qa/*",
+    "dataset/timeline_qa/data/*"
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

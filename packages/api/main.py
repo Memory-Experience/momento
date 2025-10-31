@@ -8,10 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from protos.generated.py import stt_pb2
-from api.transcription_servicer import TranscriptionServiceServicer
-from api.memory_persist_service import MemoryPersistService
-from api.question_answer_service import QuestionAnswerService
-from api.dependency_container import Container
+from .transcription_servicer import TranscriptionServiceServicer
+from .memory_persist_service import MemoryPersistService
+from .question_answer_service import QuestionAnswerService
+from .dependency_container import Container
 
 # Constants
 PORT = 8080
@@ -238,7 +238,7 @@ if __name__ == "__main__":
 
     # Run the FastAPI server with uvicorn
     uvicorn.run(
-        "main:app",
+        "api.main:app",
         host="0.0.0.0",
         port=PORT,
         log_level="info" if log_level == logging.INFO else "debug",

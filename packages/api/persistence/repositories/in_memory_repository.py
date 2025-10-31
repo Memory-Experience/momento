@@ -1,9 +1,9 @@
 import logging
 from uuid import UUID, uuid4
 
-from api.domain.memory_request import MemoryRequest
+from ...domain.memory_request import MemoryRequest
 
-from api.persistence.repositories.repository_interface import Repository
+from .repository_interface import Repository
 
 # Constants
 IN_MEMORY_URI_SCHEME = "in_memory://"

@@ -3,9 +3,9 @@ from __future__ import annotations
 from typing import Any
 from collections.abc import Sequence
 
-from api.models.huggingface_helper import HuggingFaceHelper
-from api.models.llama_cpp_base import LlamaCppConfig
-from api.models.embedding.llama_cpp_embedding import LlamaCppEmbeddingModel
+from ..huggingface_helper import HuggingFaceHelper
+from ..llama_cpp_base import LlamaCppConfig
+from .llama_cpp_embedding import LlamaCppEmbeddingModel
 
 
 class Qwen3EmbeddingModel(LlamaCppEmbeddingModel):

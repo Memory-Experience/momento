@@ -4,11 +4,11 @@ from enum import Enum
 from typing import Any, Union
 from uuid import UUID
 
-from api.domain.memory_context import MemoryContext
-from api.domain.memory_request import MemoryRequest
+from ...domain.memory_context import MemoryContext
+from ...domain.memory_request import MemoryRequest
 
-from api.models.embedding.embedding_model_interface import EmbeddingModel
-from api.models.text_chunker_interface import TextChunker
+from ...models.embedding.embedding_model_interface import EmbeddingModel
+from ...models.text_chunker_interface import TextChunker
 
 
 class FilterOperator(Enum):
@@ -76,6 +76,18 @@ class VectorStoreRepository(ABC):
 
         Args:
             memory: The Memory domain object to index
+        """
+        pass
+
+    @abstractmethod
+    async def index_memories_batch(
+        self, memories: list[MemoryRequest], qdrant_batch_size: int = 512
+    ) -> None:
+        """
+        Index multiple memories in batch for better performance.
+
+        Args:
+            memories: List of memories to index
         """
         pass
 

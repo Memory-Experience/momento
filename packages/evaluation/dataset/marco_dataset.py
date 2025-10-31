@@ -42,11 +42,11 @@ def _convert_ms_marco_to_dataframes(ms_marco_dataset, limit: int = 1000):
     found_doc_ids = set()
 
     for doc in ms_marco_dataset.docs_iter():
-        if doc.doc_id in needed_doc_ids:
-            docs_data.append({"id": doc.doc_id, "content": doc.text})
-            found_doc_ids.add(doc.doc_id)
+        docs_data.append({"id": doc.doc_id, "content": doc.text})
+        found_doc_ids.add(doc.doc_id)
 
-        if len(found_doc_ids) >= len(needed_doc_ids):
+        # Stop if we found all needed documents
+        if len(found_doc_ids) >= limit:
             break
 
     docs_df = pd.DataFrame(docs_data)
@@ -58,10 +58,15 @@ def _convert_ms_marco_to_dataframes(ms_marco_dataset, limit: int = 1000):
 
     for query in ms_marco_dataset.queries_iter():
         if query.query_id in needed_query_ids:
+            try:
+                answer = query.answers
+            except AttributeError:
+                answer = None
+
             queries_data.append({
                 "id": query.query_id,
                 "text": query.text,
-                "answer": query.answers,
+                "answer": answer,
             })
             found_query_ids.add(query.query_id)
 

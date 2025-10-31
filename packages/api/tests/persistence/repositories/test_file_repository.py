@@ -1,8 +1,8 @@
 import asyncio
 
 import pytest
-from api.domain.memory_request import MemoryRequest
-from api.persistence.repositories.file_repository import FILE_URI_SCHEME, FileRepository
+from ....domain.memory_request import MemoryRequest
+from ....persistence.repositories.file_repository import FILE_URI_SCHEME, FileRepository
 
 
 @pytest.fixture

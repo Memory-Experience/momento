@@ -3,19 +3,19 @@ from datetime import datetime
 
 import pytest
 import pytest_asyncio
-from api.domain.memory_context import MemoryContext
-from api.domain.memory_request import MemoryRequest, MemoryType
-from api.vector_store.repositories.qdrant_vector_store_repository import (
+from ...domain.memory_context import MemoryContext
+from ...domain.memory_request import MemoryRequest, MemoryType
+from ...vector_store.repositories.qdrant_vector_store_repository import (
     InMemoryQdrantVectorStoreRepository,
 )
-from api.vector_store.repositories.vector_store_repository_interface import (
+from ...vector_store.repositories.vector_store_repository_interface import (
     FilterCondition,
     FilterOperator,
     VectorStoreRepository,
 )
 
-from api.models.embedding.embedding_model_interface import EmbeddingModel
-from api.models.text_chunker_interface import TextChunker
+from ...models.embedding.embedding_model_interface import EmbeddingModel
+from ...models.text_chunker_interface import TextChunker
 
 
 class MockEmbeddingModel(EmbeddingModel):
@@ -318,3 +318,131 @@ async def test_list_memories(repository, test_memories):
     # All returned memories should be of type MEMORY
     for memory in filtered:
         assert memory.memory_type == MemoryType.MEMORY
+
+
+@pytest.mark.asyncio
+async def test_index_memories_batch(embedding_model, text_chunker):
+    """Test batch indexing of multiple memories."""
+    # Create a fresh repository for this test
+    repo = InMemoryQdrantVectorStoreRepository(
+        embedding_model=embedding_model, text_chunker=text_chunker
+    )
+
+    # Create a batch of memories
+    batch_memories = [
+        MemoryRequest.create(
+            text=[f"Batch memory {i}. This contains important information."],
+            memory_type=MemoryType.MEMORY,
+            timestamp=datetime.now(),
+        )
+        for i in range(10)
+    ]
+
+    # Index them in batch
+    await repo.index_memories_batch(batch_memories)
+
+    # Verify all memories were indexed
+    for memory in batch_memories:
+        retrieved = await repo.get_memory(memory.id)
+        assert retrieved is not None
+        assert retrieved.id == memory.id
+        assert retrieved.text == memory.text
+
+
+@pytest.mark.asyncio
+async def test_index_memories_batch_with_search(embedding_model, text_chunker):
+    """Test that batch-indexed memories are searchable."""
+    # Create a fresh repository
+    repo = InMemoryQdrantVectorStoreRepository(
+        embedding_model=embedding_model, text_chunker=text_chunker
+    )
+
+    # Create batch memories with distinct content
+    batch_memories = [
+        MemoryRequest.create(
+            text=["Information about cats and their behavior"],
+            memory_type=MemoryType.MEMORY,
+        ),
+        MemoryRequest.create(
+            text=["Information about dogs and their training"],
+            memory_type=MemoryType.MEMORY,
+        ),
+        MemoryRequest.create(
+            text=["Information about birds and their migration"],
+            memory_type=MemoryType.MEMORY,
+        ),
+    ]
+
+    # Batch index
+    await repo.index_memories_batch(batch_memories)
+
+    # Search for cat-related content
+    query = MemoryRequest.create(
+        text=["Tell me about cats"], memory_type=MemoryType.QUESTION
+    )
+
+    results = await repo.search_similar(query, limit=3)
+
+    # Should find results
+    assert not results.is_empty()
+    memories = results.get_memory_objects()
+    assert len(memories) >= 1
+
+
+@pytest.mark.asyncio
+async def test_index_memories_batch_empty_list(embedding_model, text_chunker):
+    """Test that batch indexing handles empty list gracefully."""
+    repo = InMemoryQdrantVectorStoreRepository(
+        embedding_model=embedding_model, text_chunker=text_chunker
+    )
+
+    # Should not raise any errors
+    await repo.index_memories_batch([])
+
+    # Verify repository is still functional
+    test_memory = MemoryRequest.create(text=["Test"], memory_type=MemoryType.MEMORY)
+    await repo.index_memory(test_memory)
+
+    retrieved = await repo.get_memory(test_memory.id)
+    assert retrieved is not None
+
+
+@pytest.mark.asyncio
+async def test_index_memories_batch_with_chunks(embedding_model, text_chunker):
+    """Test batch indexing with memories that produce chunks."""
+    repo = InMemoryQdrantVectorStoreRepository(
+        embedding_model=embedding_model, text_chunker=text_chunker
+    )
+
+    # Create memories with long text that will be chunked
+    long_memories = [
+        MemoryRequest.create(
+            text=[
+                f"This is a very long text for memory {i}. "
+                "It contains multiple sentences about various topics. "
+                "The first topic is about technology and innovation. "
+                "The second topic discusses nature and environment. "
+                "Finally, we talk about culture and society."
+            ],
+            memory_type=MemoryType.MEMORY,
+        )
+        for i in range(5)
+    ]
+
+    # Batch index
+    await repo.index_memories_batch(long_memories)
+
+    # Verify all can be retrieved
+    for memory in long_memories:
+        retrieved = await repo.get_memory(memory.id)
+        assert retrieved is not None
+        assert retrieved.id == memory.id
+
+    # Verify search works with chunks
+    query = MemoryRequest.create(
+        text=["Tell me about technology and innovation"],
+        memory_type=MemoryType.QUESTION,
+    )
+
+    results = await repo.search_similar(query, limit=5)
+    assert not results.is_empty()

@@ -2,3 +2,6 @@
 previous_runs/
 runs/*/
 open_lifelog_qa/
+
+metrics/cross_encoder/*
+models/*

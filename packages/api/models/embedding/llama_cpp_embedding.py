@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from api.models.llama_cpp_base import LlamaCppBase, LlamaCppConfig
-from api.models.embedding.embedding_model_interface import EmbeddingModel
+from ..llama_cpp_base import LlamaCppBase, LlamaCppConfig
+from .embedding_model_interface import EmbeddingModel
 
 
 class LlamaCppEmbeddingModel(LlamaCppBase, EmbeddingModel):

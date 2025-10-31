@@ -95,6 +95,8 @@ importers:
         specifier: ^2.7.7
         version: 2.7.7
 
+  packages/qdrant: {}
+
   packages/web:
     dependencies:
       '@emotion/react':

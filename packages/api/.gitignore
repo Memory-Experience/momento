@@ -1,5 +1,7 @@
 recordings/
+models/embedding/sbert
 
 # Ignore model files
 *.gguf
 *.pt
+

@@ -3,7 +3,7 @@ name = "docs"
 version = "0.1.0"
 description = "This is the documentation of the momento project"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = "==3.11.*"
 
 [dependency-groups]
 dev = [

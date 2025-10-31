@@ -5,7 +5,7 @@ from collections.abc import AsyncIterator
 import numpy as np
 
 from protos.generated.py import stt_pb2_grpc, stt_pb2
-from api.dependency_container import Container
+from .dependency_container import Container
 
 
 class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
