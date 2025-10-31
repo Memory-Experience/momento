@@ -66,7 +66,12 @@ nav:
                 - Datasets: evaluation/datasets.md
                 - Metrics: evaluation/metrics.md
           - Analysis:
-                - MS MARCO QnA: evaluation/analysis/ms_marco_qna_dev_10k.ipynb
-                - OpenLifelogQA: evaluation/analysis/openlifelog_qa_10k.ipynb
+                - MS MARCO Passage v1: evaluation/analysis/evaluation_ms_marco_passage.ipynb
+                - MS MARCO QnA: evaluation/analysis/evaluation_ms_marco_qna.ipynb
+                - OpenLifelogQA: evaluation/analysis/evaluation_openlifelog_qa.ipynb
+                - TimelineQA (sparse): evaluation/analysis/evaluation_timeline_qa_sparse.ipynb
+                - TimelineQA (medium): evaluation/analysis/evaluation_timeline_qa_medium.ipynb
+                - TimelineQA (dense): evaluation/analysis/evaluation_timeline_qa_dense.ipynb
+
           - Readme: evaluation/readme_link.md
           - Reference (PY): evaluation/py.md
