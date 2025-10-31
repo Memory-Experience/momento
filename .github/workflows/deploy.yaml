@@ -52,7 +52,7 @@ jobs:
           uv sync --locked
 
       - name: Build project
-        run: pnpm run build
+        run: pnpm --filter='!qdrant' run build
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
