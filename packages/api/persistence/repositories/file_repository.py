@@ -6,8 +6,8 @@ from uuid import UUID, uuid4
 
 from pydub import AudioSegment
 
-from api.domain.memory_request import MemoryRequest, MemoryType
-from api.persistence.repositories.repository_interface import Repository
+from ...domain.memory_request import MemoryRequest, MemoryType
+from .repository_interface import Repository
 
 # Constants
 FILE_URI_SCHEME = "file://"

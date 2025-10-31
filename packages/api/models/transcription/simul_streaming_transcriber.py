@@ -8,9 +8,9 @@ from typing import Any
 import numpy as np
 import torch
 
-from api.models.transcription.transcriber_interface import Segment, TranscriberInterface
-from api.models.transcription.simul_whisper.config import AlignAttConfig
-from api.models.transcription.simul_whisper.simul_whisper import PaddedAlignAttWhisper
+from .transcriber_interface import Segment, TranscriberInterface
+from .simul_whisper.config import AlignAttConfig
+from .simul_whisper.simul_whisper import PaddedAlignAttWhisper
 
 logger = logging.getLogger(__name__)
 

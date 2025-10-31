@@ -1,0 +1,15 @@
+{
+  "name": "qdrant",
+  "version": "0.1.0",
+  "private": true,
+  "description": "",
+  "scripts": {
+    "start": "taskset -c 0-3 apptainer exec --bind storage:/qdrant/storage --bind snapshots:/qdrant/snapshots --bind config:/qdrant/config --bind logs:/qdrant/logs qdrant.sif /bin/sh -lc 'ulimit -v unlimited; ulimit -n 65535; exec /qdrant/qdrant --config-path /qdrant/config/qdrant.yaml'",
+    "build": "if [ -f qdrant.sif ]; then echo '⚠️  qdrant.sif already exists — skipping build. Use pnpm run build:overwrite to rebuild.'; else apptainer build qdrant.sif docker://qdrant/qdrant:v1.15.5; fi",
+    "build:overwrite": "apptainer build --force qdrant.sif docker://qdrant/qdrant:v1.15.5"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.14.0"
+}

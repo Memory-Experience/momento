@@ -50,7 +50,7 @@ jobs:
           pnpm run lint
 
       - name: Build project
-        run: pnpm run build
+        run: pnpm --filter='!qdrant' run build
 
       - name: Run tests
         run: pnpm run test:ci

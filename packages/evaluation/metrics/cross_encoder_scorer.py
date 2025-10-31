@@ -21,7 +21,7 @@ class CrossEncoderScorer:
 
     def __init__(
         self,
-        model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2",
+        model_name: str = "cross-encoder/ms-marco-MiniLM-L6-v2",
         device: str | None = None,  # "cuda", "mps", or "cpu"
         max_length: int = 512,  # token budget for each pair
         normalize: str | None = None,  # None | "sigmoid" | "zscore"

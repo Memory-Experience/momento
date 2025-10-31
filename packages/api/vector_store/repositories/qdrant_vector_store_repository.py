@@ -1,6 +1,7 @@
 import logging
 from uuid import UUID, uuid4
 
+
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from qdrant_client.http.models import (
@@ -11,13 +12,13 @@ from qdrant_client.http.models import (
     Range,
 )
 
-from api.models.embedding.embedding_model_interface import EmbeddingModel
-from api.models.text_chunker_interface import TextChunker
+from ...models.embedding.embedding_model_interface import EmbeddingModel
+from ...models.text_chunker_interface import TextChunker
 
-from api.domain.memory_context import MemoryContext
-from api.domain.memory_request import MemoryRequest, MemoryType
+from ...domain.memory_context import MemoryContext
+from ...domain.memory_request import MemoryRequest, MemoryType
 
-from api.vector_store.repositories.vector_store_repository_interface import (
+from .vector_store_repository_interface import (
     FilterArg,
     FilterCondition,
     FilterGroup,
@@ -139,6 +140,137 @@ class QdrantVectorStoreRepository(VectorStoreRepository):
         self.client.upsert(collection_name=self.collection_name, points=points)
 
         logging.info(f"Indexed memory {memory_id} with {len(chunks)} chunks")
+
+    async def index_memories_batch(
+        self, memories: list[MemoryRequest], qdrant_batch_size: int = 512
+    ) -> None:
+        """
+        Index multiple memories in batch for better performance.
+
+        Args:
+            memories: List of memories to index
+        """
+        if not memories:
+            return
+
+        # Store all memories in cache
+        for memory in memories:
+            self._memories[memory.id] = memory
+
+        # Collect all texts that need embedding
+        texts_to_embed = []
+        text_metadata = []  # Track what each text is for
+
+        for memory in memories:
+            full_text = " ".join(memory.text)
+            chunks = self.text_chunker.chunk_text(full_text)
+
+            # Add full text
+            texts_to_embed.append(full_text)
+            text_metadata.append({
+                "type": "full",
+                "memory": memory,
+                "full_text": full_text,
+                "chunks": chunks,
+            })
+
+            # Add chunks if there are multiple
+            if len(chunks) > 1:
+                for i, chunk in enumerate(chunks):
+                    texts_to_embed.append(chunk)
+                    text_metadata.append({
+                        "type": "chunk",
+                        "memory": memory,
+                        "chunk_text": chunk,
+                        "chunk_index": i,
+                        "full_text": full_text,
+                    })
+
+        # Batch embed all texts at once
+        if hasattr(self.embedding_model, "embed_texts_batch"):
+            embeddings = await self.embedding_model.embed_texts_batch(texts_to_embed)
+        else:
+            # Fallback to individual embeddings if batch method not available
+            embeddings = [
+                await self.embedding_model.embed_text(text) for text in texts_to_embed
+            ]
+
+        # Build points for Qdrant
+        points = []
+        for i, (metadata, embedding) in enumerate(
+            zip(text_metadata, embeddings, strict=True)
+        ):
+            memory = metadata["memory"]
+
+            base_payload = {
+                "text": memory.text,
+                "timestamp": memory.timestamp.isoformat() if memory.timestamp else None,
+                "memory_type": memory.memory_type.value,
+            }
+
+            if metadata["type"] == "full":
+                points.append(
+                    PointStruct(
+                        id=str(memory.id),
+                        vector=embedding,
+                        payload={
+                            **base_payload,
+                            "is_chunk": False,
+                            "parent_id": None,
+                            "text_content": metadata["full_text"],
+                        },
+                    )
+                )
+            else:  # chunk
+                chunk_id = str(uuid4())
+                points.append(
+                    PointStruct(
+                        id=chunk_id,
+                        vector=embedding,
+                        payload={
+                            **base_payload,
+                            "is_chunk": True,
+                            "parent_id": memory.id,
+                            "chunk_index": metadata["chunk_index"],
+                            "text_content": metadata["chunk_text"],
+                        },
+                    )
+                )
+
+            if i % qdrant_batch_size == 0 and i > 0:
+                # Batch upsert to Qdrant
+                # make a small try catch loop to handle potential upsert errors
+                retries = 5  # Set to -1 for evaluation runs for unlimited retries
+                while points:
+                    try:
+                        self.client.upsert(
+                            collection_name=self.collection_name, points=points
+                        )
+                        points = []  # Clear points after upsert
+                    except Exception as e:
+                        logging.warning(f"Error upserting to Qdrant: {e}")
+
+                        retries -= 1
+                        if retries == 0:
+                            logging.error(
+                                "Max retries reached. Some points may not be indexed."
+                            )
+                            raise RuntimeError(
+                                "Failed to upsert points to"
+                                " Qdrant after multiple attempts."
+                            ) from e
+
+        # Batch upsert to Qdrant
+        if points:
+            try:
+                self.client.upsert(collection_name=self.collection_name, points=points)
+                points = []  # Clear points after upsert
+            except Exception as e:
+                logging.warning(f"Error upserting to Qdrant: {e}")
+
+        logging.info(
+            f"Batch indexed {len(memories)} memories with {len(points)} total points"
+        )
 
     async def get_memory(self, memory_id: UUID) -> MemoryRequest | None:
         """
@@ -569,6 +701,34 @@ class LocalFileQdrantVectorStoreRepository(QdrantVectorStoreRepository):
 
         # Initialize in-memory Qdrant client
         client = QdrantClient(path=database_path)
+
+        super().__init__(
+            client=client,
+            embedding_model=embedding_model,
+            text_chunker=text_chunker,
+            collection_name=collection_name,
+        )
+
+
+class ServerQdrantVectorStoreRepository(QdrantVectorStoreRepository):
+    def __init__(
+        self,
+        embedding_model: EmbeddingModel,
+        text_chunker: TextChunker,
+        url: str = "http://localhost:6333",
+        collection_name="memories",
+    ):
+        """
+        Initialize the Qdrant in-memory vector store repository.
+
+        Args:
+            collection_name: Name of the collection to store vectors
+            vector_size: Dimension of vectors
+                (should match your embedding model's output)
+        """
+
+        # Initialize in-memory Qdrant client
+        client = QdrantClient(url=url)
 
         super().__init__(
             client=client,

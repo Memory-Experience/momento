@@ -1,0 +1,5 @@
+qdrant.sif
+logs/*
+snapshots/*
+storage/*
+.qdrant-initialized

@@ -1,31 +1,35 @@
+from __future__ import annotations
 import asyncio
 import logging
 import json
+import os
 
+import multiprocessing as mp
 from datetime import datetime
 from collections.abc import AsyncIterator
+
+import torch
 
 from api.dependency_container import Container
 from api.question_answer_service import QuestionAnswerService
 from api.persistence.persistence_service import PersistenceService
 from api.persistence.repositories.in_memory_repository import InMemoryRepository
 from api.rag.llm_rag_service import LLMRAGService
-from api.models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
-from api.models.llm.qwen3 import Qwen3
 from api.models.embedding.embedding_model_interface import EmbeddingModel
-from api.models.embedding.qwen3_embedding import Qwen3EmbeddingModel
 from api.models.embedding.sbert_embedding import SBertEmbeddingModel
+from api.models.llm.qwen3_transformers_model import Qwen3TransformersModel
 from api.rag.threshold_filter_service import ThresholdFilterService
 
-from baseline.bm25_dataset_loader import BM25DatasetLoader
-from baseline.memory_reciter_llm_model import MemoryReciterModel
+from evaluation.baseline.bm25_dataset_loader import BM25DatasetLoader
+from evaluation.baseline.memory_reciter_llm_model import MemoryReciterModel
+from evaluation.baseline.dummy_transcriber import DummyTranscriber
 
-from rag_evaluation_client import RAGEvaluationClient
-from dataset.marco_dataset import MSMarcoDataset
-from dataset.timeline_qa_dataset import TimelineQADataset
-from dataset.open_lifelog_qa_dataset import OpenLifelogQADataset
-from dataset import dataset
-from dataset_loader import DatasetLoader
+from evaluation.rag_evaluation_client import RAGEvaluationClient
+from evaluation.dataset.marco_dataset import MSMarcoDataset
+from evaluation.dataset.timeline_qa_dataset import TimelineQADataset
+from evaluation.dataset.open_lifelog_qa_dataset import OpenLifelogQADataset
+from evaluation.dataset import dataset
+from evaluation.dataset_loader import DatasetLoader
 
 
 # Configure logging
@@ -35,7 +39,10 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # gRPC Server configuration
-LIMIT_DOCS = 1_000_000
+LIMIT_DOCS = 10_000_000
+MAX_QUERIES = 10_000
+BATCH_SIZE = 4096
+DB_BATCH_SIZE = 512
 
 
 async def baseline_configuration(dataset, dataset_dir) -> RAGEvaluationClient:
@@ -45,8 +52,7 @@ async def baseline_configuration(dataset, dataset_dir) -> RAGEvaluationClient:
         memory_to_doc,
     ) = await BM25DatasetLoader.create_filled_vector_store_service(dataset, dataset_dir)
 
-    transcriber = FasterWhisperTranscriber()
-    transcriber.initialize()
+    transcriber = DummyTranscriber()
 
     llm_model = MemoryReciterModel()
     rag_service = LLMRAGService(llm_model=llm_model)
@@ -69,20 +75,27 @@ async def baseline_configuration(dataset, dataset_dir) -> RAGEvaluationClient:
 
 
 async def momento_configuration(
-    dataset, dataset_dir, embedding: EmbeddingModel
+    dataset,
+    dataset_dir,
+    embedding: EmbeddingModel,
+    batch_size: int = 128,
+    db_batch_size: int = 256,
 ) -> RAGEvaluationClient:
     (
         vector_store_service,
         doc_to_memory,
         memory_to_doc,
     ) = await DatasetLoader.create_filled_vector_store_service(
-        dataset, dataset_dir, embedding
+        dataset,
+        dataset_dir,
+        embedding,
+        batch_size=batch_size,
+        db_batch_size=db_batch_size,
     )
 
-    transcriber = FasterWhisperTranscriber()
-    transcriber.initialize()
+    transcriber = DummyTranscriber()
 
-    llm_model = Qwen3()
+    llm_model = Qwen3TransformersModel()
     rag_service = LLMRAGService(llm_model=llm_model)
 
     threshold_filter_service = ThresholdFilterService(relevance_threshold=0)
@@ -105,72 +118,117 @@ async def momento_configuration(
 async def dataset_configurations() -> AsyncIterator[
     tuple[str, dataset.DataFrameDataset, RAGEvaluationClient]
 ]:
-    ############
-    # MS-Marco #
-    ############
-
-    dataset_dir = "runs/ms_marco_qna_dev_baseline"
-    ms_marco_small = MSMarcoDataset(limit=LIMIT_DOCS)
-
-    yield (
-        dataset_dir,
-        ms_marco_small,
-        await baseline_configuration(ms_marco_small, dataset_dir),
+    qwen3_embedding_06B = SBertEmbeddingModel(
+        model_name="Qwen/Qwen3-Embedding-0.6B",
+        device="cuda" if torch.cuda.is_available() else "cpu",
+    )
+    sbert_embedding = SBertEmbeddingModel(
+        device="cuda" if torch.cuda.is_available() else "cpu"
     )
 
-    qwen3_embedding = Qwen3EmbeddingModel()
-    dataset_dir = "runs/ms_marco_qna_dev_momento"
-    yield (
-        dataset_dir,
-        ms_marco_small,
-        await momento_configuration(ms_marco_small, dataset_dir, qwen3_embedding),
+    ####################
+    # MS-Marco Passage #
+    ####################
+
+    ms_marco_dev = MSMarcoDataset(
+        limit=LIMIT_DOCS, dataset_name="msmarco-passage/dev/small"
     )
 
-    sbert_embedding = SBertEmbeddingModel()
-    dataset_dir = "runs/ms_marco_qna_dev_sbert"
-
+    dataset_dir = "runs/ms_marco_passage_dev_baseline"
     yield (
         dataset_dir,
-        ms_marco_small,
-        await momento_configuration(ms_marco_small, dataset_dir, sbert_embedding),
+        ms_marco_dev,
+        await baseline_configuration(ms_marco_dev, dataset_dir),
+    )
+
+    dataset_dir = "runs/ms_marco_passage_dev_qwen3_0.6B"
+    yield (
+        dataset_dir,
+        ms_marco_dev,
+        await momento_configuration(
+            ms_marco_dev, dataset_dir, qwen3_embedding_06B, BATCH_SIZE
+        ),
+    )
+
+    dataset_dir = "runs/ms_marco_passage_dev_sbert"
+    yield (
+        dataset_dir,
+        ms_marco_dev,
+        await momento_configuration(
+            ms_marco_dev, dataset_dir, sbert_embedding, BATCH_SIZE
+        ),
+    )
+
+    ################
+    # MS-Marco QNA #
+    ################
+
+    ms_marco_qna = MSMarcoDataset(limit=LIMIT_DOCS)
+
+    dataset_dir = "runs/ms_marco_qna_full_dev_baseline"
+    yield (
+        dataset_dir,
+        ms_marco_qna,
+        await baseline_configuration(ms_marco_qna, dataset_dir),
+    )
+
+    dataset_dir = "runs/ms_marco_qna_full_dev_qwen3_0.6B"
+    yield (
+        dataset_dir,
+        ms_marco_qna,
+        await momento_configuration(
+            ms_marco_qna, dataset_dir, qwen3_embedding_06B, BATCH_SIZE, DB_BATCH_SIZE
+        ),
+    )
+
+    dataset_dir = "runs/ms_marco_qna_full_dev_sbert"
+    yield (
+        dataset_dir,
+        ms_marco_qna,
+        await momento_configuration(
+            ms_marco_qna, dataset_dir, sbert_embedding, BATCH_SIZE, DB_BATCH_SIZE
+        ),
     )
 
     #################
     # OpenLifelogQA #
     #################
 
-    dataset_dir = "runs/openlifelog_qa_baseline"
     openlifelog_qa = OpenLifelogQADataset()
 
+    dataset_dir = "runs/openlifelog_qa_baseline"
     yield (
         dataset_dir,
         openlifelog_qa,
         await baseline_configuration(openlifelog_qa, dataset_dir),
     )
 
-    dataset_dir = "runs/openlifelog_qa_momento"
+    dataset_dir = "runs/openlifelog_qa_qwen3_0.6B"
     yield (
         dataset_dir,
-        ms_marco_small,
-        await momento_configuration(ms_marco_small, dataset_dir, qwen3_embedding),
+        openlifelog_qa,
+        await momento_configuration(
+            openlifelog_qa, dataset_dir, qwen3_embedding_06B, BATCH_SIZE, DB_BATCH_SIZE
+        ),
     )
 
     dataset_dir = "runs/openlifelog_qa_sbert"
-
     yield (
         dataset_dir,
-        ms_marco_small,
-        await momento_configuration(ms_marco_small, dataset_dir, sbert_embedding),
+        openlifelog_qa,
+        await momento_configuration(
+            openlifelog_qa, dataset_dir, sbert_embedding, BATCH_SIZE, DB_BATCH_SIZE
+        ),
     )
 
     ##############
     # TimelineQA #
     ##############
 
-    # Baseline configurations
-    dataset_dir = "runs/timeline_qa_sparse_baseline"
     timeline_qa_sparse = TimelineQADataset.generate(category=0)
 
+    # Baseline configurations
+    dataset_dir = "runs/timeline_qa_sparse_baseline"
     yield (
         dataset_dir,
         timeline_qa_sparse,
@@ -196,30 +254,33 @@ async def dataset_configurations() -> AsyncIterator[
     )
 
     # Momento configurations
-    dataset_dir = "runs/timeline_qa_sparse_momento"
+    dataset_dir = "runs/timeline_qa_sparse_qwen3_0.6B"
 
     yield (
         dataset_dir,
         timeline_qa_sparse,
-        await momento_configuration(timeline_qa_sparse, dataset_dir, qwen3_embedding),
+        await momento_configuration(
+            timeline_qa_sparse,
+            dataset_dir,
+            qwen3_embedding_06B,
+            BATCH_SIZE,
+            DB_BATCH_SIZE,
+        ),
     )
 
-    dataset_dir = "runs/timeline_qa_medium_momento"
+    dataset_dir = "runs/timeline_qa_medium_qwen3_0.6B"
 
     yield (
         dataset_dir,
         timeline_qa_medium,
-        await momento_configuration(timeline_qa_medium, dataset_dir, qwen3_embedding),
+        await momento_configuration(
+            timeline_qa_medium,
+            dataset_dir,
+            qwen3_embedding_06B,
+            BATCH_SIZE,
+            DB_BATCH_SIZE,
+        ),
     )
-
-    # Too big of a dataset
-    # dataset_dir = "runs/timeline_qa_dense_momento"
-
-    # yield (
-    #    dataset_dir,
-    #    timeline_qa_dense,
-    #    await momento_configuration(timeline_qa_dense, dataset_dir, qwen3_embedding),
-    # )
 
     # SBert configurations
     dataset_dir = "runs/timeline_qa_sparse_sbert"
@@ -227,7 +288,9 @@ async def dataset_configurations() -> AsyncIterator[
     yield (
         dataset_dir,
         timeline_qa_sparse,
-        await momento_configuration(timeline_qa_sparse, dataset_dir, sbert_embedding),
+        await momento_configuration(
+            timeline_qa_sparse, dataset_dir, sbert_embedding, BATCH_SIZE, DB_BATCH_SIZE
+        ),
     )
 
     dataset_dir = "runs/timeline_qa_medium_sbert"
@@ -235,25 +298,46 @@ async def dataset_configurations() -> AsyncIterator[
     yield (
         dataset_dir,
         timeline_qa_medium,
-        await momento_configuration(timeline_qa_medium, dataset_dir, sbert_embedding),
+        await momento_configuration(
+            timeline_qa_medium, dataset_dir, sbert_embedding, BATCH_SIZE, DB_BATCH_SIZE
+        ),
     )
 
     # Too big of a dataset
-    # dataset_dir = "runs/timeline_qa_dense_sbert"
+    dataset_dir = "runs/timeline_qa_dense_qwen3_0.6B"
 
-    # yield (
-    #    dataset_dir,
-    #    timeline_qa_dense,
-    #    await momento_configuration(timeline_qa_dense, dataset_dir, sbert_embedding),
-    # )
+    yield (
+        dataset_dir,
+        timeline_qa_dense,
+        await momento_configuration(
+            timeline_qa_dense,
+            dataset_dir,
+            qwen3_embedding_06B,
+            BATCH_SIZE,
+            DB_BATCH_SIZE,
+        ),
+    )
+
+    # Too big of a dataset
+    dataset_dir = "runs/timeline_qa_dense_sbert"
+
+    yield (
+        dataset_dir,
+        timeline_qa_dense,
+        await momento_configuration(
+            timeline_qa_dense, dataset_dir, sbert_embedding, BATCH_SIZE, DB_BATCH_SIZE
+        ),
+    )
 
 
 async def main():
     """Main evaluation function."""
+    print(f"CUDA_VISIBLE_DEVICES: {os.environ.get('CUDA_VISIBLE_DEVICES')}")
+    print(f"torch.cuda.device_count(): {torch.cuda.device_count()}")
     try:
         async for dataset_dir, dataset, client in dataset_configurations():
             # Run evaluation
-            results = await client.run_evaluation(dataset, max_queries=10)  # _000)
+            results = await client.run_evaluation(dataset, max_queries=MAX_QUERIES)
 
             # Create a timestamped filename
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -307,4 +391,5 @@ async def main():
 
 
 if __name__ == "__main__":
+    mp.set_start_method("spawn", force=True)
     asyncio.run(main())

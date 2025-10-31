@@ -1,25 +1,26 @@
+import os
 from dataclasses import dataclass
 
-from api.persistence.persistence_service import PersistenceService
-from api.persistence.repositories.file_repository import FileRepository
-from api.rag.llm_rag_service import LLMRAGService
-from api.rag.threshold_filter_service import ThresholdFilterService
-from api.vector_store.repositories.qdrant_vector_store_repository import (
+from .persistence.persistence_service import PersistenceService
+from .persistence.repositories.file_repository import FileRepository
+from .rag.llm_rag_service import LLMRAGService
+from .rag.threshold_filter_service import ThresholdFilterService
+from .vector_store.repositories.qdrant_vector_store_repository import (
     InMemoryQdrantVectorStoreRepository,
 )
-from api.vector_store.repositories.vector_store_repository_interface import (
+from .vector_store.repositories.vector_store_repository_interface import (
     VectorStoreRepository,
 )
-from api.vector_store.vector_store_service import VectorStoreService
+from .vector_store.vector_store_service import VectorStoreService
 
-from api.models.spacy_sentence_chunker import SpacySentenceChunker
-from api.models.llm.qwen3 import Qwen3
-from api.models.embedding.qwen3_embedding import Qwen3EmbeddingModel
-from api.models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
-from api.models.transcription.transcriber_interface import TranscriberInterface
+from .models.spacy_sentence_chunker import SpacySentenceChunker
+from .models.llm.qwen3_llama_cpp_model import Qwen3LlamaCppModel
+from .models.embedding.qwen3_embedding import Qwen3EmbeddingModel
+from .models.transcription.faster_whisper_transcriber import FasterWhisperTranscriber
+from .models.transcription.transcriber_interface import TranscriberInterface
 
 
-RECORDINGS_DIR = "recordings"
+RECORDINGS_DIR = os.path.join(os.path.dirname(__file__), "recordings")
 SAMPLE_RATE = 16000
 RETRIEVAL_LIMIT = 2
 
@@ -78,11 +79,11 @@ class Container:
         vector_store_service = VectorStoreService(vector_store_repo)
 
         # LLM + RAG
-        llm_model = Qwen3()
+        llm_model = Qwen3LlamaCppModel()
         rag_service = LLMRAGService(llm_model=llm_model)
 
         # Threshold filter service
-        threshold_filter_service = ThresholdFilterService(relevance_threshold=0.7)
+        threshold_filter_service = ThresholdFilterService(relevance_threshold=0.0)
 
         # Persistence (fix swapped args)
         repository = FileRepository(

@@ -1,6 +1,6 @@
 import logging
 
-from api.domain.memory_context import MemoryContext
+from ..domain.memory_context import MemoryContext
 
 
 class ThresholdFilterService:

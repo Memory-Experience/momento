@@ -5,11 +5,11 @@ import threading
 from collections.abc import AsyncIterator
 from typing import Any
 
-from api.domain.memory_context import MemoryContext
-from api.domain.memory_request import MemoryRequest, MemoryType
+from ...domain.memory_context import MemoryContext
+from ...domain.memory_request import MemoryRequest, MemoryType
 
-from api.models.llama_cpp_base import LlamaCppBase, LlamaCppConfig
-from api.models.llm.llm_model_interface import LLMModel, MemoryResponse
+from ..llama_cpp_base import LlamaCppBase, LlamaCppConfig
+from .llm_model_interface import LLMModel, MemoryResponse
 
 
 class LlamaCppModel(LlamaCppBase, LLMModel):
