@@ -1,6 +1,6 @@
 # Momento - Intelligent Memory Experience System
 
-Momento is a sophisticated intelligent memory storage system with retrieval capabilities. It combines advanced AI technologies including speech-to-text for dictation, vector embeddings, and retrieval-augmented generation (RAG) to create an intelligent memory assistant that can capture, store, and answer questions about your memories and experiences.
+Momento is a memory storage system with retrieval capabilities. It combines advanced AI technologies including speech-to-text for dictation and retrieval-augmented generation (RAG) to create an intelligent memory assistant that can capture, store, and answer questions about your memories and experiences.
 
 ## Overview
 
@@ -10,6 +10,10 @@ Momento transforms spoken or written content into searchable memories, enabling 
 - **Store memories** with intelligent vector-based indexing for semantic search
 - **Query memories** using natural language questions with AI-powered responses
 - **Interact seamlessly** through a modern web interface with real-time WebSocket communication
+
+The goal is to enable users to deal with the swath of information accumulated of the life of a person. Memories or experiences are freshest and most detailed shortly after their occurence. Over the days or even years these memories degrade in information content and fade. This software is intended to alleviate this problem or feature of the human brain, by providing an external memory prosthesis to people that is inteded to be searched easily through natural language with the help of RAG.
+
+This repo not only contains a modern web application frontend with a python fast-api backend for the ML capabilities, but also a comprehensive evaluation pipeline which tests 3 different configurations of how a RAG system could be built. Several RAG, QNA and Memory-Recall specific datasets are explored and the system evaluated on. While this overview intends to give a high-level overview of the project, each section also includes the actual project readme's to understand more about the detailed structure of the code and how to get it running.
 
 ## High-Level Architecture
 
