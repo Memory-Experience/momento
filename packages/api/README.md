@@ -18,6 +18,8 @@ uv run main.py
 
 The server will start and display connection information in the terminal (typically `http://localhost:8000` for HTTP endpoints and WebSocket connections).
 
+![API package start command](https://github.com/Memory-Experience/momento/blob/main/docs/images/api_start_command.svg)
+
 ## Development
 
 ### Managing Dependencies
