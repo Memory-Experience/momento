@@ -18,6 +18,9 @@ class FasterWhisperTranscriber(TranscriberInterface):
         compute_type: str | None = None,
         vad_filter: bool = True,
         vad_parameters: dict[str, Any] | None = None,
+        buffer_duration: float = 4.0,
+        overlap_duration: float = 0.1,
+        sample_rate: int = 16000,
     ):
         """
         Initialize the FasterWhisperTranscriber.
@@ -28,12 +31,27 @@ class FasterWhisperTranscriber(TranscriberInterface):
             compute_type (str | None): Compute type for the model
             vad_filter (bool): Whether to use voice activity detection
             vad_parameters (dict[str, Any] | None): Parameters for VAD
+            buffer_duration (float): Duration in seconds to buffer before transcribing
+            overlap_duration (float): Duration in seconds to keep as overlap
+            sample_rate (int): Audio sample rate in Hz
         """
         self.model_size_or_path = model_size_or_path
         self.vad_filter = vad_filter
         # Use 'threshold' instead of 'onset' for VAD parameters
         self.vad_parameters = vad_parameters or {"threshold": 0.5}
         self.model: WhisperModel | None = None
+
+        # Buffering configuration
+        self.sample_rate = sample_rate
+        self.buffer_duration = buffer_duration
+        self.overlap_duration = overlap_duration
+        self.buffer_threshold_bytes = int(
+            buffer_duration * sample_rate * 2
+        )  # int16 = 2 bytes
+        self.overlap_bytes = int(overlap_duration * sample_rate * 2)
+
+        # Internal buffer state (bytes in int16 format)
+        self.buffer = bytearray()
 
         # Determine device and compute type
         if device is None:
@@ -87,22 +105,37 @@ class FasterWhisperTranscriber(TranscriberInterface):
         self, audio: np.ndarray, language: str | None = None
     ) -> tuple[list[Segment], Any]:
         """
-        Transcribe audio data.
+        Transcribe audio data with internal buffering.
 
         Args:
-            audio (np.ndarray): Audio data as numpy array (16000 Hz, mono)
+            audio (np.ndarray): Audio data as numpy array (16000 Hz, mono, float32)
             language (str | None): Optional language code
 
         Returns:
-            Tuple of (segments, info)
+            Tuple of (segments, info). Segments may be empty if buffer not yet full.
         """
         if self.model is None:
             self.initialize()  # Ensure model is loaded
         if self.model is None:
             raise RuntimeError("Model not initialized")
 
+        # Convert float32 audio to int16 bytes and add to buffer
+        audio_int16 = (audio * 32768.0).astype(np.int16)
+        audio_bytes = audio_int16.tobytes()
+        self.buffer += audio_bytes
+
+        # Only process when buffer reaches threshold
+        if len(self.buffer) < self.buffer_threshold_bytes:
+            return [], {}  # Not enough data yet
+
+        # Convert buffered bytes back to float32 array for transcription
+        audio_array = (
+            np.frombuffer(self.buffer, dtype=np.int16).astype(np.float32) / 32768.0
+        )
+
+        # Transcribe the buffered audio
         result, info = self.model.transcribe(
-            audio,
+            audio_array,
             language=language,
             vad_filter=self.vad_filter,
             vad_parameters=self.vad_parameters if self.vad_filter else None,
@@ -122,7 +155,18 @@ class FasterWhisperTranscriber(TranscriberInterface):
                 )
             )
 
+        # Keep overlap for continuity
+        self.buffer = (
+            self.buffer[-self.overlap_bytes :]
+            if self.overlap_bytes > 0
+            else bytearray()
+        )
+
         return segments, info
+
+    def reset_state(self):
+        """Reset internal buffer state for a new transcription session."""
+        self.buffer = bytearray()
 
     def cleanup(self):
         """Clean up resources."""
