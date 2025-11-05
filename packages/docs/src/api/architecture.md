@@ -1,6 +1,8 @@
-# API Package Architecture
+# API Package (Backend Server) Architecture
 
-The API package provides the backend server for the Momento intelligent memory system. It implements a FastAPI-based WebSocket server that handles real-time speech transcription, memory storage, and intelligent question answering using retrieval-augmented generation (RAG).
+The API Package provides the backend server for the Momento intelligent memory system. It implements a FastAPI-based WebSocket server that handles real-time speech transcription, memory storage, and intelligent question answering using retrieval-augmented generation (RAG).
+
+> **Note:** The name "API Package" stems from its role in defining, implementing, and exposing the application programming interface (API) using FastAPI for the Momento system, allowing clients (like the web frontend) to interact with its core functionalities.
 
 ## Overview
 
