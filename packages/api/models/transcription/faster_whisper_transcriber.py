@@ -18,7 +18,7 @@ class FasterWhisperTranscriber(TranscriberInterface):
         compute_type: str | None = None,
         vad_filter: bool = True,
         vad_parameters: dict[str, Any] | None = None,
-        buffer_duration: float = 4.0,
+        buffer_duration: float = 2.0,
         overlap_duration: float = 0.1,
         sample_rate: int = 16000,
     ):
