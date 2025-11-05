@@ -65,6 +65,7 @@ pnpm run test -- --testNamePattern="streaming"
 ```
 
 Tests execute and display results in the terminal, showing:
+
 - Test suite pass/fail status
 - Individual test results
 - Coverage percentages for statements, branches, functions, and lines
