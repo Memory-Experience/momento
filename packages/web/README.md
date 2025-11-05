@@ -15,6 +15,8 @@ pnpm run dev
 
 The development server will start and display a URL in the terminal (typically `http://localhost:3000`). Open this URL in your browser to see the application. The page auto-updates as you edit files.
 
+![web package dev command](https://github.com/Memory-Experience/momento/blob/main/docs/images/web_dev_command.svg)
+![web UI after starting dev server](https://github.com/Memory-Experience/momento/blob/main/docs/images/momento_web_ui.png)
 
 ### Build for Production
 
