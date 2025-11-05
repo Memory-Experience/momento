@@ -93,6 +93,8 @@ cd packages/api
 pnpm run start
 ```
 
+![API package start command](https://github.com/Memory-Experience/momento/blob/main/docs/images/api_start_command.svg)
+
 In a new terminal, start the web frontend:
 
 ```bash
@@ -101,6 +103,8 @@ pnpm run dev
 ```
 
 The web interface will be accessible at `http://localhost:3000` (or the URL shown in the terminal output).
+![web package dev command](https://github.com/Memory-Experience/momento/blob/main/docs/images/web_dev_command.svg)
+![web UI after starting dev server](https://github.com/Memory-Experience/momento/blob/main/docs/images/momento_web_ui.png)
 
 ## Development
 
