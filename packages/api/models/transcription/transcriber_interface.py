@@ -57,11 +57,23 @@ class TranscriberInterface(ABC):
         Transcribe audio data.
 
         Args:
-            audio (np.ndarray): Audio data as numpy array
+            audio (np.ndarray): Audio data as numpy array (16000 Hz, mono, float32)
             language (str | None): Optional language code
 
         Returns:
-            Tuple of (segments, info)
+            Tuple of (segments, info) where segments may be empty if the
+            implementation requires more audio before producing output
+        """
+        pass
+
+    @abstractmethod
+    def reset_state(self):
+        """
+        Reset internal state for a new transcription session.
+
+        Implementations that maintain buffering or streaming state should
+        override this to clear buffers and reset session-specific state.
+        Default implementation does nothing (for stateless transcribers).
         """
         pass
 
