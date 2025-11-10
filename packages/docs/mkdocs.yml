@@ -38,7 +38,6 @@ markdown_extensions:
           check_paths: false
 nav:
     - Overview: index.md
-    - Readme: readme_link.md
     - Python Backend:
           - Architecture:
                 - Overview: api/architecture.md
@@ -47,14 +46,11 @@ nav:
                 - Core Services: api/services.md
                 - Readme: api/readme_link.md
                 - Reference (PY): api/py.md
-    - Communication (Protobuf):
-          - Readme: protos/readme_link.md
     - Web Frontend:
           - Architecture:
                 - Overview: web/architecture.md
                 - Communication: web/communication.md
                 - Testing: web/testing.md
-                - Readme: web/readme_link.md
                 - Reference (TS): web/ts/globals.md
     - Evaluation:
           - Architecture:
@@ -71,6 +67,10 @@ nav:
                 - TimelineQA (sparse): evaluation/analysis/evaluation_timeline_qa_sparse.ipynb
                 - TimelineQA (medium): evaluation/analysis/evaluation_timeline_qa_medium.ipynb
                 - TimelineQA (dense): evaluation/analysis/evaluation_timeline_qa_dense.ipynb
-
-          - Readme: evaluation/readme_link.md
           - Reference (PY): evaluation/py.md
+    - READMEs:
+          - Project Overview (root README): readme_link.md
+          - API (Python Backend): api/readme_link.md
+          - Web Frontend: web/readme_link.md
+          - Communication (Protobuf): protos/readme_link.md
+          - Evaluation: evaluation/readme_link.md

@@ -1,6 +1,6 @@
-# API Package
+# API Package (Backend Server)
 
-A Python-based gRPC server providing real-time speech transcription services using Faster Whisper and Protocol Buffers for efficient communication.
+A FastAPI-based backend server providing real-time speech transcription services and semantic memory retrieval using WebSocket streaming, Faster Whisper, and vector storage.
 
 ## Getting Started
 
@@ -16,7 +16,9 @@ pnpm run start
 uv run main.py
 ```
 
-The gRPC server will start on `localhost:50051` ready to accept requests.
+The server will start and display connection information in the terminal (typically `http://localhost:8000` for HTTP endpoints and WebSocket connections).
+
+![API package start command](https://github.com/Memory-Experience/momento/blob/main/docs/images/api_start_command.svg)
 
 ## Development
 
@@ -52,6 +54,8 @@ pnpm run test -- -k persistence
 # Run a single file
 pnpm run test -- tests/test_persistence_service.py -q
 ```
+
+Tests will execute and display results in the terminal, showing test pass/fail status, assertions, and coverage reports.
 
 **Code Quality:**
 

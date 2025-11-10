@@ -13,7 +13,10 @@ cd packages/web
 pnpm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the application. The page auto-updates as you edit files.
+The development server will start and display a URL in the terminal (typically `http://localhost:3000`). Open this URL in your browser to see the application. The page auto-updates as you edit files.
+
+![web package dev command](https://github.com/Memory-Experience/momento/blob/main/docs/images/web_dev_command.svg)
+![web UI after starting dev server](https://github.com/Memory-Experience/momento/blob/main/docs/images/momento_web_ui.png)
 
 ### Build for Production
 
@@ -21,6 +24,8 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 pnpm run build    # Create optimized production build
 pnpm run start    # Start production server
 ```
+
+The production server will start and display the URL in the terminal where the application is accessible.
 
 ## Development
 
@@ -41,9 +46,9 @@ pnpm add -D package-name
 **Development:**
 
 ```bash
-pnpm run dev          # Start development server (http://localhost:3000)
+pnpm run dev          # Start development server (displays URL in terminal)
 pnpm run build        # Create optimized production build
-pnpm run start        # Start production server
+pnpm run start        # Start production server (displays URL in terminal)
 ```
 
 **Testing:**
@@ -58,6 +63,13 @@ pnpm run test -- Chat.test.tsx
 # Run tests matching pattern
 pnpm run test -- --testNamePattern="streaming"
 ```
+
+Tests execute and display results in the terminal, showing:
+
+- Test suite pass/fail status
+- Individual test results
+- Coverage percentages for statements, branches, functions, and lines
+- Detailed coverage report available in `coverage/lcov-report/index.html`
 
 **Code Quality:**
 
