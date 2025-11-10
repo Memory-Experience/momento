@@ -72,6 +72,13 @@ class SimulStreamingWhisperTranscriber(TranscriberInterface):
 
         self.model: PaddedAlignAttWhisper | None = None
 
+        # Internal buffer for accumulating small chunks
+        self._audio_buffer: list[np.ndarray] = []
+        self._buffer_duration = 0.0
+        self._min_chunk_duration = (
+            segment_length  # Process when we have this much audio
+        )
+
         # Online-loop state
         self._reset_online_state()
 
@@ -118,72 +125,82 @@ class SimulStreamingWhisperTranscriber(TranscriberInterface):
         self, audio: np.ndarray, language: str | None = None
     ) -> tuple[list[Segment], Any]:
         """
-        Transcribe a single audio array (16 kHz mono) and return timestamped segments.
+        Transcribe audio incrementally with internal buffering.
 
-        Internally we emulate the online-style loop:
-        - feed chunks (segment_length seconds)
-        - infer (is_last=False) per chunk
-        - produce partial segments
-        - flush once at the end (is_last=True)
+        Accumulates incoming audio chunks and processes them in batches
+        of segment_length duration. State persists across calls within
+        a session until reset_state() is called.
+
+        Args:
+            audio (np.ndarray): Audio data as numpy array (16000 Hz, mono, float32)
+            language (str | None): Optional language code
+
+        Returns:
+            Tuple of (segments, info). Segments may be empty if not enough
+            audio has been accumulated yet.
         """
         self._ensure_initialized()
 
-        # Optional language override for this call
-        if language:
-            # Make tokenizer use this language and skip auto detection
+        # Optional language override (only on first call with language set)
+        if language and not hasattr(self.model, "detected_language"):
             self.model.create_tokenizer(language)
-            self.model.detected_language = language  # stop auto-detect in infer()
-
-        # Reset per-call online state and model buffers
-        self._reset_online_state()
-        self.model.refresh_segment(complete=True)
+            self.model.detected_language = language
 
         # Normalize input
         if audio is None or audio.size == 0:
-            return [], {
-                "reason": "empty_audio",
-                "language": language or self.default_language,
-            }
+            return [], {}
 
         if audio.ndim != 1:
             audio = audio.reshape(-1)
         if audio.dtype != np.float32:
             audio = audio.astype(np.float32)
 
-        chunk_samples = max(1, int(self.segment_length * self.SAMPLING_RATE))
-        n = audio.shape[0]
+        # Add to internal buffer
+        self._audio_buffer.append(audio)
+        self._buffer_duration += len(audio) / self.SAMPLING_RATE
+
+        # Only process when we have enough audio
+        if self._buffer_duration < self._min_chunk_duration:
+            return [], {}
+
+        # Concatenate buffered audio
+        buffered_audio = np.concatenate(self._audio_buffer)
+        self._audio_buffer = []
+        self._buffer_duration = 0.0
 
         segments: list[Segment] = []
 
-        # Feed chunks
-        for i in range(0, n, chunk_samples):
-            chunk = audio[i : min(i + chunk_samples, n)]
-            self._end_sec += len(chunk) / self.SAMPLING_RATE
+        # Process the accumulated audio
+        self._end_sec += len(buffered_audio) / self.SAMPLING_RATE
 
-            # Insert and maybe evict old audio from model's ring buffer
-            removed_sec = self.model.insert_audio(torch.from_numpy(chunk))
-            self._audio_buffer_offset_sec += removed_sec
+        # Insert audio and maybe evict old audio from model's ring buffer
+        removed_sec = self.model.insert_audio(torch.from_numpy(buffered_audio))
+        self._audio_buffer_offset_sec += removed_sec
 
-            # Decode incrementally
-            tokens, generation = self.model.infer(is_last=False)
+        # Decode incrementally (not final)
+        tokens, generation = self.model.infer(is_last=False)
 
-            # Hide incomplete unicode to avoid '�' glitches
-            # (adapted from SimulStreaming)
-            # :contentReference[oaicite:1]{index=1}
-            tokens = self._hide_incomplete_unicode(tokens)
+        # Hide incomplete unicode to avoid '�' glitches
+        tokens = self._hide_incomplete_unicode(tokens)
 
-            # Turn tokens into (start, end, word) using attention
-            # frames (adapted) :contentReference[oaicite:2]{index=2}
-            ts_words = self._timestamped_text(tokens, generation)
+        # Turn tokens into (start, end, word) using attention frames
+        ts_words = self._timestamped_text(tokens, generation)
 
-            text = self.model.tokenizer.decode(tokens)
-            if not text:
-                continue
+        text = self.model.tokenizer.decode(tokens) if tokens else ""
 
+        if text:
             # Map local frame times to absolute audio times
-            beg = ts_words[0][0] + self._audio_buffer_offset_sec
+            beg = (
+                ts_words[0][0] + self._audio_buffer_offset_sec
+                if ts_words
+                else self._last_ts_end
+            )
             beg = max(beg, self._last_ts_beg + 1e-6)  # keep non-decreasing starts
-            end = ts_words[-1][1] + self._audio_buffer_offset_sec
+            end = (
+                ts_words[-1][1] + self._audio_buffer_offset_sec
+                if ts_words
+                else self._end_sec
+            )
             end = max(end, self._last_ts_end + 1e-6)
 
             self._last_ts_beg, self._last_ts_end = beg, end
@@ -199,40 +216,6 @@ class SimulStreamingWhisperTranscriber(TranscriberInterface):
                 )
             )
 
-        # Final flush with is_last=True (no new audio)
-        removed_sec = self.model.insert_audio(None)
-        self._audio_buffer_offset_sec += removed_sec
-        tokens, generation = self.model.infer(is_last=True)
-        tokens = self._hide_incomplete_unicode(tokens)
-        ts_words = self._timestamped_text(tokens, generation)
-        text = self.model.tokenizer.decode(tokens)
-
-        if text:
-            # For the last piece, SimulStreaming uses stream end as
-            # 'end' (adapted) :contentReference[oaicite:3]{index=3}
-            beg = (
-                (ts_words[0][0] + self._audio_buffer_offset_sec)
-                if ts_words
-                else self._last_ts_end
-            )
-            beg = max(beg, self._last_ts_beg + 1e-6)
-            end = max(self._end_sec, self._last_ts_end + 1e-6)
-            self._last_ts_beg, self._last_ts_end = beg, end
-
-            segments.append(
-                Segment(
-                    text=text,
-                    start=beg,
-                    end=end,
-                    no_speech_prob=float(generation.get("no_speech_prob", 0.0))
-                    if generation
-                    else 0.0,
-                )
-            )
-
-        # Clean model state for the next call
-        self.model.refresh_segment(complete=True)
-
         info = {
             "language": getattr(
                 self.model, "detected_language", language or self.default_language
@@ -246,6 +229,14 @@ class SimulStreamingWhisperTranscriber(TranscriberInterface):
             "model_path": self.model_path,
         }
         return segments, info
+
+    def reset_state(self):
+        """Reset internal state for a new transcription session."""
+        self._reset_online_state()
+        self._audio_buffer = []
+        self._buffer_duration = 0.0
+        if self.model is not None:
+            self.model.refresh_segment(complete=True)
 
     def cleanup(self):
         """Release model to allow GC."""

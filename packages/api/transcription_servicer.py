@@ -51,7 +51,6 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
         # State tracking
         audio_data = bytearray()
         transcription = []
-        buffer = b""
         session_type = stt_pb2.ChunkType.MEMORY  # Default type
         session_id = None
         memory_id = None
@@ -61,6 +60,9 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
 
         try:
             logging.info("Received a new transcription request.")
+
+            # Reset transcriber state for new session
+            self.transcriber.reset_state()
 
             # Process incoming chunks
             async for chunk in request_iterator:
@@ -113,33 +115,33 @@ class TranscriptionServiceServicer(stt_pb2_grpc.TranscriptionServiceServicer):
 
                 # Handle audio input
                 if chunk.HasField("audio_data"):
-                    buffer += chunk.audio_data
                     audio_data += chunk.audio_data
 
-                    # Process audio when buffer is large enough
-                    if len(buffer) >= self.sample_rate * 4:
-                        # Convert and transcribe audio
-                        audio_array = (
-                            np.frombuffer(buffer, dtype=np.int16).astype(np.float32)
-                            / 32768.0
+                    # Convert audio bytes to float32 numpy array
+                    audio_array = (
+                        np.frombuffer(chunk.audio_data, dtype=np.int16).astype(
+                            np.float32
                         )
-                        segments, _ = self.transcriber.transcribe(audio_array)
-                        transcription.extend(segment.text for segment in segments)
+                        / 32768.0
+                    )
 
-                        # Send transcript chunks to client
-                        for segment in segments:
-                            yield stt_pb2.MemoryChunk(
-                                text_data=segment.text,
-                                metadata=stt_pb2.ChunkMetadata(
-                                    session_id=session_id,
-                                    memory_id=memory_id,
-                                    type=stt_pb2.ChunkType.TRANSCRIPT,
-                                    is_final=False,
-                                ),
-                            )
+                    # Pass to transcriber (handles its own buffering)
+                    segments, _ = self.transcriber.transcribe(audio_array)
 
-                        # Keep a small overlap for continuity
-                        buffer = buffer[-1600:]  # Keep last 0.1 seconds
+                    # Accumulate transcription text
+                    transcription.extend(segment.text for segment in segments)
+
+                    # Send transcript chunks to client
+                    for segment in segments:
+                        yield stt_pb2.MemoryChunk(
+                            text_data=segment.text,
+                            metadata=stt_pb2.ChunkMetadata(
+                                session_id=session_id,
+                                memory_id=memory_id,
+                                type=stt_pb2.ChunkType.TRANSCRIPT,
+                                is_final=False,
+                            ),
+                        )
 
                 # Handle direct text input
                 elif chunk.HasField("text_data"):

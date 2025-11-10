@@ -13,7 +13,7 @@ dependencies = [
 
 [tool.uv.workspace]
 members = ["packages/*"]
-exclude = ["packages/web", "packages/qdrant"]
+exclude = ["packages/web", "packages/qdrant", "packages/models"]
 
 [dependency-groups]
 dev = [
