@@ -23,7 +23,7 @@ Uses OpenAI's Whisper model optimized with CTranslate2 for real-time transcripti
 
 #### Key Design Decisions
 
-**Streaming architecture**: Audio is processed in overlapping chunks (~4 seconds) with a small overlap (0.1s) maintained between chunks to ensure continuity across boundaries. This prevents word breaks at arbitrary chunk boundaries.
+**Streaming architecture**: Audio is processed in overlapping chunks (~2 seconds) with a small overlap (0.1s) maintained between chunks to ensure continuity across boundaries. This prevents word breaks at arbitrary chunk boundaries.
 
 **Buffering strategy**: Rather than transcribing every audio packet immediately, the system accumulates enough audio to provide the model with sufficient context. This improves accuracy at the cost of slight latency.
 
