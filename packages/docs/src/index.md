@@ -1,6 +1,8 @@
 # Momento - Intelligent Memory Experience System
 
-Momento is a memory storage system with retrieval capabilities. It combines advanced AI technologies including speech-to-text for dictation and retrieval-augmented generation (RAG) to create an intelligent memory assistant that can capture, store, and answer questions about your memories and experiences.
+**Momento** is a memory prosthesis system that transforms spoken or written content into searchable memories. It can capture memories, experiences, or personal notes via text or real-time speech-to-text transcription, then organizes this information into a semantic memory system that you can query naturally using everyday language.
+
+The system combines advanced AI technologies including automatic speech recognition (ASR) and retrieval-augmented generation (RAG) to create an intelligent memory assistant that helps you remember and recall information when you need it.
 
 ## Overview
 
@@ -11,9 +13,22 @@ Momento transforms spoken or written content into searchable memories, enabling 
 - **Query memories** using natural language questions with AI-powered responses
 - **Interact seamlessly** through a modern web interface with real-time WebSocket communication
 
-The goal is to enable users to deal with the swath of information accumulated of the life of a person. Memories or experiences are freshest and most detailed shortly after their occurence. Over the days or even years these memories degrade in information content and fade. This software is intended to alleviate this problem or feature of the human brain, by providing an external memory prosthesis to people that is inteded to be searched easily through natural language with the help of RAG.
+### The Memory Prosthesis Concept
 
-This repo not only contains a modern web application frontend with a python fast-api backend for the ML capabilities, but also a comprehensive evaluation pipeline which tests 3 different configurations of how a RAG system could be built. Several RAG, QNA and Memory-Recall specific datasets are explored and the system evaluated on. While this overview intends to give a high-level overview of the project, each section also includes the actual project readme's to understand more about the detailed structure of the code and how to get it running.
+Memories and experiences are freshest and most detailed shortly after they occur. Over days, weeks, or years, these memories degrade in information content and fade - a natural feature of the human brain. Momento addresses this by providing an external memory prosthesis that:
+
+- Captures information while it's fresh and detailed
+- Preserves context and connections between memories
+- Enables easy retrieval through natural language queries powered by RAG
+- Keeps all your data private and local - nothing leaves your machine
+
+### Documentation Contents
+
+This documentation aims to provide a comprehensive overview of the architecture, components, design choices, API references, and functionalities of the Momento system. It is not a user guide or marketing material, but rather a technical resource for developers, contributors, and anyone interested in understanding the system's inner workings.
+
+The evaluation section additionally provides the analysis and results from benchmarking different RAG configurations across multiple datasets that were assessed during development. See the [Evaluation > Analysis](https://memory-experience.github.io/momento/evaluation/analysis/evaluation_ms_marco_passage/) section for details.
+
+At the end of the documentation we reference the README files (the same ones found in the GitHub repository) from each package in the monorepo for additional context on setup, development, and usage. Note that these files may contain some overlapping information with this documentation, but they focus more on setting up and running the individual packages, while this documentation provides a holistic view of the entire system architecture and design.
 
 ## High-Level Architecture
 
