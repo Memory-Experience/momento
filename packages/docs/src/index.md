@@ -109,7 +109,7 @@ end note
 
 ### Intelligent Retrieval
 
-- **Natural language question processing**: Ask questions in your own words—the system understands context, synonyms, and semantic meaning rather than requiring keyword matching
+- **Natural language question processing**: Ask questions in your own words. The system understands context, synonyms, and semantic meaning rather than requiring keyword matching
 - **Semantic similarity search across stored memories**: Memories are retrieved based on conceptual relevance rather than exact text matches, surfacing contextually related information you might have forgotten you recorded
 - **Context filtering by relevance thresholds**: Configurable similarity thresholds ensure only the most relevant memories are included in responses, reducing noise and improving answer quality
 
