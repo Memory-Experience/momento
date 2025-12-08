@@ -28,6 +28,8 @@ This documentation aims to provide a comprehensive overview of the architecture,
 
 The evaluation section additionally provides the analysis and results from benchmarking different RAG configurations across multiple datasets that were assessed during development. See the [Evaluation > Analysis](https://memory-experience.github.io/momento/evaluation/analysis/evaluation_ms_marco_passage/) section for details.
 
+For an overview of the projects evaluation pipeline including the results and some interpretations, refer to the [Momento System Evaluation Report](report.pdf).
+
 At the end of the documentation we reference the README files (the same ones found in the GitHub repository) from each package in the monorepo for additional context on setup, development, and usage. Note that these files may contain some overlapping information with this documentation, but they focus more on setting up and running the individual packages, while this documentation provides a holistic view of the entire system architecture and design.
 
 ## High-Level Architecture
