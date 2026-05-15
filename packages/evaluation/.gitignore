@@ -3,5 +3,9 @@ previous_runs/
 runs/*/
 open_lifelog_qa/
 
+# Local-only sensitive data (never commit)
+runs/*_local.json
+*_local.ipynb
+
 metrics/cross_encoder/*
 models/*

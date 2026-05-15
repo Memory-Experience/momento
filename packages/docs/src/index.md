@@ -28,6 +28,8 @@ This documentation aims to provide a comprehensive overview of the architecture,
 
 The evaluation section additionally provides the analysis and results from benchmarking different RAG configurations across multiple datasets that were assessed during development. See the [Evaluation > Analysis](https://memory-experience.github.io/momento/evaluation/analysis/evaluation_ms_marco_passage/) section for details.
 
+For an overview of the projects evaluation pipeline including the results and some interpretations, refer to the [Momento System Evaluation Report](report.pdf).
+
 At the end of the documentation we reference the README files (the same ones found in the GitHub repository) from each package in the monorepo for additional context on setup, development, and usage. Note that these files may contain some overlapping information with this documentation, but they focus more on setting up and running the individual packages, while this documentation provides a holistic view of the entire system architecture and design.
 
 ## High-Level Architecture
@@ -95,24 +97,24 @@ end note
 
 ### Audio & Text Input
 
-- Real-time speech-to-text transcription
-- Direct text input support
-- WebSocket-based streaming communication
+- **Real-time speech-to-text transcription**: Capture thoughts and experiences as they happen using OpenAI's Whisper model for accurate, speaker-independent speech recognition with support for multiple languages
+- **Direct text input support**: Manually record memories, notes, or structured information when audio capture isn't practical
+- **WebSocket-based streaming communication**: Bidirectional real-time communication using Protocol Buffers for efficient binary transmission, enabling responsive, low-latency interactions between the web frontend and backend
 
 ### Memory Storage
 
-- Automatic text chunking and vector embedding generation
-- Semantic indexing in QDrant vector database
-- File-based persistence of metadata
+- **Automatic text chunking and vector embedding generation**: Incoming memories are intelligently segmented into coherent chunks using sentence-level or character-level parsing, then converted to dense vector representations using Qwen3 embeddings for semantic understanding
+- **Semantic indexing in QDrant vector database**: All memory vectors are indexed in a high-performance vector database, enabling similarity searches across thousands of memories
+- **File-based persistence of metadata**: Complete memory metadata (timestamps, sources, original text) is persisted to disk, ensuring durability and enabling reconstruction of the knowledge base
 
 ### Intelligent Retrieval
 
-- Natural language question processing
-- Semantic similarity search across stored memories
-- Context filtering by relevance thresholds
+- **Natural language question processing**: Ask questions in your own words. The system understands context, synonyms, and semantic meaning rather than requiring keyword matching
+- **Semantic similarity search across stored memories**: Memories are retrieved based on conceptual relevance rather than exact text matches, surfacing contextually related information you might have forgotten you recorded
+- **Context filtering by relevance thresholds**: Configurable similarity thresholds ensure only the most relevant memories are included in responses, reducing noise and improving answer quality
 
 ### AI-Powered Responses
 
-- RAG-based answer generation using Qwen3 LLM
-- Streaming response delivery
-- Context-aware answers based on retrieved memories
+- **RAG-based answer generation using Qwen3 LLM**: Retrieved memories are passed as context to Qwen3 to generate coherent, factually grounded answers synthesizing multiple memories
+- **Streaming response delivery**: Responses are streamed token-by-token via WebSocket, providing real-time feedback to users rather than making them wait for complete generation
+- **Context-aware answers based on retrieved memories**: Generated responses are explicitly grounded in your recorded memories rather than relying on the model's training data, ensuring accuracy and relevance to your personal context
